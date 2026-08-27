@@ -62,3 +62,25 @@ export const ACTIVE_STATUSES: JobStatus[] = [
   "transcribing",
   "diarizing",
 ];
+
+/** Ordered pipeline stages this job passes through, given current settings. */
+export function stagesFor(job: Job, diarizeEnabled: boolean): JobStatus[] {
+  const stages: JobStatus[] = [];
+  if (job.source === "podcast") stages.push("fetching");
+  stages.push("decoding", "transcribing");
+  if (diarizeEnabled) stages.push("diarizing");
+  return stages;
+}
+
+/**
+ * Rough 0..1 estimate of how far a job has progressed through its whole
+ * pipeline, not just its current stage — each stage counts equally, and the
+ * current stage contributes its own `stageProgress` within that share.
+ */
+export function jobProgress(job: Job, diarizeEnabled: boolean): number {
+  if (job.status === "done" || job.status === "error") return 1;
+  const stages = stagesFor(job, diarizeEnabled);
+  const index = stages.indexOf(job.status);
+  if (index === -1) return 0; // "queued"
+  return (index + job.stageProgress) / stages.length;
+}

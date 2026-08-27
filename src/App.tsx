@@ -516,6 +516,7 @@ export default function App() {
             activeJob={activeJob}
             done={processed}
             total={jobs.length}
+            diarizeEnabled={settings.diarizeSpeakers}
           />
         </div>
       )}

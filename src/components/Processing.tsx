@@ -1,5 +1,5 @@
 import { Cpu, Loader2, Zap } from "lucide-react";
-import type { Job } from "../lib/jobs";
+import { type Job, jobProgress } from "../lib/jobs";
 import type { ModelState } from "../hooks/useWhisper";
 
 /** Animated equalizer bars. */
@@ -121,17 +121,20 @@ export function ProcessingHero({
   activeJob,
   done,
   total,
+  diarizeEnabled,
 }: {
   state: ModelState;
   activeJob: Job | null;
   done: number;
   total: number;
+  diarizeEnabled: boolean;
 }) {
   const loading = state.status === "loading";
   const hasWork = loading || !!activeJob;
   if (!hasWork) return null;
 
-  const queuePct = total > 0 ? done / total : 0;
+  const activeFraction = activeJob ? jobProgress(activeJob, diarizeEnabled) : 0;
+  const queuePct = total > 0 ? (done + activeFraction) / total : 0;
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-sky-400/20 bg-gradient-to-br from-sky-500/[0.07] to-cyan-400/[0.04] p-5">
