@@ -2,12 +2,17 @@
 import {
   pipeline,
   env,
+  AutoModelForAudioFrameClassification,
+  AutoProcessor,
   type AutomaticSpeechRecognitionPipeline,
+  type PreTrainedModel,
+  type Processor,
 } from "@huggingface/transformers";
 import type { Backend, Dtype } from "./lib/models";
 import type {
   FileProgress,
   FromWorker,
+  SpeakerSegment,
   ToWorker,
   TranscriptResult,
 } from "./lib/protocol";
@@ -17,6 +22,40 @@ env.allowLocalModels = false;
 
 let pipe: AutomaticSpeechRecognitionPipeline | null = null;
 let loadedKey = "";
+
+// ── Speaker separation (pyannote segmentation-3.0) ──────────────────────────
+// A tiny (~1.5 MB), separate model used only to detect *who* is speaking when.
+// It has nothing to do with Whisper and is loaded lazily, once, on WASM — it's
+// small enough that there's no need for the dtype/device tiers ASR gets.
+const DIARIZATION_MODEL_ID = "onnx-community/pyannote-segmentation-3.0";
+
+// `Processor`'s public type doesn't declare the PyAnnote-only
+// post_process_speaker_diarization helper — pin the exact shape we use.
+type DiarizationProcessor = Processor & {
+  post_process_speaker_diarization: (
+    logits: unknown,
+    numSamples: number,
+  ) => SpeakerSegment[][];
+};
+
+let diarizer: { model: PreTrainedModel; processor: DiarizationProcessor } | null =
+  null;
+
+async function ensureDiarizer(): Promise<{
+  model: PreTrainedModel;
+  processor: DiarizationProcessor;
+}> {
+  if (diarizer) return diarizer;
+  const [model, processor] = await Promise.all([
+    AutoModelForAudioFrameClassification.from_pretrained(
+      DIARIZATION_MODEL_ID,
+      { device: "wasm", dtype: "q8" },
+    ),
+    AutoProcessor.from_pretrained(DIARIZATION_MODEL_ID),
+  ]);
+  diarizer = { model, processor: processor as DiarizationProcessor };
+  return diarizer;
+}
 
 function post(msg: FromWorker, transfer: Transferable[] = []): void {
   (self as unknown as Worker).postMessage(msg, transfer);
@@ -149,6 +188,26 @@ self.addEventListener("message", async (event: MessageEvent<ToWorker>) => {
         chunks: output.chunks ?? [],
       };
       post({ type: "result", jobId: msg.jobId, result });
+    } catch (err) {
+      post({
+        type: "error",
+        jobId: msg.jobId,
+        message: String((err as Error)?.message ?? err),
+      });
+    }
+    return;
+  }
+
+  if (msg.type === "diarize") {
+    try {
+      const { model, processor } = await ensureDiarizer();
+      const inputs = await processor(msg.audio);
+      const { logits } = await model(inputs);
+      const [segments] = processor.post_process_speaker_diarization(
+        logits,
+        msg.audio.length,
+      );
+      post({ type: "diarize-result", jobId: msg.jobId, segments });
     } catch (err) {
       post({
         type: "error",

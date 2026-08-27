@@ -47,7 +47,16 @@ function stamp(seconds: number, msSep: "," | "."): string {
   return `${pad(h)}:${pad(m)}:${pad(sec)}${msSep}${pad(ms, 3)}`;
 }
 
+function withSpeaker(chunk: TranscriptResult["chunks"][number]): string {
+  const text = chunk.text.trim();
+  return chunk.speaker != null ? `Speaker ${chunk.speaker}: ${text}` : text;
+}
+
 export function toTxt(result: TranscriptResult): string {
+  const chunks = result.chunks?.filter((c) => c.text.trim().length > 0) ?? [];
+  if (chunks.some((c) => c.speaker != null)) {
+    return chunks.map(withSpeaker).join("\n") + "\n";
+  }
   return result.text.trim() + "\n";
 }
 
@@ -65,7 +74,7 @@ export function toSrt(result: TranscriptResult): string {
       .map((c, i) => {
         const start = c.timestamp[0] ?? 0;
         const end = c.timestamp[1] ?? start + 2;
-        return `${i + 1}\n${stamp(start, ",")} --> ${stamp(end, ",")}\n${c.text.trim()}\n`;
+        return `${i + 1}\n${stamp(start, ",")} --> ${stamp(end, ",")}\n${withSpeaker(c)}\n`;
       })
       .join("\n") + "\n"
   );
@@ -77,7 +86,7 @@ export function toVtt(result: TranscriptResult): string {
     .map((c) => {
       const start = c.timestamp[0] ?? 0;
       const end = c.timestamp[1] ?? start + 2;
-      return `${stamp(start, ".")} --> ${stamp(end, ".")}\n${c.text.trim()}\n`;
+      return `${stamp(start, ".")} --> ${stamp(end, ".")}\n${withSpeaker(c)}\n`;
     })
     .join("\n");
   return `WEBVTT\n\n${body}\n`;

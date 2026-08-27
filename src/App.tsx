@@ -12,6 +12,7 @@ import {
   Zap,
 } from "lucide-react";
 import { decodeToPCM } from "./lib/audio";
+import { assignSpeakers } from "./lib/diarize";
 import {
   type Backend,
   type Family,
@@ -60,7 +61,7 @@ const TABS: { id: Tab; label: string; icon: typeof FileAudio }[] = [
 ];
 
 export default function App() {
-  const { state, loadModel, transcribe } = useWhisper();
+  const { state, loadModel, transcribe, diarize } = useWhisper();
 
   const [settings, setSettings] = useState<Settings>({
     modelId: "KBLab/kb-whisper-base",
@@ -70,6 +71,7 @@ export default function App() {
     task: "transcribe",
     exportFormat: "txt",
     autoDownload: true,
+    diarizeSpeakers: false,
   });
   const proxyBase = DEFAULT_PROXY;
 
@@ -193,14 +195,30 @@ export default function App() {
         updateJob(job.id, { status: "transcribing" });
         const loadedId = state.modelId ?? settings.modelId;
         const englishOnly = isEnglishOnly(loadedId);
+        // A separate model needs its own copy of the audio — transcribe()
+        // transfers (detaches) the buffer it's given.
+        const diarizeAudio = settings.diarizeSpeakers ? audio.slice() : null;
         const result = await transcribe(job.id, audio, {
           language: englishOnly ? null : settings.language,
           task: englishOnly ? "transcribe" : settings.task,
         });
 
-        updateJob(job.id, { status: "done", result });
+        let finalResult = result;
+        if (diarizeAudio) {
+          try {
+            const segments = await diarize(job.id, diarizeAudio);
+            finalResult = {
+              ...result,
+              chunks: assignSpeakers(result.chunks, segments),
+            };
+          } catch {
+            // Speaker separation is best-effort — keep the plain transcript.
+          }
+        }
+
+        updateJob(job.id, { status: "done", result: finalResult });
         if (settings.autoDownload)
-          downloadJob(job, result, settings.exportFormat);
+          downloadJob(job, finalResult, settings.exportFormat);
       } catch (e) {
         updateJob(job.id, {
           status: "error",
@@ -211,6 +229,7 @@ export default function App() {
     [
       updateJob,
       transcribe,
+      diarize,
       downloadJob,
       state.modelId,
       settings.modelId,
@@ -218,6 +237,7 @@ export default function App() {
       settings.task,
       settings.autoDownload,
       settings.exportFormat,
+      settings.diarizeSpeakers,
     ],
   );
 

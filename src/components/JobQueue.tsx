@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import type { Job, JobSource } from "../lib/jobs";
+import { toTxt } from "../lib/exporters";
 import { Badge, ProgressBar, Spinner } from "./ui";
 
 const SOURCE_ICON: Record<JobSource, typeof FileAudio> = {
@@ -88,7 +89,7 @@ export function JobQueue({
 
   async function copy(job: Job) {
     if (!job.result) return;
-    await navigator.clipboard.writeText(job.result.text.trim());
+    await navigator.clipboard.writeText(toTxt(job.result).trim());
     setCopied(job.id);
     window.setTimeout(() => setCopied((c) => (c === job.id ? null : c)), 1500);
   }
@@ -197,7 +198,7 @@ export function JobQueue({
                     </button>
                   </div>
                   <p className="max-h-60 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed text-slate-200 scroll-thin">
-                    {job.result.text.trim() || "(no speech detected)"}
+                    {toTxt(job.result).trim() || "(no speech detected)"}
                   </p>
                 </div>
               )}

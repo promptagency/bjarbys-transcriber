@@ -4,11 +4,21 @@ import type { Backend, Dtype } from "./models";
 export interface TranscriptChunk {
   text: string;
   timestamp: [number, number | null];
+  /** 1-based speaker index, assigned by speaker separation. Null if not run. */
+  speaker?: number | null;
 }
 
 export interface TranscriptResult {
   text: string;
   chunks: TranscriptChunk[];
+}
+
+/** A single speaker turn, as returned by the pyannote segmentation model. */
+export interface SpeakerSegment {
+  id: number;
+  start: number;
+  end: number;
+  confidence: number;
 }
 
 // ── UI → Worker ────────────────────────────────────────────────────────────
@@ -26,6 +36,11 @@ export type ToWorker =
       /** ISO language code (e.g. "sv") or null to auto-detect. */
       language: string | null;
       task: "transcribe" | "translate";
+    }
+  | {
+      type: "diarize";
+      jobId: string;
+      audio: Float32Array;
     };
 
 // ── Worker → UI ────────────────────────────────────────────────────────────
@@ -56,4 +71,5 @@ export type FromWorker =
     }
   | { type: "transcribe-start"; jobId: string }
   | { type: "result"; jobId: string; result: TranscriptResult }
+  | { type: "diarize-result"; jobId: string; segments: SpeakerSegment[] }
   | { type: "error"; jobId?: string; message: string };

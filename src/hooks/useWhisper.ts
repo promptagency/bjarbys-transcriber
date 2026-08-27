@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Backend, Dtype } from "../lib/models";
-import type { FromWorker, TranscriptResult } from "../lib/protocol";
+import type {
+  FromWorker,
+  SpeakerSegment,
+  TranscriptResult,
+} from "../lib/protocol";
 
 export type ModelStatus = "idle" | "loading" | "ready" | "error";
 
@@ -44,6 +48,7 @@ interface Pending<T> {
 export function useWhisper() {
   const workerRef = useRef<Worker | null>(null);
   const jobs = useRef(new Map<string, Pending<TranscriptResult>>());
+  const diarizeJobs = useRef(new Map<string, Pending<SpeakerSegment[]>>());
   const load = useRef<Pending<void> | null>(null);
   const [state, setState] = useState<ModelState>(INITIAL);
 
@@ -124,11 +129,18 @@ export function useWhisper() {
         jobs.current.delete(msg.jobId);
         break;
       }
+      case "diarize-result": {
+        const p = diarizeJobs.current.get(msg.jobId);
+        p?.resolve(msg.segments);
+        diarizeJobs.current.delete(msg.jobId);
+        break;
+      }
       case "error": {
         if (msg.jobId) {
-          const p = jobs.current.get(msg.jobId);
-          p?.reject(new Error(msg.message));
+          jobs.current.get(msg.jobId)?.reject(new Error(msg.message));
           jobs.current.delete(msg.jobId);
+          diarizeJobs.current.get(msg.jobId)?.reject(new Error(msg.message));
+          diarizeJobs.current.delete(msg.jobId);
         } else {
           setState((prev) => ({ ...prev, status: "error", error: msg.message }));
           load.current?.reject(new Error(msg.message));
@@ -186,5 +198,14 @@ export function useWhisper() {
     [],
   );
 
-  return { state, loadModel, transcribe };
+  const diarize = useCallback((jobId: string, audio: Float32Array) => {
+    const worker = workerRef.current;
+    if (!worker) return Promise.reject(new Error("Worker not ready"));
+    return new Promise<SpeakerSegment[]>((resolve, reject) => {
+      diarizeJobs.current.set(jobId, { resolve, reject });
+      worker.postMessage({ type: "diarize", jobId, audio }, [audio.buffer]);
+    });
+  }, []);
+
+  return { state, loadModel, transcribe, diarize };
 }
