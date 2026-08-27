@@ -1,5 +1,5 @@
-// Merge pyannote speaker-turn segments onto Whisper's timestamped chunks.
-import type { SpeakerSegment, TranscriptChunk } from "./protocol";
+// Merge per-speaker activity spans onto Whisper's timestamped chunks.
+import type { SpeakerActivity, TranscriptChunk } from "./protocol";
 
 // The diarization model has no internal chunking of its own (unlike Whisper),
 // so the worker splits audio into fixed windows before running it — verified
@@ -18,40 +18,91 @@ export const MAX_DIARIZE_MINUTES = 240;
 export const MAX_DIARIZE_SECONDS = MAX_DIARIZE_MINUTES * 60;
 
 /**
- * Assign a 1-based speaker index to each chunk, picking whichever segment
- * overlaps it the most. The model's raw segment ids are small but
- * non-sequential (e.g. 0, 2, 3), so they're remapped to 1, 2, 3... in the
- * order speakers first appear.
+ * Attributions at or below this margin are treated as uncertain — usually
+ * because two people are talking across the chunk, not because the answer is
+ * wrong. Consumers can filter on `speaker_conf` instead of guessing.
+ */
+export const LOW_CONFIDENCE = 0.35;
+
+/**
+ * Assign each chunk the speaker who is active for the most of its duration.
+ *
+ * Weighted by total active time across the whole chunk rather than by a single
+ * best-overlapping span: a speaker who holds the floor in three bursts should
+ * beat one continuous interjection. Speakers can be active simultaneously, so
+ * their spans legitimately overlap.
  */
 export function assignSpeakers(
   chunks: TranscriptChunk[],
-  segments: SpeakerSegment[],
+  activity: SpeakerActivity[],
 ): TranscriptChunk[] {
-  if (segments.length === 0) return chunks;
+  if (activity.length === 0) return chunks;
 
-  const seenRawIds: number[] = [];
-  function speakerFor(start: number, end: number): number | null {
-    let best: SpeakerSegment | null = null;
-    let bestOverlap = 0;
-    for (const seg of segments) {
-      const overlap = Math.min(end, seg.end) - Math.max(start, seg.start);
-      if (overlap > bestOverlap) {
-        bestOverlap = overlap;
-        best = seg;
-      }
+  // Group spans by speaker, each list sorted by start time.
+  const bySpeaker = new Map<number, SpeakerActivity[]>();
+  for (const span of activity) {
+    const list = bySpeaker.get(span.speaker);
+    if (list) list.push(span);
+    else bySpeaker.set(span.speaker, [span]);
+  }
+  for (const list of bySpeaker.values()) list.sort((a, b) => a.start - b.start);
+
+  /** First index whose span could still overlap `from` (spans are sorted). */
+  function firstCandidate(list: SpeakerActivity[], from: number): number {
+    let lo = 0;
+    let hi = list.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (list[mid].end <= from) lo = mid + 1;
+      else hi = mid;
     }
-    if (!best) return null;
-    let index = seenRawIds.indexOf(best.id);
-    if (index === -1) {
-      index = seenRawIds.length;
-      seenRawIds.push(best.id);
-    }
-    return index + 1;
+    return lo;
   }
 
+  // Speakers are renumbered 1, 2, 3... in the order they first speak, so the
+  // output stays readable regardless of the model's internal indices.
+  const seenIds: number[] = [];
+
   return chunks.map((chunk) => {
-    const [start, end] = chunk.timestamp;
-    return { ...chunk, speaker: speakerFor(start, end ?? Infinity) };
+    const start = chunk.timestamp[0];
+    const end = chunk.timestamp[1] ?? start;
+
+    let topId: number | null = null;
+    let topTime = 0;
+    let secondTime = 0;
+
+    for (const [id, list] of bySpeaker) {
+      let total = 0;
+      for (let i = firstCandidate(list, start); i < list.length; i++) {
+        const span = list[i];
+        if (span.start >= end) break;
+        total += Math.min(end, span.end) - Math.max(start, span.start);
+      }
+      if (total > topTime) {
+        secondTime = topTime;
+        topTime = total;
+        topId = id;
+      } else if (total > secondTime) {
+        secondTime = total;
+      }
+    }
+
+    // Nobody was speaking here — say so rather than inventing an attribution.
+    if (topId === null || topTime <= 0) {
+      return { ...chunk, speaker: null, speaker_conf: 0 };
+    }
+
+    let index = seenIds.indexOf(topId);
+    if (index === -1) {
+      index = seenIds.length;
+      seenIds.push(topId);
+    }
+    const confidence = (topTime - secondTime) / topTime;
+    return {
+      ...chunk,
+      speaker: index + 1,
+      speaker_conf: Math.round(confidence * 100) / 100,
+    };
   });
 }
 
@@ -88,9 +139,14 @@ function runsOf(chunks: TranscriptChunk[]): SpeakerRun[] {
 }
 
 /**
- * Merge short, isolated speaker runs into their surrounding speaker when
- * both neighboring runs agree. Only touches runs bounded on both sides by
- * the same speaker — never guesses between two different neighbors.
+ * Merge short, isolated speaker runs into their surrounding speaker when both
+ * neighboring runs agree. Only touches runs bounded on both sides by the same
+ * speaker — never guesses between two different neighbors.
+ *
+ * Only *low-confidence* runs are merged: if the model was clearly sure it
+ * heard someone else for a moment, that's a real interjection and gets to
+ * stand. Chunks with no detected speech are left alone rather than having
+ * speech invented for them.
  */
 export function smoothSpeakers(chunks: TranscriptChunk[]): TranscriptChunk[] {
   const runs = runsOf(chunks);
@@ -100,8 +156,13 @@ export function smoothSpeakers(chunks: TranscriptChunk[]): TranscriptChunk[] {
     const prev = runs[i - 1];
     const cur = runs[i];
     const next = runs[i + 1];
+    if (cur.speaker == null) continue;
+    const uncertain = chunks
+      .slice(cur.startIndex, cur.endIndex + 1)
+      .every((c) => (c.speaker_conf ?? 0) <= LOW_CONFIDENCE);
     if (
       cur.durationSec < SMOOTH_MAX_RUN_SECONDS &&
+      uncertain &&
       prev.speaker != null &&
       prev.speaker === next.speaker &&
       cur.speaker !== prev.speaker

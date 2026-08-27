@@ -235,12 +235,12 @@ export default function App() {
           }
           updateJob(job.id, { status: "diarizing", stageProgress: 0, warning });
           try {
-            const segments = await diarize(job.id, diarizeAudio, (p) =>
+            const activity = await diarize(job.id, diarizeAudio, (p) =>
               updateJob(job.id, { stageProgress: p }),
             );
             finalResult = {
               ...result,
-              chunks: smoothSpeakers(assignSpeakers(result.chunks, segments)),
+              chunks: smoothSpeakers(assignSpeakers(result.chunks, activity)),
             };
           } catch (e) {
             warning = `Speaker separation failed: ${String((e as Error)?.message ?? e)}`;

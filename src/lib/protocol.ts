@@ -4,8 +4,17 @@ import type { Backend, Dtype } from "./models";
 export interface TranscriptChunk {
   text: string;
   timestamp: [number, number | null];
-  /** 1-based speaker index, assigned by speaker separation. Null if not run. */
+  /**
+   * 1-based speaker index. Null when speaker separation ran but detected no
+   * speech in this chunk; absent entirely when it wasn't run.
+   */
   speaker?: number | null;
+  /**
+   * 0..1 confidence in the `speaker` attribution — the margin between the
+   * top two speakers' active time in this chunk. Low values mean overlapping
+   * or ambiguous speech, not necessarily a wrong answer.
+   */
+  speaker_conf?: number;
 }
 
 export interface TranscriptResult {
@@ -13,12 +22,16 @@ export interface TranscriptResult {
   chunks: TranscriptChunk[];
 }
 
-/** A single speaker turn, as returned by the pyannote segmentation model. */
-export interface SpeakerSegment {
-  id: number;
+/**
+ * A span during which one speaker is active. Spans belonging to *different*
+ * speakers may overlap in time — that's how simultaneous speech is
+ * represented, and distinguishing it from a third speaker is the whole point.
+ */
+export interface SpeakerActivity {
+  /** Speaker index, namespaced across diarization windows. */
+  speaker: number;
   start: number;
   end: number;
-  confidence: number;
 }
 
 // ── UI → Worker ────────────────────────────────────────────────────────────
@@ -73,5 +86,5 @@ export type FromWorker =
   | { type: "transcribe-progress"; jobId: string; progress: number }
   | { type: "result"; jobId: string; result: TranscriptResult }
   | { type: "diarize-progress"; jobId: string; progress: number }
-  | { type: "diarize-result"; jobId: string; segments: SpeakerSegment[] }
+  | { type: "diarize-result"; jobId: string; activity: SpeakerActivity[] }
   | { type: "error"; jobId?: string; message: string };

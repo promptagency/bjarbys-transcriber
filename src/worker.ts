@@ -15,7 +15,7 @@ import type { Backend, Dtype } from "./lib/models";
 import type {
   FileProgress,
   FromWorker,
-  SpeakerSegment,
+  SpeakerActivity,
   ToWorker,
   TranscriptResult,
 } from "./lib/protocol";
@@ -39,13 +39,21 @@ const WINDOW_JUMP_S = CHUNK_LENGTH_S - 2 * STRIDE_LENGTH_S;
 // small enough that there's no need for the dtype/device tiers ASR gets.
 const DIARIZATION_MODEL_ID = "onnx-community/pyannote-segmentation-3.0";
 
-// `Processor`'s public type doesn't declare the PyAnnote-only
-// post_process_speaker_diarization helper — pin the exact shape we use.
+// pyannote 3.x emits a POWERSET, not one class per speaker: each of the 7
+// classes is the *set* of locally-indexed speakers active in that frame.
+//   0 = nobody   1/2/3 = one speaker   4/5/6 = two speaking at once
+// So the class index is NOT a speaker id. Treating it as one (which is what
+// the library's post_process_speaker_diarization helper does) turns silence
+// into a speaker and turns overlapping speech into a phantom extra speaker —
+// measured at 23% of a real two-person interview. Decode to per-speaker
+// activity instead.
+const POWERSET: readonly (readonly number[])[] = [
+  [], [0], [1], [2], [0, 1], [0, 2], [1, 2],
+];
+/** The model can represent at most this many distinct speakers per pass. */
+const MAX_LOCAL_SPEAKERS = 3;
+
 type DiarizationProcessor = Processor & {
-  post_process_speaker_diarization: (
-    logits: unknown,
-    numSamples: number,
-  ) => SpeakerSegment[][];
   readonly sampling_rate: number;
 };
 
@@ -66,6 +74,62 @@ async function ensureDiarizer(): Promise<{
   ]);
   diarizer = { model, processor: processor as DiarizationProcessor };
   return diarizer;
+}
+
+/**
+ * Turn raw frame logits into per-speaker active spans.
+ *
+ * Reads the flat tensor directly rather than via `.tolist()` — an hour of
+ * audio is ~240k frames, and boxing that into nested JS arrays costs far more
+ * memory than the browser has to spare here.
+ */
+function decodeActivity(
+  logitsData: Float32Array,
+  numFrames: number,
+  numClasses: number,
+  durationSec: number,
+  windowStartSec: number,
+  windowIndex: number,
+): SpeakerActivity[] {
+  const secondsPerFrame = numFrames > 0 ? durationSec / numFrames : 0;
+  const out: SpeakerActivity[] = [];
+  // Start frame of each speaker's currently-open span, or -1 when inactive.
+  const openFrom: number[] = new Array(MAX_LOCAL_SPEAKERS).fill(-1);
+
+  const close = (speaker: number, endFrame: number) => {
+    const from = openFrom[speaker];
+    if (from < 0) return;
+    out.push({
+      speaker: windowIndex * MAX_LOCAL_SPEAKERS + speaker,
+      start: windowStartSec + from * secondsPerFrame,
+      end: windowStartSec + endFrame * secondsPerFrame,
+    });
+    openFrom[speaker] = -1;
+  };
+
+  const active: boolean[] = new Array(MAX_LOCAL_SPEAKERS).fill(false);
+  for (let frame = 0; frame < numFrames; frame++) {
+    const offset = frame * numClasses;
+    let bestClass = 0;
+    let bestScore = logitsData[offset];
+    for (let k = 1; k < numClasses; k++) {
+      if (logitsData[offset + k] > bestScore) {
+        bestScore = logitsData[offset + k];
+        bestClass = k;
+      }
+    }
+
+    active.fill(false);
+    for (const speaker of POWERSET[bestClass] ?? []) active[speaker] = true;
+
+    for (let s = 0; s < MAX_LOCAL_SPEAKERS; s++) {
+      if (active[s] && openFrom[s] < 0) openFrom[s] = frame;
+      else if (!active[s] && openFrom[s] >= 0) close(s, frame);
+    }
+  }
+  for (let s = 0; s < MAX_LOCAL_SPEAKERS; s++) close(s, numFrames);
+
+  return out;
 }
 
 function post(msg: FromWorker, transfer: Transferable[] = []): void {
@@ -252,39 +316,38 @@ self.addEventListener("message", async (event: MessageEvent<ToWorker>) => {
         Math.ceil(msg.audio.length / windowSamples),
       );
 
-      // The model has no chunking of its own and crashes on very long audio
-      // (verified empirically), so windows are diarized independently here.
-      // Raw speaker ids are only meaningful *within* a window, so they're
-      // namespaced per window — speaker identity is expected to reset at
-      // window boundaries (no cross-window matching in this scope).
-      const allSegments: SpeakerSegment[] = [];
+      // The model has no chunking of its own and exhausts the browser's WASM
+      // memory on very long audio (verified empirically), so long files are
+      // diarized in windows. Speaker indices only carry meaning within a
+      // single pass, so they're namespaced per window — identity is expected
+      // to reset at a boundary (no cross-window matching in this scope).
+      // Files under the window length take a single pass and have no reset.
+      const activity: SpeakerActivity[] = [];
       for (let w = 0; w < numWindows; w++) {
         const start = w * windowSamples;
         const end = Math.min(msg.audio.length, start + windowSamples);
         const windowAudio = msg.audio.subarray(start, end);
-        const windowStartSec = start / sampleRate;
 
         const inputs = await processor(windowAudio);
         const { logits } = await model(inputs);
-        const [segments] = processor.post_process_speaker_diarization(
-          logits,
-          windowAudio.length,
+        const [, numFrames, numClasses] = logits.dims as number[];
+        activity.push(
+          ...decodeActivity(
+            logits.data as Float32Array,
+            numFrames,
+            numClasses,
+            windowAudio.length / sampleRate,
+            start / sampleRate,
+            w,
+          ),
         );
-        for (const seg of segments) {
-          allSegments.push({
-            id: w * 1000 + seg.id,
-            start: seg.start + windowStartSec,
-            end: seg.end + windowStartSec,
-            confidence: seg.confidence,
-          });
-        }
         post({
           type: "diarize-progress",
           jobId: msg.jobId,
           progress: (w + 1) / numWindows,
         });
       }
-      post({ type: "diarize-result", jobId: msg.jobId, segments: allSegments });
+      post({ type: "diarize-result", jobId: msg.jobId, activity });
     } catch (err) {
       post({
         type: "error",

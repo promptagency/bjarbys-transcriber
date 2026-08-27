@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Backend, Dtype } from "../lib/models";
 import type {
   FromWorker,
-  SpeakerSegment,
+  SpeakerActivity,
   TranscriptResult,
 } from "../lib/protocol";
 
@@ -49,7 +49,7 @@ interface Pending<T> {
 export function useWhisper() {
   const workerRef = useRef<Worker | null>(null);
   const jobs = useRef(new Map<string, Pending<TranscriptResult>>());
-  const diarizeJobs = useRef(new Map<string, Pending<SpeakerSegment[]>>());
+  const diarizeJobs = useRef(new Map<string, Pending<SpeakerActivity[]>>());
   const load = useRef<Pending<void> | null>(null);
   const [state, setState] = useState<ModelState>(INITIAL);
 
@@ -138,7 +138,7 @@ export function useWhisper() {
         break;
       case "diarize-result": {
         const p = diarizeJobs.current.get(msg.jobId);
-        p?.resolve(msg.segments);
+        p?.resolve(msg.activity);
         diarizeJobs.current.delete(msg.jobId);
         break;
       }
@@ -214,7 +214,7 @@ export function useWhisper() {
     ) => {
       const worker = workerRef.current;
       if (!worker) return Promise.reject(new Error("Worker not ready"));
-      return new Promise<SpeakerSegment[]>((resolve, reject) => {
+      return new Promise<SpeakerActivity[]>((resolve, reject) => {
         diarizeJobs.current.set(jobId, { resolve, reject, onProgress });
         worker.postMessage({ type: "diarize", jobId, audio }, [audio.buffer]);
       });
