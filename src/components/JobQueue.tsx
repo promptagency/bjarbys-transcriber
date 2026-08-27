@@ -152,7 +152,7 @@ export function JobQueue({
                       {job.result.text.trim().slice(0, 80) || "(no speech detected)"}
                     </p>
                   )}
-                  {job.status === "done" && job.warning && (
+                  {job.warning && (
                     <p className="truncate text-xs text-amber-300">
                       {job.warning}
                     </p>

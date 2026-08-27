@@ -186,6 +186,12 @@ export function ProcessingHero({
                 </div>
               </div>
 
+              {activeJob.warning && (
+                <p className="mt-3 text-sm text-amber-300">
+                  {activeJob.warning}
+                </p>
+              )}
+
               <div className="mt-4">
                 <div className="mb-1.5 flex justify-between text-xs text-slate-400">
                   <span>Queue progress</span>

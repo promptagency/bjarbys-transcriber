@@ -12,7 +12,14 @@ import {
   Zap,
 } from "lucide-react";
 import { WHISPER_SAMPLE_RATE, decodeToPCM } from "./lib/audio";
-import { MAX_DIARIZE_MINUTES, MAX_DIARIZE_SECONDS, assignSpeakers } from "./lib/diarize";
+import {
+  DIARIZE_WINDOW_MINUTES,
+  DIARIZE_WINDOW_SECONDS,
+  MAX_DIARIZE_MINUTES,
+  MAX_DIARIZE_SECONDS,
+  assignSpeakers,
+  smoothSpeakers,
+} from "./lib/diarize";
 import {
   type Backend,
   type Family,
@@ -220,14 +227,20 @@ export default function App() {
         if (settings.diarizeSpeakers && tooLongToDiarize) {
           warning = `Speaker separation skipped: recording is ${Math.round(durationSec / 60)} min, longer than the ${MAX_DIARIZE_MINUTES} min limit.`;
         } else if (diarizeAudio) {
-          updateJob(job.id, { status: "diarizing", stageProgress: 0 });
+          const numDiarizeWindows = Math.ceil(
+            durationSec / DIARIZE_WINDOW_SECONDS,
+          );
+          if (numDiarizeWindows > 1) {
+            warning = `Long recording: speaker separation is running in ${numDiarizeWindows} passes of up to ${DIARIZE_WINDOW_MINUTES} min each — speaker labels may reset between passes.`;
+          }
+          updateJob(job.id, { status: "diarizing", stageProgress: 0, warning });
           try {
             const segments = await diarize(job.id, diarizeAudio, (p) =>
               updateJob(job.id, { stageProgress: p }),
             );
             finalResult = {
               ...result,
-              chunks: assignSpeakers(result.chunks, segments),
+              chunks: smoothSpeakers(assignSpeakers(result.chunks, segments)),
             };
           } catch (e) {
             warning = `Speaker separation failed: ${String((e as Error)?.message ?? e)}`;
