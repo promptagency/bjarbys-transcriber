@@ -42,12 +42,25 @@ function StatusCell({ job }: { job: Job }) {
       );
     case "transcribing":
       return (
+        <div className="w-40">
+          <ProgressBar value={job.stageProgress} />
+          <span className="mt-1 block text-xs text-slate-400">
+            Transcribing… {Math.round(job.stageProgress * 100)}%
+          </span>
+        </div>
+      );
+    case "diarizing":
+      return (
         <Badge tone="brand">
-          <Spinner className="size-3" /> Transcribing
+          <Spinner className="size-3" /> Separating speakers
         </Badge>
       );
     case "done":
-      return (
+      return job.warning ? (
+        <Badge tone="amber">
+          <TriangleAlert className="size-3" /> Done
+        </Badge>
+      ) : (
         <Badge tone="green">
           <Check className="size-3" /> Done
         </Badge>
@@ -134,6 +147,11 @@ export function JobQueue({
                   {job.status === "done" && job.result && (
                     <p className="truncate text-xs text-slate-500">
                       {job.result.text.trim().slice(0, 80) || "(no speech detected)"}
+                    </p>
+                  )}
+                  {job.status === "done" && job.warning && (
+                    <p className="truncate text-xs text-amber-300">
+                      {job.warning}
                     </p>
                   )}
                 </div>

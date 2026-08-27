@@ -1,6 +1,14 @@
 // Merge pyannote speaker-turn segments onto Whisper's timestamped chunks.
 import type { SpeakerSegment, TranscriptChunk } from "./protocol";
 
+// The diarization model processes the whole recording in a single pass (no
+// internal chunking, unlike Whisper), so very long audio can exhaust the
+// browser's WASM runtime. Verified empirically: 60 min succeeds, 67+ min
+// reliably crashes. Capped well below that, with margin for lower-memory
+// devices.
+export const MAX_DIARIZE_MINUTES = 45;
+export const MAX_DIARIZE_SECONDS = MAX_DIARIZE_MINUTES * 60;
+
 /**
  * Assign a 1-based speaker index to each chunk, picking whichever segment
  * overlaps it the most. The model's raw segment ids are small but

@@ -43,6 +43,7 @@ const INITIAL: ModelState = {
 interface Pending<T> {
   resolve: (value: T) => void;
   reject: (err: Error) => void;
+  onProgress?: (progress: number) => void;
 }
 
 export function useWhisper() {
@@ -129,6 +130,9 @@ export function useWhisper() {
         jobs.current.delete(msg.jobId);
         break;
       }
+      case "transcribe-progress":
+        jobs.current.get(msg.jobId)?.onProgress?.(msg.progress);
+        break;
       case "diarize-result": {
         const p = diarizeJobs.current.get(msg.jobId);
         p?.resolve(msg.segments);
@@ -178,11 +182,12 @@ export function useWhisper() {
       jobId: string,
       audio: Float32Array,
       opts: { language: string | null; task: "transcribe" | "translate" },
+      onProgress?: (progress: number) => void,
     ) => {
       const worker = workerRef.current;
       if (!worker) return Promise.reject(new Error("Worker not ready"));
       return new Promise<TranscriptResult>((resolve, reject) => {
-        jobs.current.set(jobId, { resolve, reject });
+        jobs.current.set(jobId, { resolve, reject, onProgress });
         worker.postMessage(
           {
             type: "transcribe",

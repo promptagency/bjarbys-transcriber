@@ -4,9 +4,11 @@ import {
   env,
   AutoModelForAudioFrameClassification,
   AutoProcessor,
+  WhisperTextStreamer,
   type AutomaticSpeechRecognitionPipeline,
   type PreTrainedModel,
   type Processor,
+  type WhisperTokenizer,
 } from "@huggingface/transformers";
 import type { Backend, Dtype } from "./lib/models";
 import type {
@@ -22,6 +24,13 @@ env.allowLocalModels = false;
 
 let pipe: AutomaticSpeechRecognitionPipeline | null = null;
 let loadedKey = "";
+
+// How long audio is chunked (see the `transcribe` handler below). Whisper
+// processes each window independently, so estimating whole-file progress
+// needs to know how far each window advances into the audio.
+const CHUNK_LENGTH_S = 30;
+const STRIDE_LENGTH_S = 5;
+const WINDOW_JUMP_S = CHUNK_LENGTH_S - 2 * STRIDE_LENGTH_S;
 
 // ── Speaker separation (pyannote segmentation-3.0) ──────────────────────────
 // A tiny (~1.5 MB), separate model used only to detect *who* is speaking when.
@@ -69,6 +78,29 @@ function keyOf(modelId: string, dtype: Dtype, device: Backend): string {
 // CPU-friendly one (q4f16/fp16 don't belong on WASM; q8 is the safe default).
 function wasmDtypeFor(dtype: Dtype): Dtype {
   return dtype === "q4f16" || dtype === "fp16" ? "q8" : dtype;
+}
+
+// WhisperTextStreamer reports timestamps *within* the current 30s window
+// (they reset to ~0 at the start of each window), not whole-file position.
+// A timestamp dropping instead of rising is our signal that a new window
+// has started, which we use to reconstruct an approximate global position.
+function makeProgressReporter(
+  jobId: string,
+  durationSec: number,
+): (localSec: number) => void {
+  let windowIndex = 0;
+  let lastLocal = 0;
+  return (localSec: number) => {
+    if (localSec + 0.5 < lastLocal) windowIndex += 1;
+    lastLocal = localSec;
+    const globalSec = windowIndex * WINDOW_JUMP_S + localSec;
+    const progress = durationSec > 0 ? globalSec / durationSec : 0;
+    post({
+      type: "transcribe-progress",
+      jobId,
+      progress: Math.min(0.99, Math.max(0, progress)),
+    });
+  };
 }
 
 // Cast away transformers.js's huge pipeline() overload union (TS2590) by
@@ -174,10 +206,20 @@ self.addEventListener("message", async (event: MessageEvent<ToWorker>) => {
       if (!pipe) throw new Error("Model is not loaded yet.");
       post({ type: "transcribe-start", jobId: msg.jobId });
 
+      const samplingRate =
+        pipe.processor.feature_extractor?.config.sampling_rate ?? 16000;
+      const durationSec = msg.audio.length / samplingRate;
+      const reportProgress = makeProgressReporter(msg.jobId, durationSec);
+      const streamer = new WhisperTextStreamer(
+        pipe.tokenizer as WhisperTokenizer,
+        { on_chunk_start: reportProgress, on_chunk_end: reportProgress },
+      );
+
       const output = (await pipe(msg.audio, {
-        chunk_length_s: 30,
-        stride_length_s: 5,
+        chunk_length_s: CHUNK_LENGTH_S,
+        stride_length_s: STRIDE_LENGTH_S,
         return_timestamps: true,
+        streamer,
         ...(msg.language
           ? { language: msg.language, task: msg.task }
           : {}),

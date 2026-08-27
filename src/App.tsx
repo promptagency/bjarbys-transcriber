@@ -11,8 +11,8 @@ import {
   Sparkles,
   Zap,
 } from "lucide-react";
-import { decodeToPCM } from "./lib/audio";
-import { assignSpeakers } from "./lib/diarize";
+import { WHISPER_SAMPLE_RATE, decodeToPCM } from "./lib/audio";
+import { MAX_DIARIZE_MINUTES, MAX_DIARIZE_SECONDS, assignSpeakers } from "./lib/diarize";
 import {
   type Backend,
   type Family,
@@ -186,37 +186,53 @@ export default function App() {
         updateJob(job.id, {
           status: job.source === "podcast" ? "fetching" : "decoding",
           error: null,
+          warning: null,
           stageProgress: 0,
         });
         const audio = await job.getAudio((p) =>
           updateJob(job.id, { stageProgress: p }),
         );
 
-        updateJob(job.id, { status: "transcribing" });
+        updateJob(job.id, { status: "transcribing", stageProgress: 0 });
         const loadedId = state.modelId ?? settings.modelId;
         const englishOnly = isEnglishOnly(loadedId);
+        // The diarization model has no internal chunking (unlike Whisper) and
+        // crashes on very long audio in-browser — skip it above a safe length
+        // rather than attempt and silently fail.
+        const durationSec = audio.length / WHISPER_SAMPLE_RATE;
+        const tooLongToDiarize = durationSec > MAX_DIARIZE_SECONDS;
+        const wantsDiarize = settings.diarizeSpeakers && !tooLongToDiarize;
         // A separate model needs its own copy of the audio — transcribe()
         // transfers (detaches) the buffer it's given.
-        const diarizeAudio = settings.diarizeSpeakers ? audio.slice() : null;
-        const result = await transcribe(job.id, audio, {
-          language: englishOnly ? null : settings.language,
-          task: englishOnly ? "transcribe" : settings.task,
-        });
+        const diarizeAudio = wantsDiarize ? audio.slice() : null;
+        const result = await transcribe(
+          job.id,
+          audio,
+          {
+            language: englishOnly ? null : settings.language,
+            task: englishOnly ? "transcribe" : settings.task,
+          },
+          (p) => updateJob(job.id, { stageProgress: p }),
+        );
 
         let finalResult = result;
-        if (diarizeAudio) {
+        let warning: string | null = null;
+        if (settings.diarizeSpeakers && tooLongToDiarize) {
+          warning = `Speaker separation skipped: recording is ${Math.round(durationSec / 60)} min, longer than the ${MAX_DIARIZE_MINUTES} min limit.`;
+        } else if (diarizeAudio) {
+          updateJob(job.id, { status: "diarizing" });
           try {
             const segments = await diarize(job.id, diarizeAudio);
             finalResult = {
               ...result,
               chunks: assignSpeakers(result.chunks, segments),
             };
-          } catch {
-            // Speaker separation is best-effort — keep the plain transcript.
+          } catch (e) {
+            warning = `Speaker separation failed: ${String((e as Error)?.message ?? e)}`;
           }
         }
 
-        updateJob(job.id, { status: "done", result: finalResult });
+        updateJob(job.id, { status: "done", result: finalResult, warning });
         if (settings.autoDownload)
           downloadJob(job, finalResult, settings.exportFormat);
       } catch (e) {
