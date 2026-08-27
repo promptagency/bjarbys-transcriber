@@ -133,6 +133,9 @@ export function useWhisper() {
       case "transcribe-progress":
         jobs.current.get(msg.jobId)?.onProgress?.(msg.progress);
         break;
+      case "diarize-progress":
+        diarizeJobs.current.get(msg.jobId)?.onProgress?.(msg.progress);
+        break;
       case "diarize-result": {
         const p = diarizeJobs.current.get(msg.jobId);
         p?.resolve(msg.segments);
@@ -203,14 +206,21 @@ export function useWhisper() {
     [],
   );
 
-  const diarize = useCallback((jobId: string, audio: Float32Array) => {
-    const worker = workerRef.current;
-    if (!worker) return Promise.reject(new Error("Worker not ready"));
-    return new Promise<SpeakerSegment[]>((resolve, reject) => {
-      diarizeJobs.current.set(jobId, { resolve, reject });
-      worker.postMessage({ type: "diarize", jobId, audio }, [audio.buffer]);
-    });
-  }, []);
+  const diarize = useCallback(
+    (
+      jobId: string,
+      audio: Float32Array,
+      onProgress?: (progress: number) => void,
+    ) => {
+      const worker = workerRef.current;
+      if (!worker) return Promise.reject(new Error("Worker not ready"));
+      return new Promise<SpeakerSegment[]>((resolve, reject) => {
+        diarizeJobs.current.set(jobId, { resolve, reject, onProgress });
+        worker.postMessage({ type: "diarize", jobId, audio }, [audio.buffer]);
+      });
+    },
+    [],
+  );
 
   return { state, loadModel, transcribe, diarize };
 }

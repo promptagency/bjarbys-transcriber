@@ -51,9 +51,12 @@ function StatusCell({ job }: { job: Job }) {
       );
     case "diarizing":
       return (
-        <Badge tone="brand">
-          <Spinner className="size-3" /> Separating speakers
-        </Badge>
+        <div className="w-40">
+          <ProgressBar value={job.stageProgress} />
+          <span className="mt-1 block text-xs text-slate-400">
+            Separating speakers… {Math.round(job.stageProgress * 100)}%
+          </span>
+        </div>
       );
     case "done":
       return job.warning ? (

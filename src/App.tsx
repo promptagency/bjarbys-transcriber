@@ -220,9 +220,11 @@ export default function App() {
         if (settings.diarizeSpeakers && tooLongToDiarize) {
           warning = `Speaker separation skipped: recording is ${Math.round(durationSec / 60)} min, longer than the ${MAX_DIARIZE_MINUTES} min limit.`;
         } else if (diarizeAudio) {
-          updateJob(job.id, { status: "diarizing" });
+          updateJob(job.id, { status: "diarizing", stageProgress: 0 });
           try {
-            const segments = await diarize(job.id, diarizeAudio);
+            const segments = await diarize(job.id, diarizeAudio, (p) =>
+              updateJob(job.id, { stageProgress: p }),
+            );
             finalResult = {
               ...result,
               chunks: assignSpeakers(result.chunks, segments),

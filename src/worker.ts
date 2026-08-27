@@ -10,6 +10,7 @@ import {
   type Processor,
   type WhisperTokenizer,
 } from "@huggingface/transformers";
+import { DIARIZE_WINDOW_SECONDS } from "./lib/diarize";
 import type { Backend, Dtype } from "./lib/models";
 import type {
   FileProgress,
@@ -45,6 +46,7 @@ type DiarizationProcessor = Processor & {
     logits: unknown,
     numSamples: number,
   ) => SpeakerSegment[][];
+  readonly sampling_rate: number;
 };
 
 let diarizer: { model: PreTrainedModel; processor: DiarizationProcessor } | null =
@@ -243,13 +245,46 @@ self.addEventListener("message", async (event: MessageEvent<ToWorker>) => {
   if (msg.type === "diarize") {
     try {
       const { model, processor } = await ensureDiarizer();
-      const inputs = await processor(msg.audio);
-      const { logits } = await model(inputs);
-      const [segments] = processor.post_process_speaker_diarization(
-        logits,
-        msg.audio.length,
+      const sampleRate = processor.sampling_rate;
+      const windowSamples = Math.round(DIARIZE_WINDOW_SECONDS * sampleRate);
+      const numWindows = Math.max(
+        1,
+        Math.ceil(msg.audio.length / windowSamples),
       );
-      post({ type: "diarize-result", jobId: msg.jobId, segments });
+
+      // The model has no chunking of its own and crashes on very long audio
+      // (verified empirically), so windows are diarized independently here.
+      // Raw speaker ids are only meaningful *within* a window, so they're
+      // namespaced per window — speaker identity is expected to reset at
+      // window boundaries (no cross-window matching in this scope).
+      const allSegments: SpeakerSegment[] = [];
+      for (let w = 0; w < numWindows; w++) {
+        const start = w * windowSamples;
+        const end = Math.min(msg.audio.length, start + windowSamples);
+        const windowAudio = msg.audio.subarray(start, end);
+        const windowStartSec = start / sampleRate;
+
+        const inputs = await processor(windowAudio);
+        const { logits } = await model(inputs);
+        const [segments] = processor.post_process_speaker_diarization(
+          logits,
+          windowAudio.length,
+        );
+        for (const seg of segments) {
+          allSegments.push({
+            id: w * 1000 + seg.id,
+            start: seg.start + windowStartSec,
+            end: seg.end + windowStartSec,
+            confidence: seg.confidence,
+          });
+        }
+        post({
+          type: "diarize-progress",
+          jobId: msg.jobId,
+          progress: (w + 1) / numWindows,
+        });
+      }
+      post({ type: "diarize-result", jobId: msg.jobId, segments: allSegments });
     } catch (err) {
       post({
         type: "error",

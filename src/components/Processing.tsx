@@ -140,6 +140,11 @@ export function ProcessingHero({
           <ProgressRing value={state.overall} label="download" />
         ) : activeJob?.status === "transcribing" ? (
           <ProgressRing value={activeJob.stageProgress} label="transcribing" />
+        ) : activeJob?.status === "diarizing" ? (
+          <ProgressRing
+            value={activeJob.stageProgress}
+            label="speakers"
+          />
         ) : (
           <ProgressRing value={0} indeterminate label="" />
         )}
