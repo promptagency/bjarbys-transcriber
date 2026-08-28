@@ -10,7 +10,7 @@ import {
   type Processor,
   type WhisperTokenizer,
 } from "@huggingface/transformers";
-import { DIARIZE_WINDOW_SECONDS, decodeActivity } from "./lib/diarize";
+import { decodeActivity, planWindows, stitchWindows } from "./lib/diarize";
 import type { Backend, Dtype } from "./lib/models";
 import type {
   FileProgress,
@@ -240,44 +240,50 @@ self.addEventListener("message", async (event: MessageEvent<ToWorker>) => {
     try {
       const { model, processor } = await ensureDiarizer();
       const sampleRate = processor.sampling_rate;
-      const windowSamples = Math.round(DIARIZE_WINDOW_SECONDS * sampleRate);
-      const numWindows = Math.max(
-        1,
-        Math.ceil(msg.audio.length / windowSamples),
-      );
 
       // The model has no chunking of its own and exhausts the browser's WASM
       // memory on very long audio (verified empirically), so long files are
-      // diarized in windows. Speaker indices only carry meaning within a
-      // single pass, so they're namespaced per window — identity is expected
-      // to reset at a boundary (no cross-window matching in this scope).
-      // Files under the window length take a single pass and have no reset.
-      const activity: SpeakerActivity[] = [];
-      for (let w = 0; w < numWindows; w++) {
-        const start = w * windowSamples;
-        const end = Math.min(msg.audio.length, start + windowSamples);
+      // diarized in overlapping windows. Speaker indices only carry meaning
+      // within a single pass, so stitchWindows() matches them across each seam
+      // using the overlap. Files under the window length take a single pass.
+      const windows = planWindows(msg.audio.length / sampleRate);
+      const parts: {
+        window: (typeof windows)[number];
+        activity: SpeakerActivity[];
+      }[] = [];
+      for (const window of windows) {
+        const start = Math.round(window.startSec * sampleRate);
+        const end = Math.min(
+          msg.audio.length,
+          Math.round(window.endSec * sampleRate),
+        );
         const windowAudio = msg.audio.subarray(start, end);
 
         const inputs = await processor(windowAudio);
         const { logits } = await model(inputs);
         const [, numFrames, numClasses] = logits.dims as number[];
-        activity.push(
-          ...decodeActivity(
+        parts.push({
+          window,
+          activity: decodeActivity(
             logits.data as Float32Array,
             numFrames,
             numClasses,
             windowAudio.length / sampleRate,
             start / sampleRate,
-            w,
+            window.index,
           ),
-        );
+        });
         post({
           type: "diarize-progress",
           jobId: msg.jobId,
-          progress: (w + 1) / numWindows,
+          progress: (window.index + 1) / windows.length,
         });
       }
-      post({ type: "diarize-result", jobId: msg.jobId, activity });
+      post({
+        type: "diarize-result",
+        jobId: msg.jobId,
+        activity: stitchWindows(parts),
+      });
     } catch (err) {
       post({
         type: "error",

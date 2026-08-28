@@ -20,6 +20,8 @@ import {
 } from "@huggingface/transformers";
 import {
   decodeActivity,
+  planWindows,
+  stitchWindows,
   assignSpeakers,
   smoothSpeakers,
   LOW_CONFIDENCE,
@@ -91,19 +93,20 @@ const processor = await AutoProcessor.from_pretrained(
   "onnx-community/pyannote-segmentation-3.0");
 const sampleRate = processor.sampling_rate;
 
-const windowSamples = Math.round(windowMinutes * 60 * sampleRate);
-const numWindows = Math.max(1, Math.ceil(audio.length / windowSamples));
-const boundaries = [];
-const activity = [];
-for (let w = 0; w < numWindows; w++) {
-  const s = w * windowSamples;
-  const e = Math.min(audio.length, s + windowSamples);
-  if (w > 0) boundaries.push(s / sampleRate);
+const windows = planWindows(audio.length / sampleRate, windowMinutes * 60);
+const boundaries = windows.slice(1).map((w, i) => (w.startSec + windows[i].endSec) / 2);
+const parts = [];
+for (const window of windows) {
+  const s = Math.round(window.startSec * sampleRate);
+  const e = Math.min(audio.length, Math.round(window.endSec * sampleRate));
   const { logits } = await model(await processor(audio.subarray(s, e)));
   const [, numFrames, numClasses] = logits.dims;
-  activity.push(...decodeActivity(
-    logits.data, numFrames, numClasses, (e - s) / sampleRate, s / sampleRate, w));
+  parts.push({ window, activity: decodeActivity(
+    logits.data, numFrames, numClasses, (e - s) / sampleRate, s / sampleRate, window.index) });
 }
+const activity = stitchWindows(parts);
+const numWindows = windows.length;
+
 // SMOOTH=0 bypasses smoothSpeakers, to measure what it is actually worth.
 const smoothing = process.env.SMOOTH !== "0";
 const assigned = assignSpeakers(chunks, activity);

@@ -11,6 +11,161 @@ import type { SpeakerActivity, TranscriptChunk } from "./protocol";
 export const DIARIZE_WINDOW_MINUTES = 50;
 export const DIARIZE_WINDOW_SECONDS = DIARIZE_WINDOW_MINUTES * 60;
 
+/**
+ * How much consecutive windows overlap.
+ *
+ * The overlap exists purely to match speakers across the seam: if two labels
+ * describe the same person, they are active at the same moments. Two minutes
+ * is enough for both people to say something in most conversations, and costs
+ * ~4% extra inference on a 50-minute window.
+ */
+export const DIARIZE_OVERLAP_SECONDS = 120;
+
+/** A speaker pairing needs at least this much coincident speech to be believed. */
+const MIN_MATCH_SECONDS = 1;
+
+export interface DiarizationWindow {
+  index: number;
+  startSec: number;
+  endSec: number;
+}
+
+/** Split a recording into overlapping windows the model can handle. */
+export function planWindows(
+  durationSec: number,
+  windowSec = DIARIZE_WINDOW_SECONDS,
+  overlapSec = DIARIZE_OVERLAP_SECONDS,
+): DiarizationWindow[] {
+  if (durationSec <= windowSec) {
+    return [{ index: 0, startSec: 0, endSec: durationSec }];
+  }
+  const advance = Math.max(1, windowSec - overlapSec);
+  const windows: DiarizationWindow[] = [];
+  for (let start = 0; start < durationSec; start += advance) {
+    const endSec = Math.min(durationSec, start + windowSec);
+    windows.push({ index: windows.length, startSec: start, endSec });
+    if (endSec >= durationSec) break;
+  }
+  return windows;
+}
+
+/** Total time both span lists are simultaneously active, within [from, to]. */
+function coincidentSeconds(
+  a: SpeakerActivity[],
+  b: SpeakerActivity[],
+  from: number,
+  to: number,
+): number {
+  let total = 0;
+  for (const x of a) {
+    const xs = Math.max(x.start, from);
+    const xe = Math.min(x.end, to);
+    if (xe <= xs) continue;
+    for (const y of b) {
+      const s = Math.max(xs, y.start);
+      const e = Math.min(xe, y.end);
+      if (e > s) total += e - s;
+    }
+  }
+  return total;
+}
+
+/**
+ * Join per-window diarization into one timeline with consistent speaker ids.
+ *
+ * The model's speaker indices are only meaningful within a single pass, so
+ * without this a long recording reports the same person under a new label in
+ * every window. Windows are matched through their overlap by how much their
+ * speakers talk at the same moments, which works because segmentation *within*
+ * a window is reliable — measured as accurate windowed as not.
+ *
+ * Each window contributes spans only up to the middle of its overlap with the
+ * next, so no stretch of audio is counted twice.
+ */
+export function stitchWindows(
+  parts: { window: DiarizationWindow; activity: SpeakerActivity[] }[],
+): SpeakerActivity[] {
+  if (parts.length === 0) return [];
+  if (parts.length === 1) return parts[0].activity;
+
+  const speakersOf = (activity: SpeakerActivity[]) => {
+    const map = new Map<number, SpeakerActivity[]>();
+    for (const s of activity) {
+      const list = map.get(s.speaker);
+      if (list) list.push(s);
+      else map.set(s.speaker, [s]);
+    }
+    return map;
+  };
+
+  // Canonical id per (window, local speaker), built left to right.
+  const canonical = new Map<string, number>();
+  let nextCanonical = 0;
+  for (const id of speakersOf(parts[0].activity).keys()) {
+    canonical.set(`0|${id}`, nextCanonical++);
+  }
+
+  for (let i = 1; i < parts.length; i++) {
+    const prev = parts[i - 1];
+    const cur = parts[i];
+    const from = cur.window.startSec;
+    const to = prev.window.endSec;
+
+    const prevSpeakers = speakersOf(prev.activity);
+    const curSpeakers = speakersOf(cur.activity);
+
+    // Score every prev/current pairing by how much they overlap in time.
+    const scores: { prev: number; cur: number; score: number }[] = [];
+    for (const [p, pSpans] of prevSpeakers) {
+      for (const [c, cSpans] of curSpeakers) {
+        const score = coincidentSeconds(pSpans, cSpans, from, to);
+        if (score >= MIN_MATCH_SECONDS) scores.push({ prev: p, cur: c, score });
+      }
+    }
+    scores.sort((a, b) => b.score - a.score);
+
+    // Greedy is sufficient: at most three speakers exist on either side.
+    const takenPrev = new Set<number>();
+    const takenCur = new Set<number>();
+    for (const { prev: p, cur: c } of scores) {
+      if (takenPrev.has(p) || takenCur.has(c)) continue;
+      const inherited = canonical.get(`${i - 1}|${p}`);
+      if (inherited === undefined) continue;
+      canonical.set(`${i}|${c}`, inherited);
+      takenPrev.add(p);
+      takenCur.add(c);
+    }
+    // Anyone who didn't speak during the overlap is genuinely unknown — give
+    // them a new label rather than guessing at a pairing.
+    for (const c of curSpeakers.keys()) {
+      if (!canonical.has(`${i}|${c}`)) canonical.set(`${i}|${c}`, nextCanonical++);
+    }
+  }
+
+  const out: SpeakerActivity[] = [];
+  for (let i = 0; i < parts.length; i++) {
+    const { window, activity } = parts[i];
+    // Own the audio up to the midpoint of each overlap, so no second is
+    // represented by two windows at once.
+    const ownStart =
+      i === 0 ? window.startSec : (window.startSec + parts[i - 1].window.endSec) / 2;
+    const ownEnd =
+      i === parts.length - 1
+        ? window.endSec
+        : (parts[i + 1].window.startSec + window.endSec) / 2;
+
+    for (const span of activity) {
+      const start = Math.max(span.start, ownStart);
+      const end = Math.min(span.end, ownEnd);
+      if (end <= start) continue;
+      const speaker = canonical.get(`${i}|${span.speaker}`);
+      if (speaker === undefined) continue;
+      out.push({ speaker, start, end });
+    }
+  }
+  return out;
+}
+
 // With windowing, duration no longer risks a crash — this is just a sanity
 // ceiling against pathological uploads (each window costs ~10-15s to
 // diarize, so even this takes a couple of minutes).

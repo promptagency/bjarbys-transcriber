@@ -96,12 +96,13 @@ That figure is for a clean recording of two people. Known limits:
 
 - **At most 3 speakers.** The model reports speaker activity as a *powerset*
   over three local speakers, so a fourth voice cannot be represented at all.
-- **Identity resets past ~50 minutes.** Longer recordings are diarized in
-  windows, because a single pass exhausts the browser's WASM memory beyond
-  roughly an hour, and the model carries no speaker identity across windows.
-  Below that threshold it's one pass and identity is stable throughout.
-  Attribution stays just as accurate when windowed — it's only the *labels*
-  that restart, so a long file shows more speakers than were in the room.
+- **Long recordings are stitched, not seamless.** Past ~50 minutes a single
+  pass exhausts the browser's WASM memory, so audio is diarized in windows
+  that overlap by two minutes, and speakers are matched across each seam by
+  who is talking at the same moments. A 67-minute two-person interview comes
+  out as 2 speakers. But someone who stays silent through an entire overlap
+  cannot be matched and is given a fresh label rather than a guessed one, so
+  very long or very lopsided recordings may still show extra speakers.
 - **Short interjections are the main error.** 43% of the wrong words sit in
   utterances under 1.5 s — typically a backchannel ("Just det.") spoken over
   someone still talking. A chunk's audio is dominated by the other speaker
