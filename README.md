@@ -107,12 +107,44 @@ That figure is for a clean recording of two people. Known limits:
   utterances under 1.5 s — typically a backchannel ("Just det.") spoken over
   someone still talking. A chunk's audio is dominated by the other speaker
   even though the transcribed words are the interjector's, so time-weighted
-  attribution gets it wrong, sometimes confidently. Word-level ASR timestamps
-  would be the fix.
+  attribution gets it wrong, sometimes confidently. See
+  [Why not word-level timestamps?](#why-not-word-level-timestamps) — the
+  obvious fix is currently unavailable for Swedish.
 - **`speaker_conf`** is the margin between the top two speakers' talk time
   within a chunk. Low values mean overlapping speech rather than a wrong
   answer; `speaker` is `null` where no speech was detected at all. About half
   the errors above are already flagged this way.
+
+### Why not word-level timestamps?
+
+The natural fix for the interjection errors above is to attribute *words*
+rather than phrase chunks: Whisper's `return_timestamps: 'word'` gives spans
+with a median length of about 0.26 s, against ~4.5 s for phrase chunks, which
+is easily fine enough to catch a half-second "Just det." This was investigated
+and deliberately not implemented.
+
+Word timestamps are derived from the decoder's **cross-attentions**, and the
+ONNX models this app loads are not exported with them:
+
+```
+Model outputs must contain cross attentions to extract timestamps.
+This is most likely because the model was not exported with `output_attentions=True`.
+```
+
+Having `alignment_heads` in `generation_config.json` is not sufficient — all
+the models here declare it and still fail. Hugging Face publishes separately
+exported `_timestamped` variants that do work (`whisper-base_timestamped`,
+`whisper-tiny.en_timestamped`, `whisper-large-v3-turbo_timestamped`), but:
+
+- **There is no KB-Whisper `_timestamped` variant**, so the feature would be
+  unavailable for exactly the Swedish recordings this app is built for.
+- They are separate repos, so switching would mean re-downloading a model the
+  user already has.
+
+Making it work for Swedish would mean exporting KB-Whisper with
+`output_attentions=True` and hosting that build — offline work, and an ongoing
+maintenance commitment. Until then, `speaker_conf` already flags roughly half
+of these errors, which is the cheaper mitigation.
 
 ### Evaluating speaker separation
 
