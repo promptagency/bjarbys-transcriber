@@ -131,20 +131,28 @@ Model outputs must contain cross attentions to extract timestamps.
 This is most likely because the model was not exported with `output_attentions=True`.
 ```
 
-Having `alignment_heads` in `generation_config.json` is not sufficient — all
-the models here declare it and still fail. Hugging Face publishes separately
-exported `_timestamped` variants that do work (`whisper-base_timestamped`,
-`whisper-tiny.en_timestamped`, `whisper-large-v3-turbo_timestamped`), but:
+Having `alignment_heads` in `generation_config.json` is not sufficient — every
+model here declares it and still fails. What the export needs is the
+cross-attentions themselves, and each candidate was checked:
 
-- **There is no KB-Whisper `_timestamped` variant**, so the feature would be
-  unavailable for exactly the Swedish recordings this app is built for.
-- They are separate repos, so switching would mean re-downloading a model the
-  user already has.
+| build | word timestamps |
+|---|---|
+| `KBLab/kb-whisper-*` | ✗ no cross-attentions |
+| `onnx-community/kb-whisper-*-ONNX` | ✗ no cross-attentions |
+| `pappa1337/kb-whisper-{tiny,small}-onnx-words` | ✗ won't load — transformers.js reports `Unsupported model type: whisper` |
+| `onnx-community/whisper-*_timestamped` (13 of them) | ✓ works, verified |
 
-Making it work for Swedish would mean exporting KB-Whisper with
-`output_attentions=True` and hosting that build — offline work, and an ongoing
-maintenance commitment. Until then, `speaker_conf` already flags roughly half
-of these errors, which is the cheaper mitigation.
+So the blocker is specific: **no working KB-Whisper build exposes
+cross-attentions.** The `_timestamped` variants that do work include
+multilingual ones, and those *can* transcribe Swedish — this is a real option,
+not an impossibility. It just means giving up KB-Whisper's Swedish accuracy for
+generic Whisper, plus re-downloading a different model. Whether better speaker
+attribution outweighs worse transcription has not been measured.
+
+The clean fix is exporting KB-Whisper with `output_attentions=True` and hosting
+that build — offline work, and an ongoing maintenance commitment. Until then,
+`speaker_conf` already flags roughly half of these errors, which is the cheaper
+mitigation.
 
 ### Evaluating speaker separation
 
