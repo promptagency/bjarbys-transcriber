@@ -109,7 +109,7 @@ That figure is for a clean recording of two people. Known limits:
   even though the transcribed words are the interjector's, so time-weighted
   attribution gets it wrong, sometimes confidently. See
   [Why not word-level timestamps?](#why-not-word-level-timestamps) — the
-  obvious fix is currently unavailable for Swedish.
+  obvious fix was measured and makes attribution worse, not better.
 - **`speaker_conf`** is the margin between the top two speakers' talk time
   within a chunk. Low values mean overlapping speech rather than a wrong
   answer; `speaker` is `null` where no speech was detected at all. About half
@@ -117,11 +117,35 @@ That figure is for a clean recording of two people. Known limits:
 
 ### Why not word-level timestamps?
 
-The natural fix for the interjection errors above is to attribute *words*
-rather than phrase chunks: Whisper's `return_timestamps: 'word'` gives spans
-with a median length of about 0.26 s, against ~4.5 s for phrase chunks, which
-is easily fine enough to catch a half-second "Just det." This was investigated
-and deliberately not implemented.
+The natural fix for the interjection errors above looks like attributing
+*words* rather than phrase chunks: `return_timestamps: 'word'` gives spans
+around 0.2 s against ~2 s for phrase chunks, easily fine enough to isolate a
+half-second "Just det." It was tried, measured, and **it makes attribution
+worse.**
+
+Transcribing the fixture twice with the same model and diarizing both, so
+granularity is the only variable (`scripts/eval-word-timestamps.mjs`):
+
+| attribution | units | median span | word accuracy |
+|---|---|---|---|
+| phrase-level (what ships) | 288 | 1.94 s | **98.6%** |
+| word-level | 1996 | 0.20 s | 94.8% (−3.7 pp) |
+| words regrouped into sentences | 201 | 2.80 s | 97.7% (−0.9 pp) |
+
+The padding really does cause the interjection errors — but it also does
+useful work everywhere else. A two-second span covers roughly 120 diarization
+frames and averages out noise; a 0.2 s word covers about 12 and can land
+entirely on a glitch. Removing the padding loses more than it recovers, so
+phrase-sized units are the right granularity and the errors above are the
+price of it.
+
+(Those percentages are not comparable to the 95.4% quoted earlier: this
+experiment uses a different ASR model and scores against time intervals rather
+than per labelled utterance. Only the three rows are comparable to each other.)
+
+The availability problem below is therefore moot — but it is recorded because
+it took a while to establish, and "just use word timestamps" is an obvious
+thing to suggest.
 
 Word timestamps are derived from the decoder's **cross-attentions**, and the
 ONNX models this app loads are not exported with them:
@@ -149,10 +173,10 @@ not an impossibility. It just means giving up KB-Whisper's Swedish accuracy for
 generic Whisper, plus re-downloading a different model. Whether better speaker
 attribution outweighs worse transcription has not been measured.
 
-The clean fix is exporting KB-Whisper with `output_attentions=True` and hosting
-that build — offline work, and an ongoing maintenance commitment. Until then,
-`speaker_conf` already flags roughly half of these errors, which is the cheaper
-mitigation.
+Exporting KB-Whisper with `output_attentions=True` would remove that
+obstacle — but the measurement above says it would not be worth doing, since
+finer spans attribute worse. `speaker_conf` already flags roughly half of these
+errors, and that remains the sensible mitigation.
 
 ### Evaluating speaker separation
 
