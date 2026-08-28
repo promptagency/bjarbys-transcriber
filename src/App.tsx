@@ -601,6 +601,15 @@ export default function App() {
           >
             KB-Whisper
           </a>{" "}
+          ·{" "}
+          <a
+            href="https://huggingface.co/pyannote/segmentation-3.0"
+            className="text-slate-400 underline-offset-2 hover:underline"
+            target="_blank"
+            rel="noreferrer"
+          >
+            pyannote
+          </a>{" "}
           · models download once and cache in your browser.
         </p>
       </footer>

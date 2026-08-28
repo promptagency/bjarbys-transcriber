@@ -20,7 +20,13 @@ to be installed** — just open the page.
   real download size shown; backend-aware so you can't pick a broken combo.
 - 🎬 **Audio _and_ video** — MP3, WAV, M4A, OGG, FLAC and MP4 / MOV / WebM
   (the browser extracts the audio track).
-- 📝 **Export** to `.txt`, `.srt`, `.vtt`, or `.json` (with timestamps).
+- 📝 **Export** to `.txt`, `.srt`, `.vtt`, and `.json` (with timestamps) — tick
+  as many formats as you like; the audio is only analysed once and every format
+  is rendered from that same result. Picking several saves them as one `.zip`.
+- 🗣️ **Speaker separation** (optional, experimental) — labels each line
+  `Speaker 1`, `Speaker 2`, … via
+  [pyannote](https://huggingface.co/pyannote/segmentation-3.0). Off by default;
+  see [the caveats](#speaker-separation) before relying on it.
 - 🔒 **Private by design** — transcription is 100% local; models download once
   from the Hugging Face CDN and cache in your browser.
 
@@ -72,9 +78,41 @@ Quantization: **4-bit (q4f16)** is the small/fast default on **WebGPU**;
 WebGPU, so it's offered only on CPU); **full (fp32)** is available for the
 smaller models.
 
+### Speaker separation
+
+Ticking **Separate speakers** additionally loads
+[`onnx-community/pyannote-segmentation-3.0`](https://huggingface.co/onnx-community/pyannote-segmentation-3.0)
+— an ONNX build of [pyannote/segmentation-3.0](https://huggingface.co/pyannote/segmentation-3.0),
+about 1.5 MB, MIT. It runs on WASM alongside Whisper and needs no extra
+dependency. Each chunk in the `.json` export then carries `speaker` and
+`speaker_conf`, and the other formats prefix each line with `Speaker N:`.
+
+It is genuinely experimental. Known limits:
+
+- **At most 3 speakers.** The model reports speaker activity as a *powerset*
+  over three local speakers, so a fourth voice cannot be represented at all.
+- **Identity resets past ~50 minutes.** Longer recordings are diarized in
+  windows, because a single pass exhausts the browser's WASM memory beyond
+  roughly an hour, and the model carries no speaker identity across windows.
+  Below that threshold it's one pass and identity is stable throughout.
+- **`speaker_conf`** is the margin between the top two speakers' talk time
+  within a chunk. Low values mean overlapping speech rather than a wrong
+  answer; `speaker` is `null` where no speech was detected at all.
+- **Accuracy is unmeasured** against hand-labelled ground truth.
+
 ## How it works
 
 `src/worker.ts` runs the Transformers.js ASR pipeline in a Web Worker. Audio is
 decoded to mono 16 kHz PCM on the main thread (`src/lib/audio.ts`) and
 transferred to the worker. Long audio is chunked (`chunk_length_s: 30`) with a
 5 s stride. See `src/lib/models.ts` for the model catalog.
+
+Progress comes from a `WhisperTextStreamer`: its chunk callbacks report
+timestamps within Whisper's current 30 s window, and the worker reconstructs a
+whole-file position from them.
+
+With speaker separation on, the worker runs the pyannote model over the same
+PCM and decodes its powerset output into per-speaker activity spans — silence
+and simultaneous speech are *not* speakers, which is easy to get wrong.
+`src/lib/diarize.ts` then attributes each Whisper chunk to whoever holds the
+floor longest across it, and merges away brief low-confidence blips.
