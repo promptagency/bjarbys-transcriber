@@ -25,6 +25,43 @@ export const MAX_DIARIZE_SECONDS = MAX_DIARIZE_MINUTES * 60;
 export const LOW_CONFIDENCE = 0.35;
 
 /**
+ * End time of chunk `i`.
+ *
+ * Whisper may leave a trailing segment's end open (`timestamp[1]` is nullable),
+ * so fall back to where the next chunk starts. Neither obvious shortcut works:
+ * treating the span as zero-width overlaps nothing and silently drops the
+ * attribution, while treating it as unbounded hands the chunk to whoever speaks
+ * most through the entire rest of the recording.
+ */
+function chunkEnd(
+  chunks: TranscriptChunk[],
+  i: number,
+  fallback?: number,
+): number {
+  const start = chunks[i].timestamp[0];
+  const explicit = chunks[i].timestamp[1];
+  if (explicit != null) return explicit;
+  return Math.max(start, chunks[i + 1]?.timestamp[0] ?? fallback ?? start);
+}
+
+/**
+ * Typical chunk length, used to bound a trailing chunk whose end is unknown.
+ *
+ * Without a bound, a transcript that Whisper truncated early (a repetition-loop
+ * cutoff, say) would stretch its final chunk across every remaining minute of
+ * speech and attribute it to whoever dominates that span.
+ */
+function typicalChunkSeconds(chunks: TranscriptChunk[]): number {
+  const spans = chunks
+    .filter((c) => c.timestamp[1] != null)
+    .map((c) => (c.timestamp[1] as number) - c.timestamp[0])
+    .filter((d) => d > 0)
+    .sort((a, b) => a - b);
+  if (spans.length === 0) return 5;
+  return spans[Math.floor(spans.length / 2)];
+}
+
+/**
  * Assign each chunk the speaker who is active for the most of its duration.
  *
  * Weighted by total active time across the whole chunk rather than by a single
@@ -63,9 +100,18 @@ export function assignSpeakers(
   // output stays readable regardless of the model's internal indices.
   const seenIds: number[] = [];
 
-  return chunks.map((chunk) => {
+  // Bounds for a final chunk with an open end: never past the last speech, and
+  // never longer than a typical utterance.
+  const lastActivityEnd = activity.reduce((max, s) => Math.max(max, s.end), 0);
+  const typicalSeconds = typicalChunkSeconds(chunks);
+
+  return chunks.map((chunk, chunkIndex) => {
     const start = chunk.timestamp[0];
-    const end = chunk.timestamp[1] ?? start;
+    const end = chunkEnd(
+      chunks,
+      chunkIndex,
+      Math.min(lastActivityEnd, start + typicalSeconds),
+    );
 
     let topId: number | null = null;
     let topTime = 0;
@@ -132,8 +178,7 @@ function runsOf(chunks: TranscriptChunk[]): SpeakerRun[] {
   }
   for (const run of runs) {
     const start = chunks[run.startIndex].timestamp[0];
-    const end = chunks[run.endIndex].timestamp[1] ?? start;
-    run.durationSec = end - start;
+    run.durationSec = chunkEnd(chunks, run.endIndex) - start;
   }
   return runs;
 }

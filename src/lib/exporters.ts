@@ -26,6 +26,24 @@ export function extFor(format: ExportFormat): string {
   return EXPORT_FORMATS.find((f) => f.value === format)!.ext;
 }
 
+/**
+ * Strip characters that can't appear in a file name.
+ *
+ * Browsers sanitize the `download` attribute, so a direct download was always
+ * safe — but ZIP has no such protection: `/` is its path separator, so a
+ * podcast episode titled "3/12 recap" would silently nest the transcript in a
+ * folder instead of sitting alongside the other formats. Leading dots go too,
+ * so a title can't produce a hidden file or a `..` traversal entry.
+ */
+export function safeFileName(name: string): string {
+  const cleaned = name
+    .replace(/[/\\:*?"<>|]+/g, "-")
+    .replace(/[\u0000-\u001f]/g, "")
+    .replace(/^\.+/, "")
+    .trim();
+  return cleaned || "transcript";
+}
+
 /** Replace a filename's extension (or append one if absent). */
 export function withExtension(name: string, ext: string): string {
   const dot = name.lastIndexOf(".");
@@ -97,17 +115,17 @@ export function toJson(result: TranscriptResult): string {
   // two fields have distinct jobs rather than one being a degraded copy of the
   // other. Whisper's own flat `text` is deliberately not used here: it carries
   // no speaker labels, so it contradicted the .txt/.srt/.vtt exports. Building
-  // it via toTxt() keeps every format telling the same story — and leaves it
-  // byte-identical to today's output when speaker separation is off.
+  // it via toTxt() keeps every format telling the same story. (It is not quite
+  // the old value even without speakers: it's trimmed, where Whisper's own
+  // text usually has a leading space.)
   //
-  // cuesFrom() covers the case where Whisper returned no timestamps: the
-  // transcript survives as a single chunk instead of being lost.
+  // `chunks` stays raw. JSON is the lossless format, so unlike the subtitle
+  // exports it keeps whitespace-only chunks — they carry valid timestamps even
+  // with no words. cuesFrom() is only a fallback for the case where Whisper
+  // returned no timestamped chunks at all, so the transcript still survives.
+  const chunks = result.chunks?.length ? result.chunks : cuesFrom(result);
   return (
-    JSON.stringify(
-      { text: toTxt(result).trim(), chunks: cuesFrom(result) },
-      null,
-      2,
-    ) + "\n"
+    JSON.stringify({ text: toTxt(result).trim(), chunks }, null, 2) + "\n"
   );
 }
 

@@ -40,6 +40,7 @@ import {
   extFor,
   render,
   withExtension,
+  safeFileName,
   downloadText,
   downloadBlob,
 } from "./lib/exporters";
@@ -187,10 +188,14 @@ export default function App() {
   const downloadJob = useCallback(
     (job: Job, result: TranscriptResult, formats: ExportFormat[]) => {
       if (formats.length === 0) return;
+      // Podcast names are built from episode titles, which routinely contain
+      // slashes ("3/12 recap"). A browser strips those from a download name,
+      // but inside a ZIP a slash is a path separator and would nest the files.
+      const base = safeFileName(job.downloadName);
       if (formats.length === 1) {
         const format = formats[0];
         downloadText(
-          withExtension(job.downloadName, extFor(format)),
+          withExtension(base, extFor(format)),
           render(result, format),
           format,
         );
@@ -198,11 +203,11 @@ export default function App() {
       }
       const zip = createZip(
         formats.map((format) => ({
-          name: withExtension(job.downloadName, extFor(format)),
+          name: withExtension(base, extFor(format)),
           text: render(result, format),
         })),
       );
-      downloadBlob(withExtension(job.downloadName, "zip"), zip);
+      downloadBlob(withExtension(base, "zip"), zip);
     },
     [],
   );
