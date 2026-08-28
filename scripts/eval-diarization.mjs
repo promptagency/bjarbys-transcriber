@@ -104,7 +104,11 @@ for (let w = 0; w < numWindows; w++) {
   activity.push(...decodeActivity(
     logits.data, numFrames, numClasses, (e - s) / sampleRate, s / sampleRate, w));
 }
-const predicted = smoothSpeakers(assignSpeakers(chunks, activity));
+// SMOOTH=0 bypasses smoothSpeakers, to measure what it is actually worth.
+const smoothing = process.env.SMOOTH !== "0";
+const assigned = assignSpeakers(chunks, activity);
+const predicted = smoothing ? smoothSpeakers(assigned) : assigned;
+const movedBySmoothing = assigned.filter((c, i) => c.speaker !== predicted[i].speaker).length;
 
 // ── metrics ────────────────────────────────────────────────────────────────
 const words = (t) => (t || "").trim().split(/\s+/).filter(Boolean).length;
@@ -161,6 +165,7 @@ console.log(`audio        ${(audio.length / sampleRate / 60).toFixed(1)} min`);
 console.log(`window       ${windowMinutes} min -> ${numWindows} pass(es), ${boundaries.length} boundary/ies`);
 console.log(`labelled     ${scored} utterances scored, ${rows.length - scored} marked "?" (${skipped} words excluded)`);
 console.log(`mapping      ${[...mapping].map(([k, v]) => `speaker ${k} -> ${v}`).join(", ")}`);
+console.log(`smoothing    ${smoothing ? `on — moved ${movedBySmoothing} utterance(s)` : "OFF"}`);
 console.log();
 console.log(`  1. word accuracy .............. ${((100 * correct) / total).toFixed(1)}%  (${correct}/${total})`);
 console.log(`  2. distinct speakers .......... ${distinct}   (target: 2)`);
