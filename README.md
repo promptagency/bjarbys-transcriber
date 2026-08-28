@@ -87,7 +87,12 @@ about 1.5 MB, MIT. It runs on WASM alongside Whisper and needs no extra
 dependency. Each chunk in the `.json` export then carries `speaker` and
 `speaker_conf`, and the other formats prefix each line with `Speaker N:`.
 
-It is genuinely experimental. Known limits:
+**Measured accuracy: 95.4%** of words attributed to the correct speaker, on a
+hand-labelled 12-minute two-person Swedish interview (231 utterances, 2116
+words). Reproduce with `scripts/eval-diarization.mjs` — see
+[Evaluating speaker separation](#evaluating-speaker-separation).
+
+That figure is for a clean recording of two people. Known limits:
 
 - **At most 3 speakers.** The model reports speaker activity as a *powerset*
   over three local speakers, so a fourth voice cannot be represented at all.
@@ -95,10 +100,40 @@ It is genuinely experimental. Known limits:
   windows, because a single pass exhausts the browser's WASM memory beyond
   roughly an hour, and the model carries no speaker identity across windows.
   Below that threshold it's one pass and identity is stable throughout.
+  Attribution stays just as accurate when windowed — it's only the *labels*
+  that restart, so a long file shows more speakers than were in the room.
+- **Short interjections are the main error.** 43% of the wrong words sit in
+  utterances under 1.5 s — typically a backchannel ("Just det.") spoken over
+  someone still talking. A chunk's audio is dominated by the other speaker
+  even though the transcribed words are the interjector's, so time-weighted
+  attribution gets it wrong, sometimes confidently. Word-level ASR timestamps
+  would be the fix.
 - **`speaker_conf`** is the margin between the top two speakers' talk time
   within a chunk. Low values mean overlapping speech rather than a wrong
-  answer; `speaker` is `null` where no speech was detected at all.
-- **Accuracy is unmeasured** against hand-labelled ground truth.
+  answer; `speaker` is `null` where no speech was detected at all. About half
+  the errors above are already flagged this way.
+
+### Evaluating speaker separation
+
+`scripts/eval-diarization.mjs` scores the shipping code against a hand-labelled
+fixture, so changes to diarization can be measured instead of eyeballed.
+
+```bash
+node --experimental-strip-types scripts/eval-diarization.mjs <fixture-dir> [windowMinutes]
+```
+
+The fixture lives outside the repo — real recordings are usually confidential —
+and the directory needs two files:
+
+| file | contents |
+|---|---|
+| `labels.csv` | `idx;time_in_clip;speaker;text;dur_s;rel_start;rel_end;…`, one row per utterance, `speaker` hand-filled (`,` or `;` separated) |
+| `excerpt.wav` | the same audio, 16 kHz mono |
+
+It reports word-level accuracy, the number of distinct speakers, speaker changes
+landing on a window boundary, and duplicated spans. Pass `windowMinutes` to force
+the windowed path on a short clip — handy for exercising boundary behaviour
+without labelling hours of audio.
 
 ## How it works
 

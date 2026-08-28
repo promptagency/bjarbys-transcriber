@@ -17,6 +17,76 @@ export const DIARIZE_WINDOW_SECONDS = DIARIZE_WINDOW_MINUTES * 60;
 export const MAX_DIARIZE_MINUTES = 240;
 export const MAX_DIARIZE_SECONDS = MAX_DIARIZE_MINUTES * 60;
 
+// pyannote 3.x emits a POWERSET, not one class per speaker: each of the 7
+// classes is the *set* of locally-indexed speakers active in that frame.
+//   0 = nobody   1/2/3 = one speaker   4/5/6 = two speaking at once
+// So the class index is NOT a speaker id. Treating it as one (which is what
+// the library's post_process_speaker_diarization helper does) turns silence
+// into a speaker and turns overlapping speech into a phantom extra speaker —
+// measured at 23% of a real two-person interview. Decode to per-speaker
+// activity instead.
+export const POWERSET: readonly (readonly number[])[] = [
+  [], [0], [1], [2], [0, 1], [0, 2], [1, 2],
+];
+/** The model can represent at most this many distinct speakers per pass. */
+export const MAX_LOCAL_SPEAKERS = 3;
+
+/**
+ * Turn raw frame logits into per-speaker active spans.
+ *
+ * Reads the flat tensor directly rather than via `.tolist()` — an hour of
+ * audio is ~240k frames, and boxing that into nested JS arrays costs far more
+ * memory than the browser has to spare here.
+ */
+export function decodeActivity(
+  logitsData: Float32Array,
+  numFrames: number,
+  numClasses: number,
+  durationSec: number,
+  windowStartSec: number,
+  windowIndex: number,
+): SpeakerActivity[] {
+  const secondsPerFrame = numFrames > 0 ? durationSec / numFrames : 0;
+  const out: SpeakerActivity[] = [];
+  // Start frame of each speaker's currently-open span, or -1 when inactive.
+  const openFrom: number[] = new Array(MAX_LOCAL_SPEAKERS).fill(-1);
+
+  const close = (speaker: number, endFrame: number) => {
+    const from = openFrom[speaker];
+    if (from < 0) return;
+    out.push({
+      speaker: windowIndex * MAX_LOCAL_SPEAKERS + speaker,
+      start: windowStartSec + from * secondsPerFrame,
+      end: windowStartSec + endFrame * secondsPerFrame,
+    });
+    openFrom[speaker] = -1;
+  };
+
+  const active: boolean[] = new Array(MAX_LOCAL_SPEAKERS).fill(false);
+  for (let frame = 0; frame < numFrames; frame++) {
+    const offset = frame * numClasses;
+    let bestClass = 0;
+    let bestScore = logitsData[offset];
+    for (let k = 1; k < numClasses; k++) {
+      if (logitsData[offset + k] > bestScore) {
+        bestScore = logitsData[offset + k];
+        bestClass = k;
+      }
+    }
+
+    active.fill(false);
+    for (const speaker of POWERSET[bestClass] ?? []) active[speaker] = true;
+
+    for (let s = 0; s < MAX_LOCAL_SPEAKERS; s++) {
+      if (active[s] && openFrom[s] < 0) openFrom[s] = frame;
+      else if (!active[s] && openFrom[s] >= 0) close(s, frame);
+    }
+  }
+  for (let s = 0; s < MAX_LOCAL_SPEAKERS; s++) close(s, numFrames);
+
+  return out;
+}
+
 /**
  * Attributions at or below this margin are treated as uncertain — usually
  * because two people are talking across the chunk, not because the answer is
