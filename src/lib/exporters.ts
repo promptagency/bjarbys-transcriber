@@ -93,7 +93,22 @@ export function toVtt(result: TranscriptResult): string {
 }
 
 export function toJson(result: TranscriptResult): string {
-  return JSON.stringify(result, null, 2) + "\n";
+  // `text` is the readable rendering and `chunks` the structured data, so the
+  // two fields have distinct jobs rather than one being a degraded copy of the
+  // other. Whisper's own flat `text` is deliberately not used here: it carries
+  // no speaker labels, so it contradicted the .txt/.srt/.vtt exports. Building
+  // it via toTxt() keeps every format telling the same story — and leaves it
+  // byte-identical to today's output when speaker separation is off.
+  //
+  // cuesFrom() covers the case where Whisper returned no timestamps: the
+  // transcript survives as a single chunk instead of being lost.
+  return (
+    JSON.stringify(
+      { text: toTxt(result).trim(), chunks: cuesFrom(result) },
+      null,
+      2,
+    ) + "\n"
+  );
 }
 
 export function render(result: TranscriptResult, format: ExportFormat): string {
@@ -115,7 +130,11 @@ export function downloadText(
   text: string,
   format: ExportFormat,
 ): void {
-  const blob = new Blob([text], { type: mimeFor(format) });
+  downloadBlob(filename, new Blob([text], { type: mimeFor(format) }));
+}
+
+/** Trigger a browser download of an already-built blob. */
+export function downloadBlob(filename: string, blob: Blob): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

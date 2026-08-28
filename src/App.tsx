@@ -41,6 +41,7 @@ import {
   render,
   withExtension,
   downloadText,
+  downloadBlob,
 } from "./lib/exporters";
 import {
   DEFAULT_PROXY,
@@ -48,6 +49,7 @@ import {
   type Podcast as PodcastShow,
   fetchEpisodeAudio,
 } from "./lib/podcasts";
+import { createZip } from "./lib/zip";
 import type { TranscriptResult } from "./lib/protocol";
 import { useWhisper } from "./hooks/useWhisper";
 import { LanguageChooser } from "./components/LanguageChooser";
@@ -76,7 +78,7 @@ export default function App() {
     deviceMode: "auto",
     language: "sv",
     task: "transcribe",
-    exportFormat: "txt",
+    exportFormats: ["txt"],
     autoDownload: true,
     diarizeSpeakers: false,
   });
@@ -175,13 +177,32 @@ export default function App() {
     [commit],
   );
 
+  // Every format is rendered from the already-transcribed result, so saving
+  // several costs no extra analysis.
+  //
+  // Several formats are bundled into one archive rather than written as
+  // separate downloads: browsers block a burst of downloads as "multiple
+  // automatic downloads" and keep only the first, without surfacing an error
+  // the page can catch (verified in Chrome). One file can't half-succeed.
   const downloadJob = useCallback(
-    (job: Job, result: TranscriptResult, format: ExportFormat) => {
-      downloadText(
-        withExtension(job.downloadName, extFor(format)),
-        render(result, format),
-        format,
+    (job: Job, result: TranscriptResult, formats: ExportFormat[]) => {
+      if (formats.length === 0) return;
+      if (formats.length === 1) {
+        const format = formats[0];
+        downloadText(
+          withExtension(job.downloadName, extFor(format)),
+          render(result, format),
+          format,
+        );
+        return;
+      }
+      const zip = createZip(
+        formats.map((format) => ({
+          name: withExtension(job.downloadName, extFor(format)),
+          text: render(result, format),
+        })),
       );
+      downloadBlob(withExtension(job.downloadName, "zip"), zip);
     },
     [],
   );
@@ -249,7 +270,7 @@ export default function App() {
 
         updateJob(job.id, { status: "done", result: finalResult, warning });
         if (settings.autoDownload)
-          downloadJob(job, finalResult, settings.exportFormat);
+          downloadJob(job, finalResult, settings.exportFormats);
       } catch (e) {
         updateJob(job.id, {
           status: "error",
@@ -267,7 +288,7 @@ export default function App() {
       settings.language,
       settings.task,
       settings.autoDownload,
-      settings.exportFormat,
+      settings.exportFormats,
       settings.diarizeSpeakers,
     ],
   );
@@ -362,9 +383,9 @@ export default function App() {
   );
   const onManualDownload = useCallback(
     (job: Job) => {
-      if (job.result) downloadJob(job, job.result, settings.exportFormat);
+      if (job.result) downloadJob(job, job.result, settings.exportFormats);
     },
-    [downloadJob, settings.exportFormat],
+    [downloadJob, settings.exportFormats],
   );
 
   const activeJob = jobs.find((j) => ACTIVE_STATUSES.includes(j.status)) ?? null;

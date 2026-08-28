@@ -9,7 +9,12 @@ export interface Settings {
   deviceMode: DeviceMode;
   language: string | null;
   task: "transcribe" | "translate";
-  exportFormat: ExportFormat;
+  /**
+   * Formats to write when saving a transcript. The audio is only ever
+   * analysed once — every format is rendered from the same stored result —
+   * so selecting several costs nothing but the extra files.
+   */
+  exportFormats: ExportFormat[];
   autoDownload: boolean;
   diarizeSpeakers: boolean;
 }

@@ -9,7 +9,7 @@ import {
   formatSize,
   isEnglishOnly,
 } from "../lib/models";
-import { EXPORT_FORMATS, type ExportFormat } from "../lib/exporters";
+import { EXPORT_FORMATS } from "../lib/exporters";
 import { type DeviceMode, LANGUAGES, type Settings } from "../lib/settings";
 import { Field, Select } from "./ui";
 
@@ -86,20 +86,56 @@ export function AdvancedSettings({
         </Select>
       </Field>
 
-      <Field label="Output format" hint="auto-saved per file">
-        <Select
-          value={settings.exportFormat}
-          onChange={(e) =>
-            onChange({ exportFormat: e.target.value as ExportFormat })
-          }
-        >
-          {EXPORT_FORMATS.map((f) => (
-            <option key={f.value} value={f.value}>
-              {f.label}
-            </option>
-          ))}
-        </Select>
-      </Field>
+      {/*
+        Not a <Field>, because that renders a single <label> — wrapping a group
+        of checkboxes in one label would misassociate every click.
+      */}
+      <div>
+        <div className="mb-1.5 flex items-baseline justify-between">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            Output formats
+          </span>
+          <span className="text-xs text-slate-500">
+            {settings.exportFormats.length > 1
+              ? "transcribed once · saved as a .zip"
+              : "transcribed once per file"}
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2.5">
+          {EXPORT_FORMATS.map((f) => {
+            const checked = settings.exportFormats.includes(f.value);
+            // Keep at least one format selected, so saving can't quietly
+            // produce nothing.
+            const isOnlyOne = checked && settings.exportFormats.length === 1;
+            return (
+              <label
+                key={f.value}
+                title={f.label}
+                className={`flex items-center gap-2 text-sm text-slate-300 ${
+                  disabled || isOnlyOne
+                    ? "cursor-not-allowed opacity-60"
+                    : "cursor-pointer"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={disabled || isOnlyOne}
+                  onChange={(e) =>
+                    onChange({
+                      exportFormats: e.target.checked
+                        ? [...settings.exportFormats, f.value]
+                        : settings.exportFormats.filter((v) => v !== f.value),
+                    })
+                  }
+                  className="size-4 rounded border-[var(--color-border)] bg-[var(--color-surface-2)] accent-sky-500"
+                />
+                .{f.ext}
+              </label>
+            );
+          })}
+        </div>
+      </div>
 
       <Field label="Language" hint={englishOnly ? "English-only model" : ""}>
         <Select
