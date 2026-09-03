@@ -184,7 +184,12 @@ export function useWhisper() {
     (
       jobId: string,
       audio: Float32Array,
-      opts: { language: string | null; task: "transcribe" | "translate" },
+      opts: {
+        language: string | null;
+        task: "transcribe" | "translate";
+        /** Keep the audio in the worker so diarize() can reuse it. */
+        retainAudio?: boolean;
+      },
       onProgress?: (progress: number) => void,
     ) => {
       const worker = workerRef.current;
@@ -198,6 +203,7 @@ export function useWhisper() {
             audio,
             language: opts.language,
             task: opts.task,
+            retainAudio: opts.retainAudio,
           },
           [audio.buffer],
         );
@@ -206,17 +212,15 @@ export function useWhisper() {
     [],
   );
 
+  // No audio argument: the worker still holds the buffer transcribe() sent it,
+  // so it isn't copied across the boundary twice.
   const diarize = useCallback(
-    (
-      jobId: string,
-      audio: Float32Array,
-      onProgress?: (progress: number) => void,
-    ) => {
+    (jobId: string, onProgress?: (progress: number) => void) => {
       const worker = workerRef.current;
       if (!worker) return Promise.reject(new Error("Worker not ready"));
       return new Promise<SpeakerActivity[]>((resolve, reject) => {
         diarizeJobs.current.set(jobId, { resolve, reject, onProgress });
-        worker.postMessage({ type: "diarize", jobId, audio }, [audio.buffer]);
+        worker.postMessage({ type: "diarize", jobId });
       });
     },
     [],

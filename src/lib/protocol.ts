@@ -49,11 +49,19 @@ export type ToWorker =
       /** ISO language code (e.g. "sv") or null to auto-detect. */
       language: string | null;
       task: "transcribe" | "translate";
+      /**
+       * Keep the audio in the worker for a `diarize` on the same job.
+       *
+       * Transferring detaches the buffer, so without this the caller has to
+       * hold a second full copy of the PCM to diarize afterwards — for an
+       * hour of speech that is a redundant ~230 MB.
+       */
+      retainAudio?: boolean;
     }
   | {
+      // Uses the audio retained by the preceding `transcribe` for this job.
       type: "diarize";
       jobId: string;
-      audio: Float32Array;
     };
 
 // ── Worker → UI ────────────────────────────────────────────────────────────

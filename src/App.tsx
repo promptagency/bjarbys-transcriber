@@ -233,15 +233,15 @@ export default function App() {
         const durationSec = audio.length / WHISPER_SAMPLE_RATE;
         const tooLongToDiarize = durationSec > MAX_DIARIZE_SECONDS;
         const wantsDiarize = settings.diarizeSpeakers && !tooLongToDiarize;
-        // A separate model needs its own copy of the audio — transcribe()
-        // transfers (detaches) the buffer it's given.
-        const diarizeAudio = wantsDiarize ? audio.slice() : null;
+        // The worker holds on to the audio when it will be needed again, so
+        // diarization reuses that buffer instead of a second full copy.
         const result = await transcribe(
           job.id,
           audio,
           {
             language: englishOnly ? null : settings.language,
             task: englishOnly ? "transcribe" : settings.task,
+            retainAudio: wantsDiarize,
           },
           (p) => updateJob(job.id, { stageProgress: p }),
         );
@@ -250,14 +250,14 @@ export default function App() {
         let warning: string | null = null;
         if (settings.diarizeSpeakers && tooLongToDiarize) {
           warning = `Speaker separation skipped: recording is ${Math.round(durationSec / 60)} min, longer than the ${MAX_DIARIZE_MINUTES} min limit.`;
-        } else if (diarizeAudio) {
+        } else if (wantsDiarize) {
           // No multi-pass warning: labels used to restart at every window, so
           // warning was always right. They're now matched across the overlap,
           // so it would be wrong far more often than right — and an amber badge
           // on every long file would devalue the one that flags real failures.
           updateJob(job.id, { status: "diarizing", stageProgress: 0, warning });
           try {
-            const activity = await diarize(job.id, diarizeAudio, (p) =>
+            const activity = await diarize(job.id, (p) =>
               updateJob(job.id, { stageProgress: p }),
             );
             finalResult = {

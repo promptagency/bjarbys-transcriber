@@ -51,6 +51,12 @@ type DiarizationProcessor = Processor & {
 let diarizer: { model: PreTrainedModel; processor: DiarizationProcessor } | null =
   null;
 
+// Audio kept back from a `transcribe` so the following `diarize` can reuse it.
+// The queue runs one job at a time, so a single slot is enough — and holding
+// only the newest bounds this to one recording's worth even if a job dies
+// between the two messages.
+let retainedAudio: { jobId: string; audio: Float32Array } | null = null;
+
 async function ensureDiarizer(): Promise<{
   model: PreTrainedModel;
   processor: DiarizationProcessor;
@@ -257,6 +263,8 @@ self.addEventListener("message", async (event: MessageEvent<ToWorker>) => {
   if (msg.type === "transcribe") {
     try {
       if (!pipe) throw new Error("Model is not loaded yet.");
+      // Whatever the previous job left behind is dead weight now.
+      retainedAudio = null;
       post({ type: "transcribe-start", jobId: msg.jobId });
 
       const samplingRate =
@@ -282,6 +290,7 @@ self.addEventListener("message", async (event: MessageEvent<ToWorker>) => {
         text: output.text ?? "",
         chunks: output.chunks ?? [],
       };
+      if (msg.retainAudio) retainedAudio = { jobId: msg.jobId, audio: msg.audio };
       post({ type: "result", jobId: msg.jobId, result });
     } catch (err) {
       post({
@@ -294,6 +303,17 @@ self.addEventListener("message", async (event: MessageEvent<ToWorker>) => {
   }
 
   if (msg.type === "diarize") {
+    const audio =
+      retainedAudio?.jobId === msg.jobId ? retainedAudio.audio : null;
+    retainedAudio = null;
+    if (!audio) {
+      post({
+        type: "error",
+        jobId: msg.jobId,
+        message: "Audio for this job is no longer available in the worker.",
+      });
+      return;
+    }
     // How much audio fits in one pass depends on the device and on how much
     // the loaded Whisper model has already claimed — a 48-minute file failed
     // with kb-whisper-small resident but not with a smaller model. No fixed
@@ -306,7 +326,7 @@ self.addEventListener("message", async (event: MessageEvent<ToWorker>) => {
         post({
           type: "diarize-result",
           jobId: msg.jobId,
-          activity: await runDiarization(msg.audio, windowSec, (progress) =>
+          activity: await runDiarization(audio, windowSec, (progress) =>
             post({ type: "diarize-progress", jobId: msg.jobId, progress }),
           ),
         });
