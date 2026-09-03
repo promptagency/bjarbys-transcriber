@@ -96,10 +96,12 @@ That figure is for a clean recording of two people. Known limits:
 
 - **At most 3 speakers.** The model reports speaker activity as a *powerset*
   over three local speakers, so a fourth voice cannot be represented at all.
-- **Long recordings are stitched, not seamless.** Past ~50 minutes a single
-  pass exhausts the browser's WASM memory, so audio is diarized in windows
-  that overlap by two minutes, and speakers are matched across each seam by
-  who is talking at the same moments. A 67-minute two-person interview comes
+- **Long recordings are stitched, not seamless.** A single pass eventually
+  exhausts the browser's WASM memory, so audio is diarized in windows that
+  overlap by two minutes, and speakers are matched across each seam by who is
+  talking at the same moments. How much fits in one pass depends on the device
+  and on how much the chosen Whisper model has already claimed, so the window
+  starts at 25 minutes and halves on retry if a pass runs out of memory. A 67-minute two-person interview comes
   out as 2 speakers. But someone who stays silent through an entire overlap
   cannot be matched and is given a fresh label rather than a guessed one, so
   very long or very lopsided recordings may still show extra speakers.

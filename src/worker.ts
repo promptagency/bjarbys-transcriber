@@ -10,7 +10,12 @@ import {
   type Processor,
   type WhisperTokenizer,
 } from "@huggingface/transformers";
-import { decodeActivity, planWindows, stitchWindows } from "./lib/diarize";
+import {
+  DIARIZE_WINDOW_SECONDS,
+  decodeActivity,
+  planWindows,
+  stitchWindows,
+} from "./lib/diarize";
 import type { Backend, Dtype } from "./lib/models";
 import type {
   FileProgress,
@@ -60,6 +65,58 @@ async function ensureDiarizer(): Promise<{
   ]);
   diarizer = { model, processor: processor as DiarizationProcessor };
   return diarizer;
+}
+
+/** Below this there is no point retrying — something other than size is wrong. */
+const MIN_DIARIZE_WINDOW_SECONDS = 5 * 60;
+
+async function disposeDiarizer(): Promise<void> {
+  const current = diarizer;
+  diarizer = null;
+  try {
+    await current?.model.dispose();
+  } catch {
+    /* already torn down by the abort */
+  }
+}
+
+/** Diarize the whole recording in windows of at most `windowSec`. */
+async function runDiarization(
+  audio: Float32Array,
+  windowSec: number,
+  onProgress: (progress: number) => void,
+): Promise<SpeakerActivity[]> {
+  const { model, processor } = await ensureDiarizer();
+  const sampleRate = processor.sampling_rate;
+
+  // Speaker indices only carry meaning within a single pass, so stitchWindows()
+  // matches them across each seam using the overlap. A recording shorter than
+  // the window takes one pass and needs no matching.
+  const windows = planWindows(audio.length / sampleRate, windowSec);
+  const parts: { window: (typeof windows)[number]; activity: SpeakerActivity[] }[] =
+    [];
+  for (const window of windows) {
+    const start = Math.round(window.startSec * sampleRate);
+    const end = Math.min(audio.length, Math.round(window.endSec * sampleRate));
+    const windowAudio = audio.subarray(start, end);
+
+    const inputs = await processor(windowAudio);
+    const { logits } = await model(inputs);
+    const [, numFrames, numClasses] = logits.dims as number[];
+    parts.push({
+      window,
+      activity: decodeActivity(
+        logits.data as Float32Array,
+        numFrames,
+        numClasses,
+        windowAudio.length / sampleRate,
+        start / sampleRate,
+        window.index,
+      ),
+    });
+    onProgress((window.index + 1) / windows.length);
+  }
+  return stitchWindows(parts);
 }
 
 function post(msg: FromWorker, transfer: Transferable[] = []): void {
@@ -237,60 +294,44 @@ self.addEventListener("message", async (event: MessageEvent<ToWorker>) => {
   }
 
   if (msg.type === "diarize") {
-    try {
-      const { model, processor } = await ensureDiarizer();
-      const sampleRate = processor.sampling_rate;
-
-      // The model has no chunking of its own and exhausts the browser's WASM
-      // memory on very long audio (verified empirically), so long files are
-      // diarized in overlapping windows. Speaker indices only carry meaning
-      // within a single pass, so stitchWindows() matches them across each seam
-      // using the overlap. Files under the window length take a single pass.
-      const windows = planWindows(msg.audio.length / sampleRate);
-      const parts: {
-        window: (typeof windows)[number];
-        activity: SpeakerActivity[];
-      }[] = [];
-      for (const window of windows) {
-        const start = Math.round(window.startSec * sampleRate);
-        const end = Math.min(
-          msg.audio.length,
-          Math.round(window.endSec * sampleRate),
-        );
-        const windowAudio = msg.audio.subarray(start, end);
-
-        const inputs = await processor(windowAudio);
-        const { logits } = await model(inputs);
-        const [, numFrames, numClasses] = logits.dims as number[];
-        parts.push({
-          window,
-          activity: decodeActivity(
-            logits.data as Float32Array,
-            numFrames,
-            numClasses,
-            windowAudio.length / sampleRate,
-            start / sampleRate,
-            window.index,
+    // How much audio fits in one pass depends on the device and on how much
+    // the loaded Whisper model has already claimed — a 48-minute file failed
+    // with kb-whisper-small resident but not with a smaller model. No fixed
+    // window can be right for every combination, so on failure the window is
+    // halved and the whole run retried.
+    let windowSec = DIARIZE_WINDOW_SECONDS;
+    let lastError: unknown = null;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      try {
+        post({
+          type: "diarize-result",
+          jobId: msg.jobId,
+          activity: await runDiarization(msg.audio, windowSec, (progress) =>
+            post({ type: "diarize-progress", jobId: msg.jobId, progress }),
           ),
         });
-        post({
-          type: "diarize-progress",
-          jobId: msg.jobId,
-          progress: (window.index + 1) / windows.length,
-        });
+        return;
+      } catch (err) {
+        lastError = err;
+        // An out-of-memory abort leaves the WASM runtime unusable, so the
+        // retry needs a fresh session rather than the poisoned one.
+        await disposeDiarizer();
+        windowSec = Math.round(windowSec / 2);
+        if (windowSec < MIN_DIARIZE_WINDOW_SECONDS) break;
       }
-      post({
-        type: "diarize-result",
-        jobId: msg.jobId,
-        activity: stitchWindows(parts),
-      });
-    } catch (err) {
-      post({
-        type: "error",
-        jobId: msg.jobId,
-        message: String((err as Error)?.message ?? err),
-      });
     }
+    // A raw memory address rather than a message means a WASM abort, which is
+    // almost always memory. Say something the user can act on.
+    const raw = String((lastError as Error)?.message ?? lastError);
+    post({
+      type: "error",
+      jobId: msg.jobId,
+      message: /^\d+$/.test(raw)
+        ? `Not enough memory for speaker separation, even in ${Math.round(
+            (windowSec * 2) / 60,
+          )}-minute chunks. A smaller Whisper model leaves more room for it.`
+        : raw,
+    });
     return;
   }
 });

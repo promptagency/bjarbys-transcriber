@@ -2,13 +2,18 @@
 import type { SpeakerActivity, TranscriptChunk } from "./protocol";
 
 // The diarization model has no internal chunking of its own (unlike Whisper),
-// so the worker splits audio into fixed windows before running it — verified
-// empirically: 60 min in one pass succeeds, 67+ min reliably crashes the
-// browser's WASM runtime. Each window boundary also resets speaker identity
-// (the model has no cross-window matching), so the window is kept as large
-// as safely possible — 50 min, with margin for lower-memory devices — rather
-// than small: most recordings need no windowing at all this way.
-export const DIARIZE_WINDOW_MINUTES = 50;
+// so the worker splits audio into windows before running it.
+//
+// How much fits in one pass is not a property of the audio alone: the loaded
+// Whisper model and a full PCM copy are resident at the same time, so a bigger
+// ASR model lowers the ceiling. Measured in isolation, 60 min succeeded and
+// 67 min aborted — but in the app a 48-minute file failed with kb-whisper-small
+// loaded. This default is therefore a starting point, not a guarantee: the
+// worker halves it and retries when a pass runs out of memory.
+//
+// Kept as large as is realistic, because each seam is a chance for
+// stitchWindows() to mislabel a speaker who stays silent through the overlap.
+export const DIARIZE_WINDOW_MINUTES = 25;
 export const DIARIZE_WINDOW_SECONDS = DIARIZE_WINDOW_MINUTES * 60;
 
 /**
@@ -17,7 +22,7 @@ export const DIARIZE_WINDOW_SECONDS = DIARIZE_WINDOW_MINUTES * 60;
  * The overlap exists purely to match speakers across the seam: if two labels
  * describe the same person, they are active at the same moments. Two minutes
  * is enough for both people to say something in most conversations, and costs
- * ~4% extra inference on a 50-minute window.
+ * ~8% extra inference on a 25-minute window.
  */
 export const DIARIZE_OVERLAP_SECONDS = 120;
 
