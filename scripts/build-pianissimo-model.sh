@@ -18,17 +18,23 @@ OUT="${1:-public/models/pianissimo}"
 REPO="https://huggingface.co/KlangAI/pianissimo-sv-onnx/resolve"
 REV="63730c6021234f26b9bbae9a07a04fec39e7a52e" # pinned so rebuilds are reproducible
 
+# A progress bar only on a terminal: when output is captured, every redraw
+# piles up as text.
+if [ -t 2 ]; then CURL_PROGRESS=(--progress-bar); else CURL_PROGRESS=(-sS); fi
+fetch() { curl -fL "${CURL_PROGRESS[@]}" -o "$1" "$2"; }
+
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 mkdir -p "$OUT"
 
 echo "Downloading Klang's fp32 encoder (~2.5 GB) …"
-curl -fL --progress-bar -o "$WORK/encoder-model.onnx" "$REPO/$REV/encoder-model.onnx"
-curl -fL --progress-bar -o "$WORK/encoder-model.onnx.data" "$REPO/$REV/encoder-model.onnx.data"
+fetch "$WORK/encoder-model.onnx" "$REPO/$REV/encoder-model.onnx"
+fetch "$WORK/encoder-model.onnx.data" "$REPO/$REV/encoder-model.onnx.data"
 
 # The fp32 decoder: the int8 one is 3x slower on WASM, where the decoder runs.
-curl -fL --progress-bar -o "$OUT/decoder_joint-model.onnx" "$REPO/$REV/decoder_joint-model.onnx"
-curl -fL --progress-bar -o "$OUT/vocab.txt" "$REPO/$REV/vocab.txt"
+echo "Downloading the decoder and vocabulary …"
+fetch "$OUT/decoder_joint-model.onnx" "$REPO/$REV/decoder_joint-model.onnx"
+fetch "$OUT/vocab.txt" "$REPO/$REV/vocab.txt"
 
 echo "Quantizing the encoder to symmetric 4-bit …"
 python3 -m venv "$WORK/venv"

@@ -11,11 +11,16 @@ quantization has no zero-point input, so the kernel accepts it.
 <fp32-dir> holds encoder-model.onnx + encoder-model.onnx.data from
 KlangAI/pianissimo-sv-onnx (CC BY 4.0).
 """
+import logging
 import sys
 from pathlib import Path
 
 import onnx
 from onnxruntime.quantization.matmul_nbits_quantizer import MatMulNBitsQuantizer
+
+# Importing the quantizer calls logging.basicConfig(level=INFO), which then
+# logs one line per node it skips — over 11,000 for this model. Keep warnings.
+logging.getLogger().setLevel(logging.WARNING)
 
 src, out = Path(sys.argv[1]) / "encoder-model.onnx", Path(sys.argv[2])
 block_size = int(sys.argv[3]) if len(sys.argv) > 3 else 32
