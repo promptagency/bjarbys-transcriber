@@ -59,14 +59,19 @@ What didn't work:
 - **Decoder threads**: the TDT decoder runs one tiny ORT call per frame; the
   10-thread pool made it 2× slower than 1 thread.
 
-## parakeet.js 1.4.4 issues found (all worked around here)
+## parakeet.js 1.4.4 issues found (worked around here)
 
 1. **Spaces dropped before å/ä/ö** in `tokenizer.decode`: the "no space before
    punctuation" rule uses ASCII-only `\w`, so "kemiska ämnen" → "kemiskaämnen".
    The spike overrides `decode`. Word-level output (long audio) is unaffected.
 2. **`wasmPaths` is ignored**; ORT always loads from jsdelivr. From the CDN the
    WASM thread pool never starts. `patch-parakeet.mjs` fixes it.
-3. **`backend: 'webgpu'` runs on CPU with `fromUrls`**: only `webgpu-hybrid`
-   sets the WebGPU provider. The spike maps to `webgpu-hybrid`.
-4. **IndexedDB cache silently fails** to keep the 630 MB encoder (resolves on
-   request success, not transaction commit), so `fromHub` re-downloads it.
+3. **`backend: 'webgpu'` with `fromUrls` creates sessions with an empty provider
+   list** (logged `Providers: []`); only `webgpu-hybrid` sets the WebGPU
+   provider. Whether ORT then still picks WebGPU was not verified. The spike
+   maps to `webgpu-hybrid`.
+4. ~~IndexedDB cache silently fails~~ **Probably not a parakeet.js bug.** The
+   encoder never stayed cached, but the later integration saw the same with the
+   Cache API: the test Chrome profile refused more than ~300 MB per origin
+   (`QuotaExceededError`) while `navigator.storage.estimate()` reported ~11 GB.
+   The likely cause is that browser storage limit.
