@@ -16,7 +16,12 @@ import {
   planWindows,
   stitchWindows,
 } from "./lib/diarize";
-import type { Backend, Dtype } from "./lib/models";
+import { type Backend, type Dtype, engineOf } from "./lib/models";
+import {
+  type Pianissimo,
+  type PianissimoAssets,
+  loadPianissimo,
+} from "./lib/pianissimo";
 import type {
   FileProgress,
   FromWorker,
@@ -28,7 +33,9 @@ import type {
 // Only ever fetch models from the Hugging Face Hub (avoids spurious local 404s).
 env.allowLocalModels = false;
 
+// At most one ASR model is resident: either a Whisper pipeline or Pianissimo.
 let pipe: AutomaticSpeechRecognitionPipeline | null = null;
+let pianissimo: Pianissimo | null = null;
 let loadedKey = "";
 
 // How long audio is chunked (see the `transcribe` handler below). Whisper
@@ -200,24 +207,59 @@ async function build(
   });
 }
 
+async function disposeAsr(): Promise<void> {
+  const [oldPipe, oldPianissimo] = [pipe, pianissimo];
+  pipe = null;
+  pianissimo = null;
+  loadedKey = "";
+  await Promise.allSettled([oldPipe?.dispose(), oldPianissimo?.dispose()]);
+}
+
+async function ensureModel(
+  modelId: string,
+  dtype: Dtype,
+  device: Backend,
+  assets: PianissimoAssets,
+): Promise<void> {
+  const key = keyOf(modelId, dtype, device);
+  if ((pipe || pianissimo) && key === loadedKey) return;
+
+  // Dispose any previously loaded model before switching.
+  await disposeAsr();
+
+  if (engineOf(modelId) === "pianissimo") {
+    // No WASM fallback: on CPU it runs at ~0.3x real time, which is worse
+    // than failing with a clear reason.
+    if (device !== "webgpu") {
+      throw new Error(
+        "Pianissimo needs WebGPU. Choose a KB-Whisper model to transcribe on the CPU.",
+      );
+    }
+    try {
+      pianissimo = await loadPianissimo(assets, (data) =>
+        post({ type: "download", data }),
+      );
+    } catch (err) {
+      const reason = String((err as Error)?.message ?? err);
+      throw new Error(
+        // Download and deployment problems already explain themselves.
+        /^Couldn't download|isn't deployed/.test(reason)
+          ? reason
+          : `Pianissimo couldn't start on this GPU (${reason}). KB-Whisper works on any device.`,
+      );
+    }
+    loadedKey = key;
+    return;
+  }
+  await ensurePipeline(modelId, dtype, device);
+}
+
 async function ensurePipeline(
   modelId: string,
   dtype: Dtype,
   device: Backend,
 ): Promise<AutomaticSpeechRecognitionPipeline> {
   const key = keyOf(modelId, dtype, device);
-  if (pipe && key === loadedKey) return pipe;
-
-  // Dispose any previously loaded model before switching.
-  if (pipe) {
-    try {
-      await pipe.dispose();
-    } catch {
-      /* ignore */
-    }
-    pipe = null;
-    loadedKey = "";
-  }
 
   try {
     pipe = await build(modelId, dtype, device);
@@ -246,7 +288,7 @@ self.addEventListener("message", async (event: MessageEvent<ToWorker>) => {
 
   if (msg.type === "load") {
     try {
-      await ensurePipeline(msg.modelId, msg.dtype, msg.device);
+      await ensureModel(msg.modelId, msg.dtype, msg.device, msg.assets);
       const [, dtype, device] = loadedKey.split("|");
       post({
         type: "ready",
@@ -262,10 +304,21 @@ self.addEventListener("message", async (event: MessageEvent<ToWorker>) => {
 
   if (msg.type === "transcribe") {
     try {
-      if (!pipe) throw new Error("Model is not loaded yet.");
+      if (!pipe && !pianissimo) throw new Error("Model is not loaded yet.");
       // Whatever the previous job left behind is dead weight now.
       retainedAudio = null;
       post({ type: "transcribe-start", jobId: msg.jobId });
+
+      if (pianissimo) {
+        // Swedish only: there is no language or task to pass.
+        const result = await pianissimo.transcribe(msg.audio, (progress) =>
+          post({ type: "transcribe-progress", jobId: msg.jobId, progress }),
+        );
+        if (msg.retainAudio) retainedAudio = { jobId: msg.jobId, audio: msg.audio };
+        post({ type: "result", jobId: msg.jobId, result });
+        return;
+      }
+      if (!pipe) throw new Error("Model is not loaded yet.");
 
       const samplingRate =
         pipe.processor.feature_extractor?.config.sampling_rate ?? 16000;

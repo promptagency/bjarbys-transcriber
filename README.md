@@ -2,9 +2,10 @@
 
 [![Support me on Patreon](https://img.shields.io/badge/Patreon-Support%20my%20work-FF424D?style=flat&logo=patreon&logoColor=white)](https://www.patreon.com/AndersBjarby)
 
-Private, **in-browser** audio &amp; video transcription. The Whisper model runs
-entirely on the user's machine via [Transformers.js](https://github.com/huggingface/transformers.js)
-(WebGPU, with a WASM/CPU fallback). **Nothing is uploaded** and **nothing needs
+Private, **in-browser** audio &amp; video transcription. The speech model runs
+entirely on the user's machine — Whisper via [Transformers.js](https://github.com/huggingface/transformers.js)
+(WebGPU, with a WASM/CPU fallback), and Klang AI's Swedish **Pianissimo** via
+[parakeet.js](https://github.com/ysdede/parakeet.js) (WebGPU). **Nothing is uploaded** and **nothing needs
 to be installed** — just open the page.
 
 ## Features
@@ -13,9 +14,10 @@ to be installed** — just open the page.
   from the **microphone**, or search a **podcast** by name and pick episodes.
   Everything feeds a single queue that transcribes sequentially and (optionally)
   **auto-downloads** each transcript.
-- 🇸🇪 **Swedish that actually works** — choose **KB-Whisper** (KBLab / National
-  Library of Sweden) tiny → large, alongside standard multilingual and
-  English-only Whisper models.
+- 🇸🇪 **Swedish that actually works** — **Pianissimo** (Klang AI), the most
+  accurate and fastest Swedish option on a WebGPU browser, or **KB-Whisper**
+  (KBLab / National Library of Sweden) tiny → large on any device, alongside
+  standard multilingual and English-only Whisper models.
 - 🎚️ **Pick your model & size** — every model offers quantization tiers with the
   real download size shown; backend-aware so you can't pick a broken combo.
 - 🎬 **Audio _and_ video** — MP3, WAV, M4A, OGG, FLAC and MP4 / MOV / WebM
@@ -28,7 +30,8 @@ to be installed** — just open the page.
   [pyannote](https://huggingface.co/pyannote/segmentation-3.0). Off by default;
   see [the caveats](#speaker-separation) before relying on it.
 - 🔒 **Private by design** — transcription is 100% local; models download once
-  from the Hugging Face CDN and cache in your browser.
+  (Whisper from the Hugging Face CDN, Pianissimo from your own server) and
+  cache in your browser.
 
 ## Develop
 
@@ -37,11 +40,19 @@ npm install
 npm run dev      # http://localhost:5173
 ```
 
+`npm install` also runs `scripts/postinstall.mjs`, which patches parakeet.js
+and copies its ONNX Runtime into `public/ort-parakeet/` (see
+[Pianissimo](#pianissimo)).
+
 ## Build & deploy to a LAMP server
 
 ```bash
-npm run build    # outputs static files to dist/
+scripts/build-pianissimo-model.sh   # once: Pianissimo files → public/models/pianissimo/ (needs python3)
+npm run build                       # outputs static files to dist/
 ```
+
+Skip the first step and everything else still works — choosing Pianissimo
+then reports that its files aren't deployed.
 
 Copy the **contents of `dist/`** into your Apache web root (or a subfolder).
 A ready-to-use **`.htaccess`** and the podcast **`proxy.php`** are included in
@@ -69,6 +80,7 @@ podcasts work for any host that happens to send CORS headers.
 
 | Group | Models | Notes |
 |---|---|---|
+| **Swedish — Pianissimo** | Pianissimo (Klang AI) | Most accurate Swedish here, ~5× faster than KB-Whisper Small. **WebGPU only**, 765 MB, self-hosted. |
 | **Swedish — KB-Whisper** | tiny · base · small · medium · large | Best Swedish accuracy. `large`/`medium` are big — use WebGPU. |
 | **Multilingual — Whisper** | tiny · base · small · large-v3-turbo | ~100 languages. Turbo is the fast flagship (WebGPU). |
 | **English — Whisper** | tiny · base · small (`.en`) | Slightly better on English. |
@@ -77,6 +89,46 @@ Quantization: **4-bit (q4f16)** is the small/fast default on **WebGPU**;
 **8-bit (q8)** is the default on **CPU/WASM** (an 8-bit *decoder* misbehaves on
 WebGPU, so it's offered only on CPU); **full (fp32)** is available for the
 smaller models.
+
+### Pianissimo
+
+[Pianissimo](https://huggingface.co/KlangAI/pianissimo-sv) is Klang AI's Swedish
+model — not Whisper, but a FastConformer-TDT fine-tuned from NVIDIA Parakeet.
+Measured in this app's browser runtime on 60 FLEURS Swedish sentences (12.8 min,
+MacBook, Chrome, WebGPU), word error rate with Klang's normalization:
+
+| model | WER | speed (× real time) | download |
+|---|---:|---:|---:|
+| **Pianissimo** | **6.85%** | **6.9×** | 765 MB |
+| KB-Whisper Small | 8.07% | 1.4× | 586 MB |
+| KB-Whisper Base (default) | 10.24% | 2.7× | 206 MB |
+
+One machine, read speech, one run each — real meetings score worse. The
+harness and full notes are on the `spike/pianissimo` branch.
+
+Why it only runs on WebGPU and is self-hosted:
+
+- **On CPU it is unusable** (~0.3× real time: ONNX Runtime Web's int8 kernels
+  are slow), so the app doesn't offer it without WebGPU.
+- **None of Klang's published 4-bit files run on WebGPU** — they use zero
+  points, which ONNX Runtime Web's WebGPU `MatMulNBits` kernel rejects.
+  `scripts/build-pianissimo-model.sh` downloads Klang's fp32 export at a pinned
+  revision and re-quantizes the encoder to **symmetric** 4-bit
+  (`scripts/quantize-pianissimo-encoder.py`). Accuracy matched Klang's own
+  figures, so the re-quantization costs nothing measurable.
+- **Serving it yourself** keeps the request on your origin. To host the three
+  files elsewhere (e.g. a Hugging Face repo), build with
+  `VITE_PIANISSIMO_MODEL_URL=<url ending in />`.
+
+parakeet.js 1.4.4 needs two patches, applied on `npm install` by
+`scripts/postinstall.mjs` (both are fixed on parakeet.js's unreleased `main`):
+it ignores `wasmPaths`, so ONNX Runtime would load from cdn.jsdelivr.net, and
+it drops the space before words starting with å/ä/ö. The version is pinned
+exactly; the script fails `npm install` if the patched code ever changes.
+
+Pianissimo is © Klang AI AB, licensed
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); the app credits it
+in the footer. Speaker separation works with it the same way as with Whisper.
 
 ### Speaker separation
 
@@ -204,7 +256,8 @@ without labelling hours of audio.
 
 ## How it works
 
-`src/worker.ts` runs the Transformers.js ASR pipeline in a Web Worker. Audio is
+`src/worker.ts` runs the Transformers.js ASR pipeline in a Web Worker — or,
+for Pianissimo, `src/lib/pianissimo.ts`, which loads parakeet.js on demand. Audio is
 decoded to mono 16 kHz PCM on the main thread (`src/lib/audio.ts`) and
 transferred to the worker. Long audio is chunked (`chunk_length_s: 30`) with a
 5 s stride. See `src/lib/models.ts` for the model catalog.

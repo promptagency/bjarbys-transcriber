@@ -3,16 +3,18 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Bjarbys Transcriber — local, in-browser audio & video transcription with Whisper (standard + KB-Whisper Swedish). Runs entirely on the user's machine, no upload, no install.",
+  "description": "Bjarbys Transcriber — local, in-browser audio & video transcription with Whisper (standard + KB-Whisper Swedish) and Klang Pianissimo. Runs entirely on the user's machine, no upload, no install.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit",
+    "postinstall": "node scripts/postinstall.mjs"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.7.5",
     "lucide-react": "^0.541.0",
+    "parakeet.js": "1.4.4",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
@@ -22,7 +24,6 @@
     "@types/react": "^19.1.12",
     "@types/react-dom": "^19.1.9",
     "@vitejs/plugin-react": "^5.0.2",
-    "parakeet.js": "^1.4.4",
     "tailwindcss": "^4.1.13",
     "typescript": "^5.9.2",
     "vite": "^7.1.5"

@@ -1,9 +1,13 @@
-// Catalog of Whisper models that load & run in-browser via Transformers.js (ONNX).
+// Catalog of speech models that load & run in-browser (ONNX): Whisper models via
+// Transformers.js, and Klang's Pianissimo via parakeet.js.
 // Sizes below are the ACTUAL total download (encoder_model + decoder_model_merged)
 // measured from each model's Hugging Face repo, per quantization (dtype).
 
 export type Dtype = "fp32" | "fp16" | "q8" | "q4" | "q4f16";
 export type Backend = "webgpu" | "wasm";
+
+/** Which runtime a model needs. Whisper models all share one pipeline. */
+export type Engine = "whisper" | "pianissimo";
 
 export interface Tier {
   dtype: Dtype;
@@ -12,6 +16,7 @@ export interface Tier {
 }
 
 export type ModelGroup =
+  | "Swedish — Pianissimo"
   | "Swedish — KB-Whisper"
   | "Multilingual — Whisper"
   | "English — Whisper";
@@ -30,6 +35,15 @@ export interface ModelOption {
   recommended?: boolean;
   /** Heavy models that realistically need a GPU (WebGPU). */
   gpuPreferred?: boolean;
+  /** Defaults to "whisper". */
+  engine?: Engine;
+  /** Too slow on CPU to offer there at all (measured ~0.3x real time). */
+  webgpuOnly?: boolean;
+  /**
+   * The only language the model transcribes. Such models have no language or
+   * task (translate) choice.
+   */
+  fixedLanguage?: string;
 }
 
 export const DTYPE_LABEL: Record<Dtype, string> = {
@@ -47,6 +61,24 @@ export const DTYPE_LABEL: Record<Dtype, string> = {
 // is much smaller. "Full" (fp32) is offered only for the smaller models whose
 // weights are inline.
 export const MODELS: ModelOption[] = [
+  // ── Swedish: Pianissimo (Klang AI, CC BY 4.0) ─────────────────────────────
+  // Not Whisper: a FastConformer-TDT model fine-tuned from NVIDIA Parakeet. In
+  // the browser it beat KB-Whisper Small on FLEURS sv (6.9% vs 8.1% WER) at
+  // ~5x its speed, but only on WebGPU. Its files are self-hosted, see
+  // PIANISSIMO_MODEL_URL. The size is the symmetric 4-bit encoder plus the
+  // fp32 decoder that scripts/build-pianissimo-model.sh produces.
+  {
+    id: "KlangAI/pianissimo-sv",
+    name: "Pianissimo",
+    group: "Swedish — Pianissimo",
+    language: "Swedish only",
+    blurb: "Most accurate Swedish model here, and fast. Needs WebGPU.",
+    tiers: [{ dtype: "q4f16", sizeMB: 765 }],
+    engine: "pianissimo",
+    webgpuOnly: true,
+    fixedLanguage: "sv",
+  },
+
   // ── Swedish: KB-Whisper (KBLab / National Library of Sweden) ──────────────
   {
     id: "KBLab/kb-whisper-tiny",
@@ -201,6 +233,7 @@ export const MODELS: ModelOption[] = [
 ];
 
 export const MODEL_GROUPS: ModelGroup[] = [
+  "Swedish — Pianissimo",
   "Swedish — KB-Whisper",
   "Multilingual — Whisper",
   "English — Whisper",
@@ -231,6 +264,7 @@ export const FAMILY_DEFAULT_MODEL: Record<Family, string> = {
 };
 
 export function familyOf(modelId: string): Family {
+  if (findModel(modelId)?.fixedLanguage === "sv") return "swedish";
   if (modelId.startsWith("KBLab/")) return "swedish";
   if (isEnglishOnly(modelId)) return "english";
   return "multilingual";
@@ -240,6 +274,24 @@ export function familyOf(modelId: string): Family {
 export function isEnglishOnly(id: string): boolean {
   return id.endsWith(".en");
 }
+
+export function engineOf(modelId: string): Engine {
+  return findModel(modelId)?.engine ?? "whisper";
+}
+
+/** Whether the user can pick a language and translate (Whisper multilingual). */
+export function hasLanguageChoice(modelId: string): boolean {
+  return !isEnglishOnly(modelId) && !findModel(modelId)?.fixedLanguage;
+}
+
+/**
+ * Where the Pianissimo files (encoder-model.sym4.onnx, decoder_joint-model.onnx,
+ * vocab.txt) are served from, relative to the page. Same-origin by default so
+ * no third party sees the request; set VITE_PIANISSIMO_MODEL_URL at build time
+ * to host them elsewhere.
+ */
+export const PIANISSIMO_MODEL_URL: string =
+  import.meta.env.VITE_PIANISSIMO_MODEL_URL || "./models/pianissimo/";
 
 // Which dtypes are SAFE on each backend.
 //  • WebGPU: avoid 8-bit integer decoders — they produce gibberish on the
