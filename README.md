@@ -14,10 +14,11 @@ to be installed** — just open the page.
   from the **microphone**, or search a **podcast** by name and pick episodes.
   Everything feeds a single queue that transcribes sequentially and (optionally)
   **auto-downloads** each transcript.
-- 🇸🇪 **Swedish that actually works** — **Pianissimo** (Klang AI), the most
-  accurate and fastest Swedish option on a WebGPU browser, or **KB-Whisper**
-  (KBLab / National Library of Sweden) tiny → large on any device, alongside
-  standard multilingual and English-only Whisper models.
+- 🇸🇪 **Swedish that actually works** — **KB-Whisper** (KBLab / National
+  Library of Sweden) tiny → large on any device, with Base as the default. On
+  a WebGPU browser, **Pianissimo** (Klang AI) is an opt-in alternative: in our
+  tests more accurate and several times faster, at a bigger download. Standard
+  multilingual and English-only Whisper models are there too.
 - 🎚️ **Pick your model & size** — every model offers quantization tiers with the
   real download size shown; backend-aware so you can't pick a broken combo.
 - 🎬 **Audio _and_ video** — MP3, WAV, M4A, OGG, FLAC and MP4 / MOV / WebM
@@ -58,12 +59,17 @@ Copy the **contents of `dist/`** into your Apache web root (or a subfolder).
 A ready-to-use **`.htaccess`** and the podcast **`proxy.php`** are included in
 `public/` and are emitted into `dist/` by the build.
 
+With Pianissimo, `dist/` is ~820 MB, almost all of it `models/` — including a
+single 660 MB file, so check your host's upload and file-size limits. Make sure
+the upload includes the hidden `.htaccess`.
+
 - **HTTPS is required** for the microphone (`getUserMedia`) and WebGPU. The
   `.htaccess` force-redirects to HTTPS (localhost is exempt).
 - **No COOP/COEP headers needed** for WebGPU or single-threaded WASM — they're
   left commented out in `.htaccess`.
-- **Serving from a subfolder?** Set `base: '/yourpath/'` in `vite.config.ts`,
-  rebuild, and adjust the `RewriteBase` / fallback lines in `.htaccess`.
+- **Serving from a subfolder** needs no rebuild: the build uses relative paths
+  (`base: './'` in `vite.config.ts`). If Apache's fallback misbehaves there,
+  add a `RewriteBase` to `.htaccess`.
 
 ### Podcasts &amp; `proxy.php`
 
@@ -80,8 +86,8 @@ podcasts work for any host that happens to send CORS headers.
 
 | Group | Models | Notes |
 |---|---|---|
-| **Swedish — Pianissimo** | Pianissimo (Klang AI) | Most accurate Swedish here, ~5× faster than KB-Whisper Small. **WebGPU only**, 765 MB, self-hosted. |
-| **Swedish — KB-Whisper** | tiny · base · small · medium · large | Best Swedish accuracy. `large`/`medium` are big — use WebGPU. |
+| **Swedish — Pianissimo** | Pianissimo (Klang AI) | Opt-in. Fewer errors and ~5× faster than KB-Whisper Small in our tests, weaker on names. **WebGPU only**, 765 MB, self-hosted. |
+| **Swedish — KB-Whisper** | tiny · base · small · medium · large | The default (Base). Runs on any device. `large`/`medium` are big — use WebGPU. |
 | **Multilingual — Whisper** | tiny · base · small · large-v3-turbo | ~100 languages. Turbo is the fast flagship (WebGPU). |
 | **English — Whisper** | tiny · base · small (`.en`) | Slightly better on English. |
 
@@ -94,6 +100,9 @@ smaller models.
 
 [Pianissimo](https://huggingface.co/KlangAI/pianissimo-sv) is Klang AI's Swedish
 model — not Whisper, but a FastConformer-TDT fine-tuned from NVIDIA Parakeet.
+It is **opt-in** (Settings → Model); KB-Whisper Base stays the default because
+Pianissimo needs WebGPU and a 765 MB download.
+
 Measured in this app's browser runtime on 60 FLEURS Swedish sentences (12.8 min,
 MacBook, Chrome, WebGPU), word error rate with Klang's normalization:
 
@@ -103,8 +112,31 @@ MacBook, Chrome, WebGPU), word error rate with Klang's normalization:
 | KB-Whisper Small | 8.07% | 1.4× | 586 MB |
 | KB-Whisper Base (default) | 10.24% | 2.7× | 206 MB |
 
-One machine, read speech, one run each — real meetings score worse. The
-harness and full notes are on the `spike/pianissimo` branch.
+In practice: roughly a third fewer wrong words than the default, and an hour
+of audio in ~9 minutes instead of ~22 (Base) or ~43 (Small). Where the gain
+shrinks:
+
+- **One machine, read speech, one run each** — meetings, noise and overlapping
+  speakers score worse for every model, and the gap may change.
+- **Long files score lower:** 8.7% WER on the same sentences joined into one
+  13-minute file.
+- **Names:** on a real 73-minute parliament debate,
+  [Sagascript](https://github.com/Magnus-Gille/sagascript) measured Pianissimo
+  and KB-Whisper Large about equal on wrong-or-missing words (10.9% vs 11.7%),
+  but Pianissimo spelled names right less often (93% vs 98.5%). KB-Whisper
+  Large wasn't measured here — in the browser it is very slow.
+- **Swedish only** — no language choice, no translation.
+- **Caching may not stick.** In one test Chrome profile the browser refused
+  more than ~300 MB of storage per site (`QuotaExceededError`, though it
+  reported ~11 GB free), so the 765 MB were downloaded on every visit. To
+  check a browser: after one load, `caches.open('pianissimo-models')` in the
+  console should hold three files.
+
+Best fit: long Swedish recordings on computers with WebGPU. Try it on a few
+typical recordings of your own — especially ones with many names — before
+relying on it. The test harness and full notes are on the
+[`spike/pianissimo`](https://github.com/promptagency/bjarbys-transcriber/tree/spike/pianissimo)
+branch.
 
 Why it only runs on WebGPU and is self-hosted:
 
