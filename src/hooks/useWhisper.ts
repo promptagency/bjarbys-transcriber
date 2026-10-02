@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Backend, Dtype } from "../lib/models";
+import { type Backend, type Dtype, PIANISSIMO_MODEL_URL } from "../lib/models";
+import type { PianissimoAssets } from "../lib/pianissimo";
 import type {
   FromWorker,
   SpeakerActivity,
@@ -174,7 +175,15 @@ export function useWhisper() {
       });
       return new Promise<void>((resolve, reject) => {
         load.current = { resolve, reject };
-        worker.postMessage({ type: "load", modelId, dtype, device });
+        // Relative to the page, so the app works from any subfolder.
+        const assets: PianissimoAssets = {
+          modelUrl: new URL(PIANISSIMO_MODEL_URL, document.baseURI).href,
+          ortUrl: new URL(
+            `./ort-parakeet/${__PARAKEET_ORT_VERSION__}/`,
+            document.baseURI,
+          ).href,
+        };
+        worker.postMessage({ type: "load", modelId, dtype, device, assets });
       });
     },
     [],

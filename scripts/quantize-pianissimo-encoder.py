@@ -5,8 +5,8 @@ quantization with zero points, which ONNX Runtime Web 1.24's WebGPU
 MatMulNBits kernel rejects ("zeroPoints input size error"). Symmetric
 quantization has no zero-point input, so the kernel accepts it.
 
-    pip install onnx onnxruntime
-    python spike/quantize-encoder.py <fp32-dir> <out.onnx> [block_size]
+    pip install onnx onnxruntime onnx_ir
+    python scripts/quantize-pianissimo-encoder.py <fp32-dir> <out.onnx> [block_size]
 
 <fp32-dir> holds encoder-model.onnx + encoder-model.onnx.data from
 KlangAI/pianissimo-sv-onnx (CC BY 4.0).
