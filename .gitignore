@@ -9,3 +9,8 @@ yarn-debug.log*
 yarn-error.log*
 
 *.tsbuildinfo
+
+# Spike fixture (FLEURS audio, rebuilt by scripts/build-fleurs-sv-fixture.mjs)
+public/spike-fixture/
+public/spike-ort/
+public/spike-models/
