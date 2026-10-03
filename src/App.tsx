@@ -568,7 +568,7 @@ export default function App() {
       <footer className="mt-12 border-t border-[var(--color-border)] pt-6 text-center text-xs text-slate-500">
         <p>
           Vem sa vad? by{" "}
-          <span className="font-medium text-slate-300">Mikael Quick</span> ·{" "}
+          <span className="font-medium text-slate-300">Micke Quick</span> ·{" "}
           <a
             href="https://github.com/promptagency/vem-sa-vad"
             className="text-slate-400 underline-offset-2 hover:underline"
