@@ -30,12 +30,34 @@ to be installed** — just open the page.
 - 🔒 **Private by design** — transcription is 100% local; models download once
   from the Hugging Face CDN and cache in your browser.
 
-## Develop
+## Run it yourself
+
+This is a fork of [fltman/bjarbys-transcriber](https://github.com/fltman/bjarbys-transcriber)
+that adds [speaker separation](#speaker-separation). Everything runs locally —
+there is no server to set up.
+
+You need [Node.js](https://nodejs.org) 20.19+ or 22.12+ and git.
 
 ```bash
+git clone https://github.com/promptagency/bjarbys-transcriber.git
+cd bjarbys-transcriber
 npm install
-npm run dev      # http://localhost:5173
+npm run dev      # open http://localhost:5173
 ```
+
+- **Use a browser with WebGPU** (Chrome or Edge are the safe choice) for
+  speed: the models then run on the GPU. Without WebGPU the app falls back to
+  the CPU, which works but is much slower.
+- **The first transcription downloads the model** (about 200 MB for the
+  default, KB-Whisper Base) from Hugging Face. The browser caches it, so later runs
+  start straight away.
+- **Podcasts work in `npm run dev`:** the dev server includes a stand-in for
+  `proxy.php` (see [below](#podcasts--proxyphp)). `npm run preview` doesn't
+  include it, so use `dev` locally.
+- `localhost` counts as a secure origin, so the microphone and WebGPU work
+  without HTTPS.
+
+To serve it for others instead, see the next section.
 
 ## Build & deploy to a LAMP server
 
