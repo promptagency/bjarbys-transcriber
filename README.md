@@ -245,3 +245,9 @@ PCM and decodes its powerset output into per-speaker activity spans — silence
 and simultaneous speech are *not* speakers, which is easy to get wrong.
 `src/lib/diarize.ts` then attributes each Whisper chunk to whoever holds the
 floor longest across it, and merges away brief low-confidence blips.
+
+## License
+
+[MIT](LICENSE) © 2026 Anders Bjarby. The models are downloaded at runtime from
+Hugging Face and carry their own licenses (OpenAI Whisper and KB-Whisper are
+both Apache-2.0).

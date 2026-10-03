@@ -2,6 +2,7 @@
   "name": "vem-sa-vad",
   "private": true,
   "version": "0.1.0",
+  "license": "MIT",
   "type": "module",
   "description": "Vem sa vad? — local, in-browser audio & video transcription with speaker separation, built on Bjarbys Transcriber by Anders Bjarby. Whisper (standard + KB-Whisper Swedish) runs entirely on the user's machine, no upload, no install.",
   "scripts": {
