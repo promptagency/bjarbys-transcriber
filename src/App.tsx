@@ -404,7 +404,7 @@ export default function App() {
             <FileAudio className="size-7" />
           </div>
           <h1 className="bg-gradient-to-r from-white to-slate-300 bg-clip-text text-3xl font-extrabold tracking-tight text-transparent sm:text-4xl">
-            Bjarbys Transcriber
+            Vem sa vad?
           </h1>
         </div>
         <p className="mx-auto max-w-md text-base text-slate-400">
@@ -567,16 +567,28 @@ export default function App() {
 
       <footer className="mt-12 border-t border-[var(--color-border)] pt-6 text-center text-xs text-slate-500">
         <p>
-          Made by{" "}
-          <span className="font-medium text-slate-300">Anders Bjarby</span> ·{" "}
+          Vem sa vad? by{" "}
+          <span className="font-medium text-slate-300">Mikael Quick</span> ·{" "}
           <a
-            href="https://github.com/fltman/bjarbys-transcriber"
+            href="https://github.com/promptagency/vem-sa-vad"
             className="text-slate-400 underline-offset-2 hover:underline"
             target="_blank"
             rel="noreferrer"
           >
             Source on GitHub
           </a>
+        </p>
+        <p className="mt-2">
+          Based on{" "}
+          <a
+            href="https://github.com/fltman/bjarbys-transcriber"
+            className="text-slate-400 underline-offset-2 hover:underline"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Bjarbys Transcriber
+          </a>{" "}
+          by <span className="font-medium text-slate-300">Anders Bjarby</span>
         </p>
         <p className="mt-2">
           Powered by{" "}

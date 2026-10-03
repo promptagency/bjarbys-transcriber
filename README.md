@@ -1,11 +1,15 @@
-# Bjarbys Transcriber
+# Vem sa vad?
 
-[![Support me on Patreon](https://img.shields.io/badge/Patreon-Support%20my%20work-FF424D?style=flat&logo=patreon&logoColor=white)](https://www.patreon.com/AndersBjarby)
+Private, **in-browser** audio &amp; video transcription that also tells you
+**who said what**. The Whisper model runs entirely on the user's machine via
+[Transformers.js](https://github.com/huggingface/transformers.js) (WebGPU, with
+a WASM/CPU fallback). **Nothing is uploaded** and **nothing needs to be
+installed** — just open the page.
 
-Private, **in-browser** audio &amp; video transcription. The Whisper model runs
-entirely on the user's machine via [Transformers.js](https://github.com/huggingface/transformers.js)
-(WebGPU, with a WASM/CPU fallback). **Nothing is uploaded** and **nothing needs
-to be installed** — just open the page.
+Vem sa vad? is built on [Bjarbys Transcriber](https://github.com/fltman/bjarbys-transcriber)
+by Anders Bjarby, and adds speaker separation and a few other features on top.
+If you find it useful, consider
+[supporting him on Patreon](https://www.patreon.com/AndersBjarby).
 
 ## Features
 
@@ -32,15 +36,15 @@ to be installed** — just open the page.
 
 ## Run it yourself
 
-This is a fork of [fltman/bjarbys-transcriber](https://github.com/fltman/bjarbys-transcriber)
+Vem sa vad? is a fork of [fltman/bjarbys-transcriber](https://github.com/fltman/bjarbys-transcriber)
 that adds [speaker separation](#speaker-separation). Everything runs locally —
 there is no server to set up.
 
 You need [Node.js](https://nodejs.org) 20.19+ or 22.12+ and git.
 
 ```bash
-git clone https://github.com/promptagency/bjarbys-transcriber.git
-cd bjarbys-transcriber
+git clone https://github.com/promptagency/vem-sa-vad.git
+cd vem-sa-vad
 npm install
 npm run dev      # open http://localhost:5173
 ```
