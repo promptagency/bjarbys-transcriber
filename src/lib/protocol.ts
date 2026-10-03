@@ -1,6 +1,5 @@
 // Message protocol between the UI thread and the Whisper Web Worker.
 import type { Backend, Dtype } from "./models";
-import type { PianissimoAssets } from "./pianissimo";
 
 export interface TranscriptChunk {
   text: string;
@@ -42,11 +41,6 @@ export type ToWorker =
       modelId: string;
       dtype: Dtype;
       device: Backend;
-      /**
-       * Where self-hosted model files live. Resolved on the page, because the
-       * worker's own URL (under assets/) is the wrong base for relative paths.
-       */
-      assets: PianissimoAssets;
     }
   | {
       type: "transcribe";

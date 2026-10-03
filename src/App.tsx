@@ -28,7 +28,7 @@ import {
   familyOf,
   findModel,
   formatSize,
-  hasLanguageChoice,
+  isEnglishOnly,
   tierFor,
 } from "./lib/models";
 import { type Settings } from "./lib/settings";
@@ -136,16 +136,6 @@ export default function App() {
     }
   }, [settings.modelId, settings.dtype, resolvedDevice, patchSettings]);
 
-  // A WebGPU-only model (Pianissimo) can't follow the user onto the CPU.
-  // Switch to the family's default rather than load something unusable.
-  useEffect(() => {
-    if (findModel(settings.modelId)?.webgpuOnly && resolvedDevice !== "webgpu") {
-      patchSettings({
-        modelId: FAMILY_DEFAULT_MODEL[familyOf(settings.modelId)],
-      });
-    }
-  }, [settings.modelId, resolvedDevice, patchSettings]);
-
   const family = familyOf(settings.modelId);
   const setFamily = useCallback(
     (f: Family) => {
@@ -236,7 +226,7 @@ export default function App() {
 
         updateJob(job.id, { status: "transcribing", stageProgress: 0 });
         const loadedId = state.modelId ?? settings.modelId;
-        const languageChoice = hasLanguageChoice(loadedId);
+        const englishOnly = isEnglishOnly(loadedId);
         // The diarization model has no internal chunking (unlike Whisper) and
         // crashes on very long audio in-browser — skip it above a safe length
         // rather than attempt and silently fail.
@@ -249,8 +239,8 @@ export default function App() {
           job.id,
           audio,
           {
-            language: languageChoice ? settings.language : null,
-            task: languageChoice ? settings.task : "transcribe",
+            language: englishOnly ? null : settings.language,
+            task: englishOnly ? "transcribe" : settings.task,
             retainAudio: wantsDiarize,
           },
           (p) => updateJob(job.id, { stageProgress: p }),
@@ -606,16 +596,6 @@ export default function App() {
             rel="noreferrer"
           >
             KB-Whisper
-          </a>{" "}
-          ·{" "}
-          {/* CC BY 4.0 requires the attribution. */}
-          <a
-            href="https://huggingface.co/KlangAI/pianissimo-sv"
-            className="text-slate-400 underline-offset-2 hover:underline"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Pianissimo by Klang AI
           </a>{" "}
           ·{" "}
           <a

@@ -1,13 +1,6 @@
 import { defineConfig, type PluginOption } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
-import { readFileSync } from 'node:fs'
-
-// The ONNX Runtime that parakeet.js (Pianissimo) pins. scripts/postinstall.mjs
-// copies it to public/ort-parakeet/<version>/; the app needs the same path.
-const PARAKEET_ORT_VERSION: string = JSON.parse(
-  readFileSync('node_modules/parakeet.js/package.json', 'utf-8'),
-).dependencies['onnxruntime-web']
 
 // Dev-only stand-in for the production proxy.php: lets the podcast feature
 // fetch cross-origin RSS/audio while developing locally. In production the real
@@ -51,9 +44,6 @@ function devPodcastProxy(): PluginOption {
 export default defineConfig({
   base: './',
   plugins: [react(), tailwindcss(), devPodcastProxy()],
-  define: {
-    __PARAKEET_ORT_VERSION__: JSON.stringify(PARAKEET_ORT_VERSION),
-  },
   worker: {
     format: 'es',
   },

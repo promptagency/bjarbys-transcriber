@@ -7,7 +7,6 @@ import {
   availableTiers,
   findModel,
   formatSize,
-  hasLanguageChoice,
   isEnglishOnly,
 } from "../lib/models";
 import { EXPORT_FORMATS } from "../lib/exporters";
@@ -29,10 +28,7 @@ export function AdvancedSettings({
 }) {
   const model = findModel(settings.modelId)!;
   const tiers = availableTiers(model, resolvedDevice);
-  const languageChoice = hasLanguageChoice(settings.modelId);
-  const fixedLanguageLabel = isEnglishOnly(settings.modelId)
-    ? "English"
-    : LANGUAGES.find((l) => l.code === model.fixedLanguage)?.label;
+  const englishOnly = isEnglishOnly(settings.modelId);
   const currentTier = tiers.find((t) => t.dtype === settings.dtype) ?? tiers[0];
 
   return (
@@ -45,16 +41,12 @@ export function AdvancedSettings({
         >
           {MODEL_GROUPS.map((group) => (
             <optgroup key={group} label={group}>
-              {MODELS.filter((m) => m.group === group).map((m) => {
-                const noGpu = m.webgpuOnly && resolvedDevice !== "webgpu";
-                return (
-                  <option key={m.id} value={m.id} disabled={noGpu}>
-                    {m.name}
-                    {m.recommended ? "  ★" : ""}
-                    {noGpu ? " (needs WebGPU)" : ""}
-                  </option>
-                );
-              })}
+              {MODELS.filter((m) => m.group === group).map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                  {m.recommended ? "  ★" : ""}
+                </option>
+              ))}
             </optgroup>
           ))}
         </Select>
@@ -90,9 +82,7 @@ export function AdvancedSettings({
           <option value="webgpu" disabled={!webgpuAvailable}>
             GPU — WebGPU{webgpuAvailable ? "" : " (not available)"}
           </option>
-          <option value="wasm" disabled={model.webgpuOnly}>
-            CPU — WASM{model.webgpuOnly ? ` (not for ${model.name})` : ""}
-          </option>
+          <option value="wasm">CPU — WASM</option>
         </Select>
       </Field>
 
@@ -147,13 +137,10 @@ export function AdvancedSettings({
         </div>
       </div>
 
-      <Field
-        label="Language"
-        hint={languageChoice ? "" : `${fixedLanguageLabel}-only model`}
-      >
+      <Field label="Language" hint={englishOnly ? "English-only model" : ""}>
         <Select
           value={settings.language ?? ""}
-          disabled={disabled || !languageChoice}
+          disabled={disabled || englishOnly}
           onChange={(e) =>
             onChange({ language: e.target.value === "" ? null : e.target.value })
           }
@@ -169,7 +156,7 @@ export function AdvancedSettings({
       <Field label="Task" hint="translate → English">
         <Select
           value={settings.task}
-          disabled={disabled || !languageChoice}
+          disabled={disabled || englishOnly}
           onChange={(e) =>
             onChange({ task: e.target.value as "transcribe" | "translate" })
           }
