@@ -251,3 +251,8 @@ floor longest across it, and merges away brief low-confidence blips.
 [MIT](LICENSE) © 2026 Anders Bjarby. The models are downloaded at runtime from
 Hugging Face and carry their own licenses (OpenAI Whisper and KB-Whisper are
 both Apache-2.0).
+
+Vem sa vad?'s additions are released under the same MIT license. Speaker
+separation also downloads the
+[pyannote segmentation](https://huggingface.co/onnx-community/pyannote-segmentation-3.0)
+model, which is MIT-licensed.
