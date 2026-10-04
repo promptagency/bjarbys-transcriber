@@ -25,6 +25,8 @@ export interface Settings {
   keepTranscripts: boolean;
   /** Whether the user has answered the one-time "keep transcripts?" prompt. */
   keepTranscriptsAsked: boolean;
+  /** Prefix each paragraph of the document formats (.md, .document.txt) with its time. */
+  documentTimestamps: boolean;
 }
 
 export const LANGUAGES: { code: string | null; label: string }[] = [
@@ -53,6 +55,7 @@ export const DEFAULT_SETTINGS: Settings = {
   diarizeSpeakers: false,
   keepTranscripts: false,
   keepTranscriptsAsked: false,
+  documentTimestamps: true,
 };
 
 /**
@@ -97,5 +100,6 @@ export function restoreSettings(raw: Record<string, unknown> | null): Settings {
     diarizeSpeakers: pick(raw.diarizeSpeakers, isBool, d.diarizeSpeakers),
     keepTranscripts: pick(raw.keepTranscripts, isBool, d.keepTranscripts),
     keepTranscriptsAsked: pick(raw.keepTranscriptsAsked, isBool, d.keepTranscriptsAsked),
+    documentTimestamps: pick(raw.documentTimestamps, isBool, d.documentTimestamps),
   };
 }

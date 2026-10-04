@@ -1,7 +1,7 @@
 // Turn a Whisper result into downloadable transcript formats.
 import type { TranscriptResult } from "./protocol";
 
-export type ExportFormat = "txt" | "srt" | "vtt" | "json";
+export type ExportFormat = "txt" | "srt" | "vtt" | "json" | "md" | "doc";
 
 export const EXPORT_FORMATS: { value: ExportFormat; label: string; ext: string }[] =
   [
@@ -9,6 +9,9 @@ export const EXPORT_FORMATS: { value: ExportFormat; label: string; ext: string }
     { value: "srt", label: "Subtitles (.srt)", ext: "srt" },
     { value: "vtt", label: "WebVTT (.vtt)", ext: "vtt" },
     { value: "json", label: "JSON (.json)", ext: "json" },
+    { value: "md", label: "Document (.md)", ext: "md" },
+    // A distinct suffix so it can sit next to the plain .txt in one zip.
+    { value: "doc", label: "Document (.txt)", ext: "document.txt" },
   ];
 
 export function mimeFor(format: ExportFormat): string {
@@ -17,6 +20,8 @@ export function mimeFor(format: ExportFormat): string {
       return "application/json";
     case "vtt":
       return "text/vtt";
+    case "md":
+      return "text/markdown;charset=utf-8";
     default:
       return "text/plain;charset=utf-8";
   }
@@ -170,12 +175,123 @@ export function toJson(result: TranscriptResult, names: SpeakerNames = {}): stri
   );
 }
 
+// ── Readable documents (.md / .document.txt) ────────────────────────────────
+// The other formats keep Whisper's own segmentation — one short fragment per
+// line — which suits tools but reads poorly. A document merges fragments into
+// paragraphs: one per speaker turn, also split at long pauses, with the
+// speaker named once and an optional timestamp per paragraph.
+
+/** A pause at least this long starts a new paragraph even within one turn. */
+const PARAGRAPH_PAUSE_SECONDS = 4;
+
+export interface DocumentOptions {
+  /** Shown as the heading — usually the file or episode name. */
+  title: string;
+  /** Prefix each paragraph with its start time. */
+  timestamps: boolean;
+  /** Date shown in the header; defaults to now. */
+  date?: Date;
+}
+
+interface Paragraph {
+  start: number;
+  /** null for "no speaker detected", undefined when there are no speakers. */
+  speaker: number | null | undefined;
+  text: string;
+}
+
+function paragraphsOf(result: TranscriptResult): Paragraph[] {
+  const paragraphs: Paragraph[] = [];
+  let lastEnd = 0;
+  for (const chunk of result.chunks ?? []) {
+    const text = chunk.text.trim();
+    if (!text) continue;
+    const [start, end] = chunk.timestamp;
+    const current = paragraphs[paragraphs.length - 1];
+    const sameSpeaker = current && current.speaker === chunk.speaker;
+    if (current && sameSpeaker && start - lastEnd < PARAGRAPH_PAUSE_SECONDS) {
+      current.text += ` ${text}`;
+    } else {
+      paragraphs.push({ start, speaker: chunk.speaker, text });
+    }
+    lastEnd = end ?? start;
+  }
+  // No timestamped chunks at all: the whole text is one paragraph.
+  if (paragraphs.length === 0 && result.text.trim()) {
+    paragraphs.push({ start: 0, speaker: undefined, text: result.text.trim() });
+  }
+  return paragraphs;
+}
+
+/** 0:58, 12:05 or 1:02:03 — hours only when the recording needs them. */
+function clockTime(seconds: number, withHours: boolean): string {
+  const s = Math.max(0, Math.floor(seconds));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  const mm = String(m).padStart(2, "0");
+  return withHours
+    ? `${h}:${mm}:${String(sec).padStart(2, "0")}`
+    : `${mm}:${String(sec).padStart(2, "0")}`;
+}
+
+/** Escape text so Markdown shows it literally instead of formatting it. */
+function escapeMarkdown(text: string): string {
+  return text
+    .replace(/([\\`*_[\]<>#|~])/g, "\\$1")
+    // "1994. Something" at the start of a paragraph would become a list item.
+    .replace(/^(\d+)\./, "$1\\.");
+}
+
+export function toDocument(
+  result: TranscriptResult,
+  names: SpeakerNames,
+  options: DocumentOptions,
+  markdown: boolean,
+): string {
+  const paragraphs = paragraphsOf(result);
+  const duration = Math.max(
+    0,
+    ...(result.chunks ?? []).map((c) => c.timestamp[1] ?? c.timestamp[0]),
+  );
+  const withHours = duration >= 3600;
+  const ids = speakersIn(result);
+  const esc = markdown ? escapeMarkdown : (t: string) => t;
+
+  const facts = [
+    (options.date ?? new Date()).toISOString().slice(0, 10),
+    duration > 0 ? clockTime(duration, withHours) : null,
+    ids.length ? `Speakers: ${ids.map((id) => speakerLabel(id, names)).join(", ")}` : null,
+  ].filter(Boolean);
+
+  const lines: string[] = markdown
+    ? [`# ${esc(options.title)}`, "", `*${esc(facts.join(" · "))}*`, ""]
+    : [options.title, facts.join(" · "), ""];
+
+  for (const p of paragraphs) {
+    const time = options.timestamps ? `[${clockTime(p.start, withHours)}]` : "";
+    const who = p.speaker != null ? `${speakerLabel(p.speaker, names)}:` : "";
+    const lead = [time, who].filter(Boolean).join(" ");
+    if (markdown) {
+      lines.push(lead ? `**${esc(lead)}** ${esc(p.text)}` : esc(p.text), "");
+    } else {
+      lines.push(lead ? `${lead} ${p.text}` : p.text, "");
+    }
+  }
+  return lines.join("\n").trimEnd() + "\n";
+}
+
 export function render(
   result: TranscriptResult,
   format: ExportFormat,
   names: SpeakerNames = {},
+  document: DocumentOptions = { title: "Transcript", timestamps: true },
 ): string {
   switch (format) {
+    case "md":
+      return toDocument(result, names, document, true);
+    case "doc":
+      return toDocument(result, names, document, false);
     case "srt":
       return toSrt(result, names);
     case "vtt":

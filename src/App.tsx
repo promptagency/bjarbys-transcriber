@@ -341,8 +341,14 @@ export default function App() {
   // automatic downloads" and keep only the first, without surfacing an error
   // the page can catch (verified in Chrome). One file can't half-succeed.
   const downloadJob = useCallback(
-    (job: Job, result: TranscriptResult, formats: ExportFormat[]) => {
+    (
+      job: Job,
+      result: TranscriptResult,
+      formats: ExportFormat[],
+      documentTimestamps: boolean,
+    ) => {
       if (formats.length === 0) return;
+      const document = { title: job.label, timestamps: documentTimestamps };
       // Podcast names are built from episode titles, which routinely contain
       // slashes ("3/12 recap"). A browser strips those from a download name,
       // but inside a ZIP a slash is a path separator and would nest the files.
@@ -351,7 +357,7 @@ export default function App() {
         const format = formats[0];
         downloadText(
           withExtension(base, extFor(format)),
-          render(result, format, job.speakerNames),
+          render(result, format, job.speakerNames, document),
           format,
         );
         return;
@@ -359,7 +365,7 @@ export default function App() {
       const zip = createZip(
         formats.map((format) => ({
           name: withExtension(base, extFor(format)),
-          text: render(result, format, job.speakerNames),
+          text: render(result, format, job.speakerNames, document),
         })),
       );
       downloadBlob(withExtension(base, "zip"), zip);
@@ -437,7 +443,12 @@ export default function App() {
           warning,
         });
         if (settings.autoDownload)
-          downloadJob(job, finalResult, settings.exportFormats);
+          downloadJob(
+            job,
+            finalResult,
+            settings.exportFormats,
+            settings.documentTimestamps,
+          );
       } catch (e) {
         updateJob(job.id, {
           status: "error",
@@ -456,6 +467,7 @@ export default function App() {
       settings.task,
       settings.autoDownload,
       settings.exportFormats,
+      settings.documentTimestamps,
       settings.diarizeSpeakers,
     ],
   );
@@ -594,9 +606,16 @@ export default function App() {
   );
   const onManualDownload = useCallback(
     (job: Job) => {
-      if (job.result) downloadJob(job, job.result, settings.exportFormats);
+      if (job.result) {
+        downloadJob(
+          job,
+          job.result,
+          settings.exportFormats,
+          settings.documentTimestamps,
+        );
+      }
     },
-    [downloadJob, settings.exportFormats],
+    [downloadJob, settings.exportFormats, settings.documentTimestamps],
   );
 
   const activeJob = jobs.find((j) => ACTIVE_STATUSES.includes(j.status)) ?? null;
