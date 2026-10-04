@@ -215,31 +215,50 @@ export default function App() {
     };
   }, [commit]);
 
-  useEffect(() => {
+  const persist = useCallback(() => {
     // Before the restore finishes, an empty list would look like "everything
     // was removed".
     if (!restoredOnce) return;
-    const timer = window.setTimeout(() => {
-      const done = new Map(
-        jobs.filter((j) => j.status === "done" && j.result).map((j) => [j.id, j]),
-      );
-      for (const [id, job] of done) {
-        const prev = saved.current.get(id);
-        if (prev?.job === job) continue;
-        const savedAt = prev?.savedAt ?? Date.now();
-        saved.current.set(id, { job, savedAt });
-        void saveTranscript(toSaved(job, savedAt)!).then((ok) => {
-          if (!ok) setSaveFailed(true);
-        });
-      }
-      for (const id of [...saved.current.keys()]) {
-        if (done.has(id)) continue;
-        saved.current.delete(id);
-        void deleteTranscript(id);
-      }
-    }, 400);
+    const done = new Map(
+      jobsRef.current
+        .filter((j) => j.status === "done" && j.result)
+        .map((j) => [j.id, j]),
+    );
+    for (const [id, job] of done) {
+      const prev = saved.current.get(id);
+      if (prev?.job === job) continue;
+      const savedAt = prev?.savedAt ?? Date.now();
+      saved.current.set(id, { job, savedAt });
+      void saveTranscript(toSaved(job, savedAt)!).then((ok) => {
+        if (!ok) setSaveFailed(true);
+      });
+    }
+    for (const id of [...saved.current.keys()]) {
+      if (done.has(id)) continue;
+      saved.current.delete(id);
+      void deleteTranscript(id);
+    }
+  }, [restoredOnce]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(persist, 400);
     return () => window.clearTimeout(timer);
-  }, [jobs, restoredOnce]);
+  }, [jobs, persist]);
+
+  // Don't let the pause before saving lose the last edit: a hidden tab
+  // throttles timers to about once a minute, and a closed tab never fires
+  // them. Save immediately when the page is hidden or unloaded.
+  useEffect(() => {
+    const flush = () => {
+      if (document.visibilityState === "hidden") persist();
+    };
+    document.addEventListener("visibilitychange", flush);
+    window.addEventListener("pagehide", persist);
+    return () => {
+      document.removeEventListener("visibilitychange", flush);
+      window.removeEventListener("pagehide", persist);
+    };
+  }, [persist]);
 
   // Every format is rendered from the already-transcribed result, so saving
   // several costs no extra analysis.
