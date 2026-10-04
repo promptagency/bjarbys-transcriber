@@ -1,4 +1,5 @@
 import type { SpeakerNames } from "./exporters";
+import type { SavedTranscript } from "./storage";
 import type { TranscriptResult } from "./protocol";
 
 export type JobSource = "file" | "mic" | "podcast";
@@ -46,6 +47,8 @@ export interface Job {
   media: Blob | null;
   /** The transcript as produced, before any manual edits, for reverting lines. */
   originalResult: TranscriptResult | null;
+  /** Brought back from storage after a reload — its media is gone. */
+  restored: boolean;
 }
 
 export interface JobInput {
@@ -77,6 +80,7 @@ export function makeJob(input: JobInput): Job {
     getMedia: input.getMedia,
     media: null,
     originalResult: null,
+    restored: false,
   };
 }
 
@@ -107,4 +111,26 @@ export function jobProgress(job: Job): number {
   const index = stages.indexOf(job.status);
   if (index === -1) return 0; // "queued"
   return (index + job.stageProgress) / stages.length;
+}
+
+/** A finished job rebuilt from storage. It has no media, so nothing can re-run it. */
+export function jobFromSaved(saved: SavedTranscript): Job {
+  return {
+    id: saved.id,
+    label: saved.label,
+    source: saved.source,
+    status: "done",
+    stageProgress: 1,
+    result: saved.result,
+    error: null,
+    warning: saved.warning,
+    willDiarize: false,
+    speakerNames: saved.speakerNames ?? {},
+    downloadName: saved.downloadName,
+    getMedia: () =>
+      Promise.reject(new Error("The original audio isn't kept after a reload.")),
+    media: null,
+    originalResult: saved.originalResult,
+    restored: true,
+  };
 }

@@ -130,6 +130,7 @@ export function JobQueue({
           <button
             type="button"
             onClick={onClearCompleted}
+            title="Removes finished transcripts from this list and from this browser"
             className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-200"
           >
             <Trash2 className="size-3.5" /> Clear completed

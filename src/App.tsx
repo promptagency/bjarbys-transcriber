@@ -31,8 +31,22 @@ import {
   isEnglishOnly,
   tierFor,
 } from "./lib/models";
-import { type Settings } from "./lib/settings";
-import { ACTIVE_STATUSES, type Job, type JobInput, makeJob } from "./lib/jobs";
+import { type Settings, restoreSettings } from "./lib/settings";
+import {
+  deleteTranscript,
+  loadSettingsRaw,
+  loadTranscripts,
+  saveSettings,
+  saveTranscript,
+  toSaved,
+} from "./lib/storage";
+import {
+  ACTIVE_STATUSES,
+  type Job,
+  type JobInput,
+  jobFromSaved,
+  makeJob,
+} from "./lib/jobs";
 import {
   type ExportFormat,
   extFor,
@@ -71,16 +85,11 @@ const TABS: { id: Tab; label: string; icon: typeof FileAudio }[] = [
 export default function App() {
   const { state, loadModel, transcribe, diarize } = useWhisper();
 
-  const [settings, setSettings] = useState<Settings>({
-    modelId: "KBLab/kb-whisper-base",
-    dtype: "q8",
-    deviceMode: "auto",
-    language: "sv",
-    task: "transcribe",
-    exportFormats: ["txt"],
-    autoDownload: true,
-    diarizeSpeakers: false,
-  });
+  // Restored from the last visit; anything invalid falls back to defaults.
+  const [settings, setSettings] = useState<Settings>(() =>
+    restoreSettings(loadSettingsRaw()),
+  );
+  useEffect(() => saveSettings(settings), [settings]);
   const proxyBase = DEFAULT_PROXY;
 
   const [tab, setTab] = useState<Tab>("files");
@@ -175,6 +184,62 @@ export default function App() {
     (inputs: JobInput[]) => commit([...jobsRef.current, ...inputs.map(makeJob)]),
     [commit],
   );
+
+  // ── Persistence ───────────────────────────────────────────────────────────
+  // Finished transcripts survive a reload (see src/lib/storage.ts). `saved`
+  // remembers the exact job object last written for each id, so only changed
+  // jobs are written; ids that vanish from the list (✕, Clear completed) are
+  // deleted. Writes wait for a pause so typing a name doesn't write per key.
+  const saved = useRef(new Map<string, { job: Job; savedAt: number }>());
+  const [restoredOnce, setRestoredOnce] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadTranscripts().then((records) => {
+      if (cancelled) return;
+      const restored = records.map(jobFromSaved);
+      for (let i = 0; i < restored.length; i++) {
+        saved.current.set(restored[i].id, {
+          job: restored[i],
+          savedAt: records[i].savedAt,
+        });
+      }
+      // Restored transcripts go first: they're older than anything added
+      // while storage was still loading.
+      if (restored.length) commit([...restored, ...jobsRef.current]);
+      setRestoredOnce(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [commit]);
+
+  useEffect(() => {
+    // Before the restore finishes, an empty list would look like "everything
+    // was removed".
+    if (!restoredOnce) return;
+    const timer = window.setTimeout(() => {
+      const done = new Map(
+        jobs.filter((j) => j.status === "done" && j.result).map((j) => [j.id, j]),
+      );
+      for (const [id, job] of done) {
+        const prev = saved.current.get(id);
+        if (prev?.job === job) continue;
+        const savedAt = prev?.savedAt ?? Date.now();
+        saved.current.set(id, { job, savedAt });
+        void saveTranscript(toSaved(job, savedAt)!).then((ok) => {
+          if (!ok) setSaveFailed(true);
+        });
+      }
+      for (const id of [...saved.current.keys()]) {
+        if (done.has(id)) continue;
+        saved.current.delete(id);
+        void deleteTranscript(id);
+      }
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [jobs, restoredOnce]);
 
   // Every format is rendered from the already-transcribed result, so saving
   // several costs no extra analysis.
@@ -606,6 +671,14 @@ export default function App() {
             total={jobs.length}
           />
         </div>
+      )}
+
+      {saveFailed && (
+        <p className="mt-5 text-xs text-amber-300">
+          This browser won&rsquo;t let the app save transcripts (a private window,
+          or storage is full or blocked), so they&rsquo;ll be gone after a reload.
+          Download anything you want to keep.
+        </p>
       )}
 
       <div className="mt-5">
