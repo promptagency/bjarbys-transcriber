@@ -15,6 +15,8 @@ export interface TranscriptChunk {
    * or ambiguous speech, not necessarily a wrong answer.
    */
   speaker_conf?: number;
+  /** Set when the user corrected this chunk's text or speaker by hand. */
+  edited?: boolean;
 }
 
 export interface TranscriptResult {

@@ -12,6 +12,8 @@ import {
   X,
 } from "lucide-react";
 import type { Job, JobSource } from "../lib/jobs";
+import type { TranscriptChunk } from "../lib/protocol";
+import { TranscriptReview } from "./TranscriptReview";
 import { speakersIn, toTxt } from "../lib/exporters";
 import { Badge, ProgressBar, Spinner } from "./ui";
 
@@ -83,12 +85,16 @@ export function JobQueue({
   onRemove,
   onClearCompleted,
   onRenameSpeaker,
+  onEditChunk,
+  onRevertChunk,
 }: {
   jobs: Job[];
   onDownload: (job: Job) => void;
   onRemove: (job: Job) => void;
   onClearCompleted: () => void;
   onRenameSpeaker: (job: Job, speaker: number, name: string) => void;
+  onEditChunk: (job: Job, index: number, patch: Partial<TranscriptChunk>) => void;
+  onRevertChunk: (job: Job, index: number) => void;
 }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [copied, setCopied] = useState<string | null>(null);
@@ -223,10 +229,11 @@ export function JobQueue({
                       )}
                     </button>
                   </div>
-                  <p className="max-h-60 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed text-slate-200 scroll-thin">
-                    {toTxt(job.result, job.speakerNames).trim() ||
-                      "(no speech detected)"}
-                  </p>
+                  <TranscriptReview
+                    job={job}
+                    onEdit={onEditChunk}
+                    onRevert={onRevertChunk}
+                  />
                 </div>
               )}
             </li>

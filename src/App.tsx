@@ -49,7 +49,7 @@ import {
   fetchEpisodeAudio,
 } from "./lib/podcasts";
 import { createZip } from "./lib/zip";
-import type { TranscriptResult } from "./lib/protocol";
+import type { TranscriptChunk, TranscriptResult } from "./lib/protocol";
 import { useWhisper } from "./hooks/useWhisper";
 import { LanguageChooser } from "./components/LanguageChooser";
 import { AdvancedSettings } from "./components/AdvancedSettings";
@@ -221,9 +221,11 @@ export default function App() {
           willDiarize: settings.diarizeSpeakers,
           stageProgress: 0,
         });
-        const audio = await job.getAudio((p) =>
+        const media = await job.getMedia((p) =>
           updateJob(job.id, { stageProgress: p }),
         );
+        updateJob(job.id, { media, status: "decoding", stageProgress: 0 });
+        const audio = await decodeToPCM(media);
 
         updateJob(job.id, { status: "transcribing", stageProgress: 0 });
         const loadedId = state.modelId ?? settings.modelId;
@@ -271,7 +273,12 @@ export default function App() {
           }
         }
 
-        updateJob(job.id, { status: "done", result: finalResult, warning });
+        updateJob(job.id, {
+          status: "done",
+          result: finalResult,
+          originalResult: finalResult,
+          warning,
+        });
         if (settings.autoDownload)
           downloadJob(job, finalResult, settings.exportFormats);
       } catch (e) {
@@ -336,7 +343,7 @@ export default function App() {
           label: f.name,
           source: "file" as const,
           downloadName: f.name,
-          getAudio: () => decodeToPCM(f),
+          getMedia: async () => f,
         })),
       ),
     [addJobs],
@@ -349,7 +356,7 @@ export default function App() {
           label,
           source: "mic",
           downloadName: label,
-          getAudio: () => decodeToPCM(blob),
+          getMedia: async () => blob,
         },
       ]),
     [addJobs],
@@ -362,12 +369,10 @@ export default function App() {
           label: ep.title,
           source: "podcast" as const,
           downloadName: `${show.title} - ${ep.title}`,
-          getAudio: async (onProgress) => {
-            const blob = await fetchEpisodeAudio(ep, proxyBase, (l, t) =>
+          getMedia: (onProgress) =>
+            fetchEpisodeAudio(ep, proxyBase, (l, t) =>
               onProgress?.(t ? l / t : 0),
-            );
-            return decodeToPCM(blob);
-          },
+            ),
         })),
       );
       setTab("files");
@@ -390,6 +395,37 @@ export default function App() {
       if (!current) return;
       updateJob(job.id, {
         speakerNames: { ...current.speakerNames, [speaker]: name },
+      });
+    },
+    [updateJob],
+  );
+  // Manual corrections from the review view. Whisper's flat `text` is rebuilt
+  // from the chunks so exports without speakers (which use it) see the edit.
+  const onEditChunk = useCallback(
+    (job: Job, index: number, patch: Partial<TranscriptChunk>) => {
+      const current = jobsRef.current.find((j) => j.id === job.id);
+      if (!current?.result) return;
+      const chunks = current.result.chunks.map((c, i) =>
+        i === index ? { ...c, ...patch, edited: true } : c,
+      );
+      updateJob(job.id, {
+        result: { text: chunks.map((c) => c.text).join(""), chunks },
+      });
+    },
+    [updateJob],
+  );
+  const onRevertChunk = useCallback(
+    (job: Job, index: number) => {
+      const current = jobsRef.current.find((j) => j.id === job.id);
+      const original = current?.originalResult?.chunks[index];
+      if (!current?.result || !original) return;
+      const chunks = current.result.chunks.map((c, i) => (i === index ? original : c));
+      const edited = chunks.some((c) => c.edited);
+      updateJob(job.id, {
+        // With nothing left edited, restore Whisper's own text exactly.
+        result: edited
+          ? { text: chunks.map((c) => c.text).join(""), chunks }
+          : current.originalResult,
       });
     },
     [updateJob],
@@ -572,6 +608,8 @@ export default function App() {
           jobs={jobs}
           onDownload={onManualDownload}
           onRenameSpeaker={onRenameSpeaker}
+          onEditChunk={onEditChunk}
+          onRevertChunk={onRevertChunk}
           onRemove={onRemove}
           onClearCompleted={onClearCompleted}
         />
