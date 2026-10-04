@@ -41,7 +41,8 @@ export function TranscriptReview({
 }) {
   const result = job.result!;
   const chunks = result.chunks;
-  const hasSpeakers = speakersIn(result, { includeBlank: true }).length > 0;
+  const allSpeakers = speakersIn(result, { includeBlank: true });
+  const hasSpeakers = allSpeakers.length > 0;
   const speakers = speakersIn(result);
 
   const [onlyUnsure, setOnlyUnsure] = useState(false);
@@ -67,7 +68,9 @@ export function TranscriptReview({
     .map((chunk, index) => ({ chunk, index }))
     .filter(({ chunk }) => chunk.text.trim().length > 0 || chunk.edited);
   const unsureCount = rows.filter(({ chunk }) => isUnsure(chunk, hasSpeakers)).length;
-  const shown = onlyUnsure
+  // Only while the toggle is visible: if every speaker is removed by hand the
+  // checkbox disappears, and a filter left on would hide all lines for good.
+  const shown = onlyUnsure && hasSpeakers
     ? rows.filter(({ chunk }) => isUnsure(chunk, hasSpeakers))
     : rows;
 
@@ -104,18 +107,26 @@ export function TranscriptReview({
 
   function saveEdit() {
     if (editing === null) return;
-    const before = chunks[editing].text.trim();
-    const after = draft.trim();
-    // Whisper's chunk text starts with a space; keep that so the joined
-    // full text stays readable.
-    if (after !== before) onEdit(job, editing, { text: after ? ` ${after}` : "" });
+    const original = chunks[editing].text;
+    // One line of text: a newline inside a subtitle cue (and a blank line in
+    // particular, which ends the cue) would corrupt the .srt/.vtt exports.
+    const after = draft.replace(/\s+/g, " ").trim();
+    // Keep the chunk's own leading whitespace — Whisper puts a space there for
+    // languages that use them, and none for those that don't — so the joined
+    // full text reads the same as before.
+    const lead = original.match(/^\s*/)?.[0] ?? "";
+    if (after !== original.trim()) {
+      onEdit(job, editing, { text: after ? lead + after : "" });
+    }
     setEditing(null);
   }
 
   function setSpeaker(index: number, value: string) {
     let speaker: number | null;
     if (value === "none") speaker = null;
-    else if (value === "new") speaker = Math.max(0, ...speakers) + 1;
+    // Counted over every speaker, including those only on blank lines, so a
+    // new speaker can't silently reuse an existing number.
+    else if (value === "new") speaker = Math.max(0, ...allSpeakers) + 1;
     else speaker = Number(value);
     onEdit(job, index, { speaker });
   }
