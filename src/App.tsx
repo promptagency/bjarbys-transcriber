@@ -91,15 +91,27 @@ export default function App() {
   const [settings, setSettings] = useState<Settings>(() =>
     restoreSettings(loadSettingsRaw()),
   );
-  useEffect(() => saveSettings(settings), [settings]);
   // Follow changes made in another tab, so this one never writes stale
-  // settings back. (Saving an identical value fires no event, so this can't
-  // ping-pong between tabs.)
+  // settings back. Settings adopted that way are NOT saved again: if the
+  // other tab made two quick changes, re-saving the first after the second
+  // had landed would overwrite it — and the other tab would then adopt the
+  // stale value (found in testing: switching keeping on was reverted).
+  const adoptedFromElsewhere = useRef<string | null>(null);
+  useEffect(() => {
+    const json = JSON.stringify(settings);
+    if (json === adoptedFromElsewhere.current) {
+      adoptedFromElsewhere.current = null;
+      return;
+    }
+    saveSettings(settings);
+  }, [settings]);
   useEffect(
     () =>
-      onSettingsChangedElsewhere(() =>
-        setSettings(restoreSettings(loadSettingsRaw())),
-      ),
+      onSettingsChangedElsewhere(() => {
+        const next = restoreSettings(loadSettingsRaw());
+        adoptedFromElsewhere.current = JSON.stringify(next);
+        setSettings(next);
+      }),
     [],
   );
   const proxyBase = DEFAULT_PROXY;
