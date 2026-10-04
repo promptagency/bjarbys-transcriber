@@ -70,7 +70,10 @@ The README documents why word-level timestamps were measured and rejected — do
 **Exports (`src/lib/exporters.ts`, `src/lib/zip.ts`).** txt/srt/vtt/json are all rendered from the one
 stored `TranscriptResult`; lines get a speaker prefix when chunks carry speakers — the user's name from
 `job.speakerNames` (per job, edited in `JobQueue`) or `Speaker N` — and JSON's `text` is built from `toTxt()`
-so all formats agree. JSON keeps numeric `speaker` per chunk plus a `speakers` id→name map. Several formats are saved as one store-only ZIP because browsers
+so all formats agree. JSON keeps numeric `speaker` per chunk plus a `speakers` id→name map. The document
+formats (`md`, `doc` → `.document.txt`) go through `toDocument()`: chunks merge into paragraphs per speaker
+turn, split at gaps ≥ `PARAGRAPH_PAUSE_SECONDS`; Markdown text is escaped (including list-like paragraph
+starts), the header date is local, and the title/timestamp option come from `downloadJob`. Several formats are saved as one store-only ZIP because browsers
 silently block bursts of downloads.
 
 **Podcasts (`src/lib/podcasts.ts`).** iTunes Search API (CORS-enabled) to find shows; RSS and audio are

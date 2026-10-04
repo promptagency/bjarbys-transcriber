@@ -9,7 +9,10 @@ import {
   formatSize,
   isEnglishOnly,
 } from "../lib/models";
-import { EXPORT_FORMATS } from "../lib/exporters";
+import { EXPORT_FORMATS, type ExportFormat } from "../lib/exporters";
+
+/** The readable formats: paragraphs per speaker turn rather than one line per fragment. */
+const isDocument = (f: ExportFormat) => f === "md" || f === "doc";
 import { type DeviceMode, LANGUAGES, type Settings } from "../lib/settings";
 import { Field, Select } from "./ui";
 
@@ -130,11 +133,22 @@ export function AdvancedSettings({
                   }
                   className="size-4 rounded border-[var(--color-border)] bg-[var(--color-surface-2)] accent-sky-500"
                 />
-                .{f.ext}
+                {isDocument(f.value) ? f.label : `.${f.ext}`}
               </label>
             );
           })}
         </div>
+        {settings.exportFormats.some(isDocument) && (
+          <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs text-slate-400">
+            <input
+              type="checkbox"
+              checked={settings.documentTimestamps}
+              onChange={(e) => onChange({ documentTimestamps: e.target.checked })}
+              className="size-3.5 rounded border-[var(--color-border)] bg-[var(--color-surface-2)] accent-sky-500"
+            />
+            Timestamps in documents ([00:09] before each paragraph)
+          </label>
+        )}
       </div>
 
       <Field label="Language" hint={englishOnly ? "English-only model" : ""}>

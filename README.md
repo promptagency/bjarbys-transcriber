@@ -27,6 +27,10 @@ If you find it useful, consider
 - 📝 **Export** to `.txt`, `.srt`, `.vtt`, and `.json` (with timestamps) — tick
   as many formats as you like; the audio is only analysed once and every format
   is rendered from that same result. Picking several saves them as one `.zip`.
+- 📄 **Readable documents** — `.md` or `.document.txt` for reading rather
+  than subtitling: one paragraph per speaker turn (a new one after a pause of
+  4 s or more), the speaker named once, a header with title, date, length and
+  speakers, and optional `[mm:ss]` timestamps.
 - 🗣️ **Speaker separation** (optional, experimental) — labels each line
   `Speaker 1`, `Speaker 2`, … via
   [pyannote](https://huggingface.co/pyannote/segmentation-3.0), and lets you
@@ -128,7 +132,7 @@ dependency. Each chunk in the `.json` export then carries `speaker` and
 Open a finished transcript to **name the speakers**: one field per detected
 speaker, applied immediately to the transcript, Copy and downloads. Names are
 per transcript, since "Speaker 1" is a different person in every recording.
-In `.txt`/`.srt`/`.vtt` the name replaces `Speaker N`; in `.json` the chunks
+In `.txt`/`.srt`/`.vtt` and the documents the name replaces `Speaker N`; in `.json` the chunks
 keep their numeric `speaker` and a top-level `speakers` object maps each
 number to its name. An automatic download happens before you've named
 anyone, so download again after naming.
