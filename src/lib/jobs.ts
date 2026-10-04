@@ -61,10 +61,13 @@ export interface JobInput {
 let counter = 0;
 export function makeJob(input: JobInput): Job {
   counter += 1;
+  // randomUUID only exists in secure contexts (not plain http on a LAN IP).
+  // Ids are persisted, so the fallback must not repeat across page loads —
+  // a bare counter would restart at 1 and collide with restored transcripts.
   const id =
     typeof crypto !== "undefined" && "randomUUID" in crypto
       ? crypto.randomUUID()
-      : `job-${counter}`;
+      : `job-${Date.now().toString(36)}-${counter}-${Math.random().toString(36).slice(2)}`;
   return {
     id,
     label: input.label,

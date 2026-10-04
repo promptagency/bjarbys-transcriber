@@ -190,7 +190,8 @@ export default function App() {
   // remembers the exact job object last written for each id, so only changed
   // jobs are written; ids that vanish from the list (✕, Clear completed) are
   // deleted. Writes wait for a pause so typing a name doesn't write per key.
-  const saved = useRef(new Map<string, { job: Job; savedAt: number }>());
+  // `job` is null when the last write failed, so the next pass retries it.
+  const saved = useRef(new Map<string, { job: Job | null; savedAt: number }>());
   const [restoredOnce, setRestoredOnce] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
 
@@ -230,7 +231,12 @@ export default function App() {
       const savedAt = prev?.savedAt ?? Date.now();
       saved.current.set(id, { job, savedAt });
       void saveTranscript(toSaved(job, savedAt)!).then((ok) => {
-        if (!ok) setSaveFailed(true);
+        if (ok) return;
+        setSaveFailed(true);
+        // Not saved after all: forget it (unless a newer version has been
+        // queued since), so the next pass tries again.
+        const entry = saved.current.get(id);
+        if (entry?.job === job) entry.job = null;
       });
     }
     for (const id of [...saved.current.keys()]) {
@@ -240,10 +246,28 @@ export default function App() {
     }
   }, [restoredOnce]);
 
+  // At most one save pass per 400 ms. Deliberately NOT a debounce: while a
+  // queue runs, progress updates change `jobs` many times a second, and a
+  // timer restarted on every change would postpone saving finished
+  // transcripts for as long as the queue keeps running.
+  const saveTimer = useRef<number | null>(null);
+  // The timer calls whatever `persist` is current when it fires, not the one
+  // from when it was scheduled (which may predate the restore finishing).
+  const persistRef = useRef(persist);
+  persistRef.current = persist;
   useEffect(() => {
-    const timer = window.setTimeout(persist, 400);
-    return () => window.clearTimeout(timer);
+    if (saveTimer.current !== null) return;
+    saveTimer.current = window.setTimeout(() => {
+      saveTimer.current = null;
+      persistRef.current();
+    }, 400);
   }, [jobs, persist]);
+  useEffect(
+    () => () => {
+      if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
+    },
+    [],
+  );
 
   // Don't let the pause before saving lose the last edit: a hidden tab
   // throttles timers to about once a minute, and a closed tab never fires
@@ -527,7 +551,9 @@ export default function App() {
   );
 
   const activeJob = jobs.find((j) => ACTIVE_STATUSES.includes(j.status)) ?? null;
-  const processed = jobs.filter(
+  // Transcripts restored from an earlier visit aren't part of this run.
+  const sessionJobs = jobs.filter((j) => !j.restored);
+  const processed = sessionJobs.filter(
     (j) => j.status === "done" || j.status === "error",
   ).length;
   const busy = state.status === "loading" || !!activeJob;
@@ -687,7 +713,7 @@ export default function App() {
             state={state}
             activeJob={activeJob}
             done={processed}
-            total={jobs.length}
+            total={sessionJobs.length}
           />
         </div>
       )}
