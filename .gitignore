@@ -9,3 +9,6 @@ yarn-debug.log*
 yarn-error.log*
 
 *.tsbuildinfo
+
+# Temporary audio for manual browser tests (see CLAUDE.md)
+public/test-audio/
