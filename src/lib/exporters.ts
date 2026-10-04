@@ -239,8 +239,16 @@ function clockTime(seconds: number, withHours: boolean): string {
 function escapeMarkdown(text: string): string {
   return text
     .replace(/([\\`*_[\]<>#|~])/g, "\\$1")
-    // "1994. Something" at the start of a paragraph would become a list item.
-    .replace(/^(\d+)\./, "$1\\.");
+    // "1994. Something", "1) …" or Whisper's subtitle-style "- Hej." at the
+    // start of a paragraph would become a list item.
+    .replace(/^(\d+)([.)])/, "$1\\$2")
+    .replace(/^([-+])(?=\s|$)/, "\\$1");
+}
+
+/** YYYY-MM-DD in the user's own time zone (toISOString would give UTC's date). */
+function localDate(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 export function toDocument(
@@ -259,7 +267,7 @@ export function toDocument(
   const esc = markdown ? escapeMarkdown : (t: string) => t;
 
   const facts = [
-    (options.date ?? new Date()).toISOString().slice(0, 10),
+    localDate(options.date ?? new Date()),
     duration > 0 ? clockTime(duration, withHours) : null,
     ids.length ? `Speakers: ${ids.map((id) => speakerLabel(id, names)).join(", ")}` : null,
   ].filter(Boolean);
