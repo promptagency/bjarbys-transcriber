@@ -36,15 +36,23 @@ export interface Job {
   speakerNames: SpeakerNames;
   /** Base filename used when exporting (without extension is fine). */
   downloadName: string;
-  /** Lazily acquire + decode this job's audio to mono 16 kHz PCM. */
-  getAudio: (onProgress?: (p: number) => void) => Promise<Float32Array>;
+  /** Lazily acquire this job's original audio/video (a podcast is downloaded here). */
+  getMedia: (onProgress?: (p: number) => void) => Promise<Blob>;
+  /**
+   * The original media once acquired — kept so the review view can play back
+   * individual lines. For files and recordings it's the object the page
+   * already holds, so keeping it costs no extra memory.
+   */
+  media: Blob | null;
+  /** The transcript as produced, before any manual edits, for reverting lines. */
+  originalResult: TranscriptResult | null;
 }
 
 export interface JobInput {
   label: string;
   source: JobSource;
   downloadName: string;
-  getAudio: (onProgress?: (p: number) => void) => Promise<Float32Array>;
+  getMedia: (onProgress?: (p: number) => void) => Promise<Blob>;
 }
 
 let counter = 0;
@@ -66,7 +74,9 @@ export function makeJob(input: JobInput): Job {
     willDiarize: false,
     speakerNames: {},
     downloadName: input.downloadName,
-    getAudio: input.getAudio,
+    getMedia: input.getMedia,
+    media: null,
+    originalResult: null,
   };
 }
 
