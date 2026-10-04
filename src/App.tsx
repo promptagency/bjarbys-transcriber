@@ -33,6 +33,7 @@ import {
 } from "./lib/models";
 import { type Settings, restoreSettings } from "./lib/settings";
 import {
+  deleteAllTranscripts,
   deleteTranscript,
   loadSettingsRaw,
   loadTranscripts,
@@ -186,17 +187,26 @@ export default function App() {
   );
 
   // ── Persistence ───────────────────────────────────────────────────────────
-  // Finished transcripts survive a reload (see src/lib/storage.ts). `saved`
+  // Only if the user opts in (`settings.keepTranscripts`), finished
+  // transcripts survive a reload (see src/lib/storage.ts). `saved`
   // remembers the exact job object last written for each id, so only changed
-  // jobs are written; ids that vanish from the list (✕, Clear completed) are
+  // jobs are written; ids that vanish from the list (✕, Delete all finished) are
   // deleted. Writes wait for a pause so typing a name doesn't write per key.
   // `job` is null when the last write failed, so the next pass retries it.
   const saved = useRef(new Map<string, { job: Job | null; savedAt: number }>());
   const [restoredOnce, setRestoredOnce] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
 
+  // The choice as it stood when the page loaded decides whether to restore.
+  const keepAtLoad = useRef(settings.keepTranscripts);
   useEffect(() => {
     let cancelled = false;
+    if (!keepAtLoad.current) {
+      // Not opted in: make sure nothing lingers from an earlier choice.
+      void deleteAllTranscripts();
+      setRestoredOnce(true);
+      return;
+    }
     loadTranscripts().then((records) => {
       if (cancelled) return;
       const restored = records.map(jobFromSaved);
@@ -219,7 +229,7 @@ export default function App() {
   const persist = useCallback(() => {
     // Before the restore finishes, an empty list would look like "everything
     // was removed".
-    if (!restoredOnce) return;
+    if (!restoredOnce || !settings.keepTranscripts) return;
     const done = new Map(
       jobsRef.current
         .filter((j) => j.status === "done" && j.result)
@@ -244,17 +254,30 @@ export default function App() {
       saved.current.delete(id);
       void deleteTranscript(id);
     }
-  }, [restoredOnce]);
+  }, [restoredOnce, settings.keepTranscripts]);
+  // Timers and the toggle effect call whatever `persist` is current when they
+  // run, not the one captured when they were scheduled.
+  const persistRef = useRef(persist);
+  persistRef.current = persist;
+
+  // Turning keeping off deletes every saved copy (the list on screen stays
+  // until reload); turning it on saves what's already finished right away.
+  useEffect(() => {
+    if (!restoredOnce) return;
+    if (settings.keepTranscripts) {
+      persistRef.current();
+    } else {
+      saved.current.clear();
+      setSaveFailed(false);
+      void deleteAllTranscripts();
+    }
+  }, [settings.keepTranscripts, restoredOnce]);
 
   // At most one save pass per 400 ms. Deliberately NOT a debounce: while a
   // queue runs, progress updates change `jobs` many times a second, and a
   // timer restarted on every change would postpone saving finished
   // transcripts for as long as the queue keeps running.
   const saveTimer = useRef<number | null>(null);
-  // The timer calls whatever `persist` is current when it fires, not the one
-  // from when it was scheduled (which may predate the restore finishing).
-  const persistRef = useRef(persist);
-  persistRef.current = persist;
   useEffect(() => {
     if (saveTimer.current !== null) return;
     saveTimer.current = window.setTimeout(() => {
@@ -721,11 +744,11 @@ export default function App() {
         </div>
       )}
 
-      {saveFailed && (
+      {saveFailed && settings.keepTranscripts && (
         <p className="mt-5 text-xs text-amber-300">
-          This browser won&rsquo;t let the app save transcripts (a private window,
-          or storage is full or blocked), so they&rsquo;ll be gone after a reload.
-          Download anything you want to keep.
+          This browser refused to save a transcript (a private window, or storage
+          is full or blocked), so it may be missing after a reload. Download
+          anything you want to keep.
         </p>
       )}
 
@@ -738,6 +761,13 @@ export default function App() {
           onRevertChunk={onRevertChunk}
           onRemove={onRemove}
           onClearCompleted={onClearCompleted}
+          keepTranscripts={settings.keepTranscripts}
+          askKeepTranscripts={
+            !settings.keepTranscripts && !settings.keepTranscriptsAsked
+          }
+          onChooseKeepTranscripts={(keep) =>
+            patchSettings({ keepTranscripts: keep, keepTranscriptsAsked: true })
+          }
         />
       </div>
 

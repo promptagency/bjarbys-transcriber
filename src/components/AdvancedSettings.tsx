@@ -186,6 +186,28 @@ export function AdvancedSettings({
         Separate speakers (experimental — labels each line "Speaker 1",
         "Speaker 2", etc.)
       </label>
+
+      <label className="flex cursor-pointer items-start gap-2.5 text-sm text-slate-300 sm:col-span-2">
+        <input
+          type="checkbox"
+          checked={settings.keepTranscripts}
+          onChange={(e) =>
+            onChange({
+              keepTranscripts: e.target.checked,
+              keepTranscriptsAsked: true,
+            })
+          }
+          className="mt-0.5 size-4 rounded border-[var(--color-border)] bg-[var(--color-surface-2)] accent-sky-500"
+        />
+        <span>
+          Keep finished transcripts in this browser after a reload
+          <span className="mt-0.5 block text-xs text-slate-500">
+            They stay until you delete them, and anyone using this browser could
+            open them — leave this off on a shared computer. Turning it off
+            deletes the saved copies.
+          </span>
+        </span>
+      </label>
     </div>
   );
 }

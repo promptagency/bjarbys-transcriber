@@ -1,5 +1,5 @@
-// Keeps finished transcripts and settings across page reloads, on this device
-// only: transcripts in IndexedDB (they can run to hundreds of KB each, past
+// Keeps settings — and, only if the user opts in (`keepTranscripts`), finished
+// transcripts — across page reloads, on this device only: transcripts in IndexedDB (they can run to hundreds of KB each, past
 // localStorage's ~5 MB budget), settings in localStorage.
 //
 // The original media is deliberately NOT stored — a video can be gigabytes,
@@ -139,5 +139,14 @@ export function saveSettings(settings: object): void {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   } catch {
     /* private window or storage disabled — settings just won't persist */
+  }
+}
+
+/** Remove every saved transcript (used when the user turns keeping off). */
+export async function deleteAllTranscripts(): Promise<void> {
+  try {
+    await withStore("readwrite", (s) => s.clear());
+  } catch {
+    /* storage unavailable — nothing stored */
   }
 }

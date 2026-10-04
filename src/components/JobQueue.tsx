@@ -5,6 +5,7 @@ import {
   Copy,
   Download,
   FileAudio,
+  HardDrive,
   Mic,
   Podcast,
   Trash2,
@@ -87,6 +88,9 @@ export function JobQueue({
   onRenameSpeaker,
   onEditChunk,
   onRevertChunk,
+  keepTranscripts,
+  askKeepTranscripts,
+  onChooseKeepTranscripts,
 }: {
   jobs: Job[];
   onDownload: (job: Job) => void;
@@ -95,6 +99,11 @@ export function JobQueue({
   onRenameSpeaker: (job: Job, speaker: number, name: string) => void;
   onEditChunk: (job: Job, index: number, patch: Partial<TranscriptChunk>) => void;
   onRevertChunk: (job: Job, index: number) => void;
+  /** The user opted in to keeping finished transcripts across reloads. */
+  keepTranscripts: boolean;
+  /** Show the one-time question about keeping transcripts. */
+  askKeepTranscripts: boolean;
+  onChooseKeepTranscripts: (keep: boolean) => void;
 }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [copied, setCopied] = useState<string | null>(null);
@@ -102,6 +111,7 @@ export function JobQueue({
   if (jobs.length === 0) return null;
 
   const doneCount = jobs.filter((j) => j.status === "done").length;
+  const restoredCount = jobs.filter((j) => j.restored).length;
 
   function toggle(id: string) {
     setExpanded((prev) => {
@@ -130,13 +140,72 @@ export function JobQueue({
           <button
             type="button"
             onClick={onClearCompleted}
-            title="Removes finished transcripts from this list and from this browser"
-            className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-200"
+            title="Deletes all finished transcripts from this list and from this browser"
+            className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-300"
           >
-            <Trash2 className="size-3.5" /> Clear completed
+            <Trash2 className="size-3.5" /> Delete all finished
           </button>
         )}
       </div>
+
+      {/*
+        Transcripts outlive the tab, so say so plainly: nothing removes them
+        automatically, and anyone using this browser profile can open them.
+      */}
+      {/*
+        Keeping is opt-in, so the first finished transcript asks — with what
+        the choice means — instead of quietly storing anything.
+      */}
+      {doneCount > 0 && askKeepTranscripts && (
+        <div className="rounded-xl border border-sky-400/30 bg-sky-400/[0.07] p-3.5 text-xs leading-relaxed text-sky-100/90">
+          <p className="mb-1 text-sm font-semibold text-sky-100">
+            Keep finished transcripts if you reload the page?
+          </p>
+          <p>
+            If you say yes, they&rsquo;re saved in this browser (never uploaded)
+            and <strong className="font-semibold text-sky-100">stay until you
+            delete them</strong> — anyone using this browser could open them. If
+            you say no, they disappear when you close or reload the page, so
+            download what you need. You can change this later in Settings.
+          </p>
+          <div className="mt-2.5 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => onChooseKeepTranscripts(true)}
+              className="rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-600"
+            >
+              Yes, keep them
+            </button>
+            <button
+              type="button"
+              onClick={() => onChooseKeepTranscripts(false)}
+              className="rounded-lg px-3 py-1.5 text-xs text-slate-300 ring-1 ring-inset ring-[var(--color-border)] hover:bg-white/5"
+            >
+              No thanks
+            </button>
+          </div>
+        </div>
+      )}
+
+      {doneCount > 0 && keepTranscripts && (
+        <div className="flex gap-2.5 rounded-xl border border-sky-400/25 bg-sky-400/[0.06] p-3 text-xs leading-relaxed text-sky-100/90">
+          <HardDrive className="mt-0.5 size-4 shrink-0 text-sky-300" />
+          <p>
+            {restoredCount > 0 && (
+              <>
+                <strong className="font-semibold text-sky-100">
+                  Restored {restoredCount} transcript{restoredCount === 1 ? "" : "s"} from
+                  your last visit.
+                </strong>{" "}
+              </>
+            )}
+            Finished transcripts are <strong className="font-semibold text-sky-100">saved
+            in this browser and stay until you delete them</strong> — with ✕ on each one,
+            or <em>Delete all finished</em>. On a shared computer, delete them when
+            you&rsquo;re done.
+          </p>
+        </div>
+      )}
 
       <ul className="space-y-2">
         {jobs.map((job) => {

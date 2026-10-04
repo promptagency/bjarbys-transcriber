@@ -81,13 +81,15 @@ the `devPodcastProxy` plugin in `vite.config.ts` serves `/proxy.php` (`apply: 's
 WebGPU) and adds an SPA fallback. The dev server sends COOP/COEP (multithreaded WASM); production doesn't
 need them.
 
-**Persistence (`src/lib/storage.ts`).** Finished jobs (result, `originalResult`, `speakerNames`, label…) are
-saved to IndexedDB and restored on load as `restored` jobs via `jobFromSaved()`; media is never stored, so
+**Persistence (`src/lib/storage.ts`).** Keeping transcripts is **opt-in** (`settings.keepTranscripts`, off by
+default; a one-time card in `JobQueue` asks when the first job finishes, tracked by `keepTranscriptsAsked`).
+When on, finished jobs (result, `originalResult`, `speakerNames`, label…) are saved to IndexedDB and restored on load as `restored` jobs via `jobFromSaved()`; media is never stored, so
 restored jobs can't play lines. Settings live in `localStorage` and pass through `restoreSettings()`, which
 falls back to defaults field by field. In `App.tsx`, a throttled save pass (≤ once per 400 ms — not a debounce,
 because progress ticks change `jobs` constantly) writes changed jobs and deletes ones that left the list; it
 also flushes on `visibilitychange`/`pagehide`. Writes resolve on transaction commit; storage failures are
 silent except for an on-page note. Queued/running jobs aren't saved — without their files they can't resume.
+Turning keeping off (or loading with it off) deletes every stored transcript. Settings are always saved.
 
 ## Repository conventions
 
