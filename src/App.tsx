@@ -37,6 +37,7 @@ import {
   deleteTranscript,
   loadSettingsRaw,
   loadTranscripts,
+  onSettingsChangedElsewhere,
   saveSettings,
   saveTranscript,
   toSaved,
@@ -91,6 +92,16 @@ export default function App() {
     restoreSettings(loadSettingsRaw()),
   );
   useEffect(() => saveSettings(settings), [settings]);
+  // Follow changes made in another tab, so this one never writes stale
+  // settings back. (Saving an identical value fires no event, so this can't
+  // ping-pong between tabs.)
+  useEffect(
+    () =>
+      onSettingsChangedElsewhere(() =>
+        setSettings(restoreSettings(loadSettingsRaw())),
+      ),
+    [],
+  );
   const proxyBase = DEFAULT_PROXY;
 
   const [tab, setTab] = useState<Tab>("files");
