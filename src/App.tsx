@@ -348,7 +348,9 @@ export default function App() {
       documentTimestamps: boolean,
     ) => {
       if (formats.length === 0) return;
-      const document = { title: job.label, timestamps: documentTimestamps };
+      // A file's label is its filename; the document heading reads better without ".wav".
+      const title = job.source === "file" ? job.label.replace(/\.[^.\s]{1,5}$/, "") : job.label;
+      const document = { title, timestamps: documentTimestamps };
       // Podcast names are built from episode titles, which routinely contain
       // slashes ("3/12 recap"). A browser strips those from a download name,
       // but inside a ZIP a slash is a path separator and would nest the files.
