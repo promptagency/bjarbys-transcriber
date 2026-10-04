@@ -264,7 +264,10 @@ export default function App() {
   }, [jobs, persist]);
   useEffect(
     () => () => {
+      // Reset, not just clear: React's StrictMode remounts in development,
+      // and a stale id here would block every future save.
       if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
+      saveTimer.current = null;
     },
     [],
   );
