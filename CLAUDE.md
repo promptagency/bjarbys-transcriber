@@ -72,7 +72,8 @@ stored `TranscriptResult`; lines get a speaker prefix when chunks carry speakers
 `job.speakerNames` (per job, edited in `JobQueue`) or `Speaker N` — and JSON's `text` is built from `toTxt()`
 so all formats agree. JSON keeps numeric `speaker` per chunk plus a `speakers` id→name map. The document
 formats (`txt`, the default, and `md`) go through `toDocument()`; `lines` (→ `.lines.txt`) and Copy use
-`toTxt()`, one fragment per line. Saved settings with the old `doc` value are mapped to `txt`. Documents: chunks merge into paragraphs per speaker
+`toTxt()`, one fragment per line. Old saved settings: `doc` maps to `txt`, and a `txt` saved next to `doc` maps to `lines`; a lone saved `txt`
+deliberately becomes the document. Documents: chunks merge into paragraphs per speaker
 turn, split at gaps ≥ `PARAGRAPH_PAUSE_SECONDS`; Markdown text is escaped (including list-like paragraph
 starts), the header date is local, and the title/timestamp option come from `downloadJob`. Several formats are saved as one store-only ZIP because browsers
 silently block bursts of downloads.
