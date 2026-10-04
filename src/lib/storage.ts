@@ -150,3 +150,17 @@ export async function deleteAllTranscripts(): Promise<void> {
     /* storage unavailable — nothing stored */
   }
 }
+
+/**
+ * Call `listener` when another tab changes the saved settings. Without this,
+ * a tab still holding old settings would write them back on its next change —
+ * e.g. switching keepTranscripts back on after the user turned it off (and
+ * deleted everything) in another tab. Returns an unsubscribe function.
+ */
+export function onSettingsChangedElsewhere(listener: () => void): () => void {
+  const handle = (e: StorageEvent) => {
+    if (e.key === SETTINGS_KEY) listener();
+  };
+  window.addEventListener("storage", handle);
+  return () => window.removeEventListener("storage", handle);
+}
