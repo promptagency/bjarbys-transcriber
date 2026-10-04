@@ -17,6 +17,14 @@ export interface Settings {
   exportFormats: ExportFormat[];
   autoDownload: boolean;
   diarizeSpeakers: boolean;
+  /**
+   * Opt-in: keep finished transcripts in this browser across reloads. Off by
+   * default — they'd stay until deleted, which the user should choose
+   * knowingly (e.g. not on a shared computer).
+   */
+  keepTranscripts: boolean;
+  /** Whether the user has answered the one-time "keep transcripts?" prompt. */
+  keepTranscriptsAsked: boolean;
 }
 
 export const LANGUAGES: { code: string | null; label: string }[] = [
@@ -43,6 +51,8 @@ export const DEFAULT_SETTINGS: Settings = {
   exportFormats: ["txt"],
   autoDownload: true,
   diarizeSpeakers: false,
+  keepTranscripts: false,
+  keepTranscriptsAsked: false,
 };
 
 /**
@@ -85,5 +95,7 @@ export function restoreSettings(raw: Record<string, unknown> | null): Settings {
     exportFormats: formats.length ? [...new Set(formats)] : d.exportFormats,
     autoDownload: pick(raw.autoDownload, isBool, d.autoDownload),
     diarizeSpeakers: pick(raw.diarizeSpeakers, isBool, d.diarizeSpeakers),
+    keepTranscripts: pick(raw.keepTranscripts, isBool, d.keepTranscripts),
+    keepTranscriptsAsked: pick(raw.keepTranscriptsAsked, isBool, d.keepTranscriptsAsked),
   };
 }
