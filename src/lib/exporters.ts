@@ -65,15 +65,33 @@ function stamp(seconds: number, msSep: "," | "."): string {
   return `${pad(h)}:${pad(m)}:${pad(sec)}${msSep}${pad(ms, 3)}`;
 }
 
-function withSpeaker(chunk: TranscriptResult["chunks"][number]): string {
-  const text = chunk.text.trim();
-  return chunk.speaker != null ? `Speaker ${chunk.speaker}: ${text}` : text;
+/** Names the user gave a transcript's speakers, keyed by speaker number. */
+export type SpeakerNames = Record<number, string>;
+
+/** The user's name for a speaker, or "Speaker N" when none was given. */
+export function speakerLabel(speaker: number, names: SpeakerNames = {}): string {
+  return names[speaker]?.trim() || `Speaker ${speaker}`;
 }
 
-export function toTxt(result: TranscriptResult): string {
+/** Speaker numbers present in a transcript, in ascending order. */
+export function speakersIn(result: TranscriptResult): number[] {
+  const ids = new Set<number>();
+  for (const c of result.chunks ?? []) if (c.speaker != null) ids.add(c.speaker);
+  return [...ids].sort((a, b) => a - b);
+}
+
+function withSpeaker(
+  chunk: TranscriptResult["chunks"][number],
+  names: SpeakerNames,
+): string {
+  const text = chunk.text.trim();
+  return chunk.speaker != null ? `${speakerLabel(chunk.speaker, names)}: ${text}` : text;
+}
+
+export function toTxt(result: TranscriptResult, names: SpeakerNames = {}): string {
   const chunks = result.chunks?.filter((c) => c.text.trim().length > 0) ?? [];
   if (chunks.some((c) => c.speaker != null)) {
-    return chunks.map(withSpeaker).join("\n") + "\n";
+    return chunks.map((c) => withSpeaker(c, names)).join("\n") + "\n";
   }
   return result.text.trim() + "\n";
 }
@@ -85,32 +103,32 @@ function cuesFrom(result: TranscriptResult): TranscriptResult["chunks"] {
   return [{ text: result.text.trim(), timestamp: [0, null] }];
 }
 
-export function toSrt(result: TranscriptResult): string {
+export function toSrt(result: TranscriptResult, names: SpeakerNames = {}): string {
   const cues = cuesFrom(result);
   return (
     cues
       .map((c, i) => {
         const start = c.timestamp[0] ?? 0;
         const end = c.timestamp[1] ?? start + 2;
-        return `${i + 1}\n${stamp(start, ",")} --> ${stamp(end, ",")}\n${withSpeaker(c)}\n`;
+        return `${i + 1}\n${stamp(start, ",")} --> ${stamp(end, ",")}\n${withSpeaker(c, names)}\n`;
       })
       .join("\n") + "\n"
   );
 }
 
-export function toVtt(result: TranscriptResult): string {
+export function toVtt(result: TranscriptResult, names: SpeakerNames = {}): string {
   const cues = cuesFrom(result);
   const body = cues
     .map((c) => {
       const start = c.timestamp[0] ?? 0;
       const end = c.timestamp[1] ?? start + 2;
-      return `${stamp(start, ".")} --> ${stamp(end, ".")}\n${withSpeaker(c)}\n`;
+      return `${stamp(start, ".")} --> ${stamp(end, ".")}\n${withSpeaker(c, names)}\n`;
     })
     .join("\n");
   return `WEBVTT\n\n${body}\n`;
 }
 
-export function toJson(result: TranscriptResult): string {
+export function toJson(result: TranscriptResult, names: SpeakerNames = {}): string {
   // `text` is the readable rendering and `chunks` the structured data, so the
   // two fields have distinct jobs rather than one being a degraded copy of the
   // other. Whisper's own flat `text` is deliberately not used here: it carries
@@ -123,22 +141,37 @@ export function toJson(result: TranscriptResult): string {
   // exports it keeps whitespace-only chunks — they carry valid timestamps even
   // with no words. cuesFrom() is only a fallback for the case where Whisper
   // returned no timestamped chunks at all, so the transcript still survives.
+  //
+  // Chunks keep their numeric `speaker`; `speakers` maps each number to its
+  // display name, so renaming never changes the structured data.
   const chunks = result.chunks?.length ? result.chunks : cuesFrom(result);
+  const ids = speakersIn(result);
+  const speakers = ids.length
+    ? Object.fromEntries(ids.map((id) => [id, speakerLabel(id, names)]))
+    : undefined;
   return (
-    JSON.stringify({ text: toTxt(result).trim(), chunks }, null, 2) + "\n"
+    JSON.stringify(
+      { text: toTxt(result, names).trim(), ...(speakers && { speakers }), chunks },
+      null,
+      2,
+    ) + "\n"
   );
 }
 
-export function render(result: TranscriptResult, format: ExportFormat): string {
+export function render(
+  result: TranscriptResult,
+  format: ExportFormat,
+  names: SpeakerNames = {},
+): string {
   switch (format) {
     case "srt":
-      return toSrt(result);
+      return toSrt(result, names);
     case "vtt":
-      return toVtt(result);
+      return toVtt(result, names);
     case "json":
-      return toJson(result);
+      return toJson(result, names);
     default:
-      return toTxt(result);
+      return toTxt(result, names);
   }
 }
 

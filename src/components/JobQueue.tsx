@@ -12,7 +12,7 @@ import {
   X,
 } from "lucide-react";
 import type { Job, JobSource } from "../lib/jobs";
-import { toTxt } from "../lib/exporters";
+import { speakersIn, toTxt } from "../lib/exporters";
 import { Badge, ProgressBar, Spinner } from "./ui";
 
 const SOURCE_ICON: Record<JobSource, typeof FileAudio> = {
@@ -82,11 +82,13 @@ export function JobQueue({
   onDownload,
   onRemove,
   onClearCompleted,
+  onRenameSpeaker,
 }: {
   jobs: Job[];
   onDownload: (job: Job) => void;
   onRemove: (job: Job) => void;
   onClearCompleted: () => void;
+  onRenameSpeaker: (job: Job, speaker: number, name: string) => void;
 }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [copied, setCopied] = useState<string | null>(null);
@@ -105,7 +107,9 @@ export function JobQueue({
 
   async function copy(job: Job) {
     if (!job.result) return;
-    await navigator.clipboard.writeText(toTxt(job.result).trim());
+    await navigator.clipboard.writeText(
+      toTxt(job.result, job.speakerNames).trim(),
+    );
     setCopied(job.id);
     window.setTimeout(() => setCopied((c) => (c === job.id ? null : c)), 1500);
   }
@@ -201,6 +205,7 @@ export function JobQueue({
 
               {open && job.result && (
                 <div className="border-t border-[var(--color-border)] p-3">
+                  <SpeakerNamer job={job} onRename={onRenameSpeaker} />
                   <div className="mb-2 flex justify-end">
                     <button
                       type="button"
@@ -219,7 +224,8 @@ export function JobQueue({
                     </button>
                   </div>
                   <p className="max-h-60 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed text-slate-200 scroll-thin">
-                    {toTxt(job.result).trim() || "(no speech detected)"}
+                    {toTxt(job.result, job.speakerNames).trim() ||
+                      "(no speech detected)"}
                   </p>
                 </div>
               )}
@@ -227,6 +233,47 @@ export function JobQueue({
           );
         })}
       </ul>
+    </div>
+  );
+}
+
+/**
+ * One text field per detected speaker. Names apply straight away to the
+ * transcript shown here, Copy, and every download format.
+ */
+function SpeakerNamer({
+  job,
+  onRename,
+}: {
+  job: Job;
+  onRename: (job: Job, speaker: number, name: string) => void;
+}) {
+  const speakers = job.result ? speakersIn(job.result) : [];
+  if (speakers.length === 0) return null;
+  return (
+    <div className="mb-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)]/40 p-3">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+        Name the speakers
+      </p>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        {speakers.map((speaker) => (
+          <label key={speaker} className="flex flex-col gap-1">
+            <span className="text-xs text-slate-500">Speaker {speaker}</span>
+            <input
+              type="text"
+              value={job.speakerNames[speaker] ?? ""}
+              placeholder={`Speaker ${speaker}`}
+              onChange={(e) => onRename(job, speaker, e.target.value)}
+              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-1.5 text-sm text-slate-100 outline-none transition focus:border-sky-400/60 focus:ring-2 focus:ring-sky-400/20"
+            />
+          </label>
+        ))}
+      </div>
+      <p className="mt-2 text-xs text-slate-500">
+        Names are used in the transcript, Copy and downloads. A file that was
+        downloaded automatically still says &ldquo;Speaker 1&rdquo; — download
+        it again after naming.
+      </p>
     </div>
   );
 }

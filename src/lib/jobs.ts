@@ -1,3 +1,4 @@
+import type { SpeakerNames } from "./exporters";
 import type { TranscriptResult } from "./protocol";
 
 export type JobSource = "file" | "mic" | "podcast";
@@ -28,6 +29,11 @@ export interface Job {
    * setting mid-job can't change how far along the job appears to be.
    */
   willDiarize: boolean;
+  /**
+   * Names the user gave this transcript's speakers. Per job, because
+   * "Speaker 1" is a different person in every recording.
+   */
+  speakerNames: SpeakerNames;
   /** Base filename used when exporting (without extension is fine). */
   downloadName: string;
   /** Lazily acquire + decode this job's audio to mono 16 kHz PCM. */
@@ -58,6 +64,7 @@ export function makeJob(input: JobInput): Job {
     error: null,
     warning: null,
     willDiarize: false,
+    speakerNames: {},
     downloadName: input.downloadName,
     getAudio: input.getAudio,
   };

@@ -194,7 +194,7 @@ export default function App() {
         const format = formats[0];
         downloadText(
           withExtension(base, extFor(format)),
-          render(result, format),
+          render(result, format, job.speakerNames),
           format,
         );
         return;
@@ -202,7 +202,7 @@ export default function App() {
       const zip = createZip(
         formats.map((format) => ({
           name: withExtension(base, extFor(format)),
-          text: render(result, format),
+          text: render(result, format, job.speakerNames),
         })),
       );
       downloadBlob(withExtension(base, "zip"), zip);
@@ -384,6 +384,16 @@ export default function App() {
     () => commit(jobsRef.current.filter((j) => j.status !== "done")),
     [commit],
   );
+  const onRenameSpeaker = useCallback(
+    (job: Job, speaker: number, name: string) => {
+      const current = jobsRef.current.find((j) => j.id === job.id);
+      if (!current) return;
+      updateJob(job.id, {
+        speakerNames: { ...current.speakerNames, [speaker]: name },
+      });
+    },
+    [updateJob],
+  );
   const onManualDownload = useCallback(
     (job: Job) => {
       if (job.result) downloadJob(job, job.result, settings.exportFormats);
@@ -561,6 +571,7 @@ export default function App() {
         <JobQueue
           jobs={jobs}
           onDownload={onManualDownload}
+          onRenameSpeaker={onRenameSpeaker}
           onRemove={onRemove}
           onClearCompleted={onClearCompleted}
         />

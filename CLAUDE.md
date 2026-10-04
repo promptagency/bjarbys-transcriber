@@ -65,8 +65,9 @@ surroundings and renumbers speakers by first appearance. Hard limits: 3 speakers
 The README documents why word-level timestamps were measured and rejected — don't reintroduce them.
 
 **Exports (`src/lib/exporters.ts`, `src/lib/zip.ts`).** txt/srt/vtt/json are all rendered from the one
-stored `TranscriptResult`; lines get a `Speaker N:` prefix when chunks carry speakers, and JSON's `text` is
-built from `toTxt()` so all formats agree. Several formats are saved as one store-only ZIP because browsers
+stored `TranscriptResult`; lines get a speaker prefix when chunks carry speakers — the user's name from
+`job.speakerNames` (per job, edited in `JobQueue`) or `Speaker N` — and JSON's `text` is built from `toTxt()`
+so all formats agree. JSON keeps numeric `speaker` per chunk plus a `speakers` id→name map. Several formats are saved as one store-only ZIP because browsers
 silently block bursts of downloads.
 
 **Podcasts (`src/lib/podcasts.ts`).** iTunes Search API (CORS-enabled) to find shows; RSS and audio are

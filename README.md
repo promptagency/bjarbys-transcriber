@@ -29,8 +29,10 @@ If you find it useful, consider
   is rendered from that same result. Picking several saves them as one `.zip`.
 - 🗣️ **Speaker separation** (optional, experimental) — labels each line
   `Speaker 1`, `Speaker 2`, … via
-  [pyannote](https://huggingface.co/pyannote/segmentation-3.0). Off by default;
-  see [the caveats](#speaker-separation) before relying on it.
+  [pyannote](https://huggingface.co/pyannote/segmentation-3.0), and lets you
+  **name the speakers** ("Anna", "Erik") in the transcript view; the names
+  carry into Copy and every download. Off by default; see
+  [the caveats](#speaker-separation) before relying on it.
 - 🔒 **Private by design** — transcription is 100% local; models download once
   from the Hugging Face CDN and cache in your browser.
 
@@ -113,6 +115,14 @@ Ticking **Separate speakers** additionally loads
 about 1.5 MB, MIT. It runs on WASM alongside Whisper and needs no extra
 dependency. Each chunk in the `.json` export then carries `speaker` and
 `speaker_conf`, and the other formats prefix each line with `Speaker N:`.
+
+Open a finished transcript to **name the speakers**: one field per detected
+speaker, applied immediately to the transcript, Copy and downloads. Names are
+per transcript, since "Speaker 1" is a different person in every recording.
+In `.txt`/`.srt`/`.vtt` the name replaces `Speaker N`; in `.json` the chunks
+keep their numeric `speaker` and a top-level `speakers` object maps each
+number to its name. An automatic download happens before you've named
+anyone, so download again after naming.
 
 **Measured accuracy: 94.7%** of words attributed to the correct speaker, on a
 hand-labelled 12-minute two-person Swedish interview (231 utterances, 2116
