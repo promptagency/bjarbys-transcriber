@@ -35,6 +35,10 @@ If you find it useful, consider
   [the caveats](#speaker-separation) before relying on it.
 - 🔒 **Private by design** — transcription is 100% local; models download once
   from the Hugging Face CDN and cache in your browser.
+- 💾 **Picks up where you left off** — finished transcripts (with speaker names
+  and corrections) and your settings are kept in this browser across reloads,
+  until you remove them. The original audio isn't kept, so restored
+  transcripts can be edited and exported but not played back.
 
 ## Run it yourself
 
@@ -139,7 +143,7 @@ line by line:
 
 Corrections flow into Copy and every export; corrected chunks carry
 `"edited": true` in `.json`, and a speaker you set has `speaker_conf` 1 (0 for
-*No speaker*). Edits, like names, last until the page is reloaded.
+*No speaker*). Edits and names are kept with the transcript across reloads.
 
 **Measured accuracy: 94.7%** of words attributed to the correct speaker, on a
 hand-labelled 12-minute two-person Swedish interview (231 utterances, 2116
