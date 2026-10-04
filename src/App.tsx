@@ -405,9 +405,14 @@ export default function App() {
     (job: Job, index: number, patch: Partial<TranscriptChunk>) => {
       const current = jobsRef.current.find((j) => j.id === job.id);
       if (!current?.result) return;
-      const chunks = current.result.chunks.map((c, i) =>
-        i === index ? { ...c, ...patch, edited: true } : c,
-      );
+      const chunks = current.result.chunks.map((c, i) => {
+        if (i !== index) return c;
+        const next = { ...c, ...patch, edited: true };
+        // A speaker chosen by hand is certain; the model's margin no longer
+        // describes it. "No speaker" matches what assignSpeakers writes.
+        if ("speaker" in patch) next.speaker_conf = patch.speaker == null ? 0 : 1;
+        return next;
+      });
       updateJob(job.id, {
         result: { text: chunks.map((c) => c.text).join(""), chunks },
       });
