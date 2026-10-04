@@ -73,10 +73,22 @@ export function speakerLabel(speaker: number, names: SpeakerNames = {}): string 
   return names[speaker]?.trim() || `Speaker ${speaker}`;
 }
 
-/** Speaker numbers present in a transcript, in ascending order. */
-export function speakersIn(result: TranscriptResult): number[] {
+/**
+ * Speaker numbers present in a transcript, in ascending order. By default only
+ * speakers with actual words count: the text exports drop whitespace-only
+ * chunks, so a speaker found only on those never appears in them and shouldn't
+ * be offered for naming. JSON keeps every chunk, so it asks for all.
+ */
+export function speakersIn(
+  result: TranscriptResult,
+  { includeBlank = false }: { includeBlank?: boolean } = {},
+): number[] {
   const ids = new Set<number>();
-  for (const c of result.chunks ?? []) if (c.speaker != null) ids.add(c.speaker);
+  for (const c of result.chunks ?? []) {
+    if (c.speaker == null) continue;
+    if (!includeBlank && c.text.trim().length === 0) continue;
+    ids.add(c.speaker);
+  }
   return [...ids].sort((a, b) => a - b);
 }
 
@@ -145,7 +157,7 @@ export function toJson(result: TranscriptResult, names: SpeakerNames = {}): stri
   // Chunks keep their numeric `speaker`; `speakers` maps each number to its
   // display name, so renaming never changes the structured data.
   const chunks = result.chunks?.length ? result.chunks : cuesFrom(result);
-  const ids = speakersIn(result);
+  const ids = speakersIn(result, { includeBlank: true });
   const speakers = ids.length
     ? Object.fromEntries(ids.map((id) => [id, speakerLabel(id, names)]))
     : undefined;
