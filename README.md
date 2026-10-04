@@ -124,6 +124,23 @@ keep their numeric `speaker` and a top-level `speakers` object maps each
 number to its name. An automatic download happens before you've named
 anyone, so download again after naming.
 
+The open transcript is also a **review view** for checking and correcting it
+line by line:
+
+- **▶ plays that line** from the original file, stopping at its end.
+- **Unsure lines are highlighted** in amber — where the model's margin between
+  the top two speakers is low, or it found no speaker — and *Only unsure
+  lines* filters to them. In testing, these were the lines where two voices
+  overlapped.
+- **Change a line's speaker** (including *New speaker* or *No speaker*) or
+  **click its text to edit it**. Enter or clicking elsewhere saves, Esc
+  cancels; text is kept on one line so subtitle cues stay valid.
+- **Revert** undoes your changes to a line.
+
+Corrections flow into Copy and every export; corrected chunks carry
+`"edited": true` in `.json`, and a speaker you set has `speaker_conf` 1 (0 for
+*No speaker*). Edits, like names, last until the page is reloaded.
+
 **Measured accuracy: 94.7%** of words attributed to the correct speaker, on a
 hand-labelled 12-minute two-person Swedish interview (231 utterances, 2116
 words). Lines where no speaker was detected count as wrong. Reproduce with `scripts/eval-diarization.mjs` — see

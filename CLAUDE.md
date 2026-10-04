@@ -48,6 +48,9 @@ PCM on the main thread (`src/lib/audio.ts`, Web Audio) and **transferred** to th
 separation will follow, `transcribe` is sent with `retainAudio`, and the worker keeps that buffer for the
 next `diarize` message instead of the page sending a second copy (~230 MB per hour of audio).
 `job.willDiarize` is fixed when the job starts, so toggling the setting mid-job can't skew progress.
+Each job keeps its original media (`getMedia()` → `job.media`; decoding happens in `runJob`) so the review view
+(`src/components/TranscriptReview.tsx`) can play single lines, and keeps `originalResult` so edited lines can be
+reverted. Manual edits rewrite `job.result` (and rebuild its flat `text`), so every export sees them.
 
 **Models (`src/lib/models.ts`, `resolveDtype` in the worker).** Whisper via Transformers.js, downloaded from
 the Hugging Face CDN and cached by the browser. Each model lists quantization tiers; `availableTiers()` hides
@@ -99,6 +102,12 @@ Settings are plain React state — nothing is persisted between reloads.
   `HTMLAnchorElement.prototype.click`, and Copy via `Object.defineProperty(navigator.clipboard, 'writeText', …)`,
   so nothing lands in the user's Downloads or clipboard. The page can stop responding while Whisper runs; wait
   for the job to finish before driving the UI.
+  **The test tab must be visible** (`document.visibilityState === "visible"` — ask the user to bring Chrome to
+  the front): a hidden tab never loads `<audio>` media and throttles `setTimeout` to about once a minute, which
+  looks like a frozen page. In a hidden tab, yield with `MessageChannel` instead of timers. To get "unsure"
+  lines, mix two `say` voices that **overlap** in time with ffmpeg `adelay` + `amix`; clean alternating turns
+  are never unsure. The labelled eval interview is confidential client audio — never copy it into the repo or
+  `public/`, even temporarily.
 - PRs to upstream carry **one feature each**, built on upstream's `main`. A feature that depends on another
   open upstream PR either waits for it to merge or is based on that PR's branch and says so.
 - `upstream` = `fltman/bjarbys-transcriber` (Anders's repo, read-only). Never push there; anything public on it
