@@ -164,7 +164,12 @@ export function TranscriptReview({
         ) : (
           <span />
         )}
-        {playbackError || !job.media ? (
+        {job.restored ? (
+          <span>
+            Restored after a reload · the audio isn&rsquo;t kept, so lines
+            can&rsquo;t be played · click text to edit it
+          </span>
+        ) : playbackError || !job.media ? (
           <span className="text-amber-300">
             Playback isn&rsquo;t available for this file in the browser.
           </span>
