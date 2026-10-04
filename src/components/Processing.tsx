@@ -121,19 +121,17 @@ export function ProcessingHero({
   activeJob,
   done,
   total,
-  diarizeEnabled,
 }: {
   state: ModelState;
   activeJob: Job | null;
   done: number;
   total: number;
-  diarizeEnabled: boolean;
 }) {
   const loading = state.status === "loading";
   const hasWork = loading || !!activeJob;
   if (!hasWork) return null;
 
-  const activeFraction = activeJob ? jobProgress(activeJob, diarizeEnabled) : 0;
+  const activeFraction = activeJob ? jobProgress(activeJob) : 0;
   const queuePct = total > 0 ? (done + activeFraction) / total : 0;
 
   return (

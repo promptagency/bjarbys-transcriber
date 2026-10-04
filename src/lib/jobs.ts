@@ -22,6 +22,12 @@ export interface Job {
   error: string | null;
   /** Non-fatal issue with an otherwise-successful result (e.g. speaker separation failed or was skipped). */
   warning: string | null;
+  /**
+   * Whether this job includes a speaker-separation stage. Fixed when the job
+   * starts (and cleared if the recording is too long), so toggling the
+   * setting mid-job can't change how far along the job appears to be.
+   */
+  willDiarize: boolean;
   /** Base filename used when exporting (without extension is fine). */
   downloadName: string;
   /** Lazily acquire + decode this job's audio to mono 16 kHz PCM. */
@@ -51,6 +57,7 @@ export function makeJob(input: JobInput): Job {
     result: null,
     error: null,
     warning: null,
+    willDiarize: false,
     downloadName: input.downloadName,
     getAudio: input.getAudio,
   };
@@ -63,12 +70,12 @@ export const ACTIVE_STATUSES: JobStatus[] = [
   "diarizing",
 ];
 
-/** Ordered pipeline stages this job passes through, given current settings. */
-export function stagesFor(job: Job, diarizeEnabled: boolean): JobStatus[] {
+/** Ordered pipeline stages this job passes through. */
+export function stagesFor(job: Job): JobStatus[] {
   const stages: JobStatus[] = [];
   if (job.source === "podcast") stages.push("fetching");
   stages.push("decoding", "transcribing");
-  if (diarizeEnabled) stages.push("diarizing");
+  if (job.willDiarize) stages.push("diarizing");
   return stages;
 }
 
@@ -77,9 +84,9 @@ export function stagesFor(job: Job, diarizeEnabled: boolean): JobStatus[] {
  * pipeline, not just its current stage — each stage counts equally, and the
  * current stage contributes its own `stageProgress` within that share.
  */
-export function jobProgress(job: Job, diarizeEnabled: boolean): number {
+export function jobProgress(job: Job): number {
   if (job.status === "done" || job.status === "error") return 1;
-  const stages = stagesFor(job, diarizeEnabled);
+  const stages = stagesFor(job);
   const index = stages.indexOf(job.status);
   if (index === -1) return 0; // "queued"
   return (index + job.stageProgress) / stages.length;

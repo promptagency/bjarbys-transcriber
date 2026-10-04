@@ -218,6 +218,7 @@ export default function App() {
           status: job.source === "podcast" ? "fetching" : "decoding",
           error: null,
           warning: null,
+          willDiarize: settings.diarizeSpeakers,
           stageProgress: 0,
         });
         const audio = await job.getAudio((p) =>
@@ -233,6 +234,7 @@ export default function App() {
         const durationSec = audio.length / WHISPER_SAMPLE_RATE;
         const tooLongToDiarize = durationSec > MAX_DIARIZE_SECONDS;
         const wantsDiarize = settings.diarizeSpeakers && !tooLongToDiarize;
+        if (!wantsDiarize) updateJob(job.id, { willDiarize: false });
         // The worker holds on to the audio when it will be needed again, so
         // diarization reuses that buffer instead of a second full copy.
         const result = await transcribe(
@@ -551,7 +553,6 @@ export default function App() {
             activeJob={activeJob}
             done={processed}
             total={jobs.length}
-            diarizeEnabled={settings.diarizeSpeakers}
           />
         </div>
       )}
