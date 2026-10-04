@@ -86,6 +86,19 @@ Settings are plain React state — nothing is persisted between reloads.
   (`feature/<name>`), with commits that touch only that feature, and lands on `main` through a PR in this fork.
   Keeping features apart means any one of them can be offered upstream without untangling it from others.
   Small fixes (docs, typos, an isolated bug fix) may go straight to `main`.
+- **Before a feature branch is merged** (into `main`, or offered upstream), always:
+  1. **Test edge cases in the browser**, not just the happy path: the feature with speaker separation on *and*
+     off, several jobs in the queue (state must not leak between them), empty/cleared input, odd characters
+     (`Åsa "Q" <b>&` must render as text), collapse/reopen, every export format including the multi-format zip,
+     and the long-recording/windowed path when the feature touches diarization.
+  2. **Run `/code-review` on the branch** and fix what it finds — or say why a finding doesn't hold.
+  3. **List what was tested, the review findings and what's left untested** in the fork PR.
+  Testing techniques that work here: generate a two-voice test file with macOS `say` (Swedish voice `Alva` plus
+  an English voice) and serve it from a temporary `public/test-audio/` (delete it afterwards); switch off
+  auto-download; capture downloads in the page by wrapping `URL.createObjectURL` and
+  `HTMLAnchorElement.prototype.click`, and Copy via `Object.defineProperty(navigator.clipboard, 'writeText', …)`,
+  so nothing lands in the user's Downloads or clipboard. The page can stop responding while Whisper runs; wait
+  for the job to finish before driving the UI.
 - PRs to upstream carry **one feature each**, built on upstream's `main`. A feature that depends on another
   open upstream PR either waits for it to merge or is based on that PR's branch and says so.
 - `upstream` = `fltman/bjarbys-transcriber` (Anders's repo, read-only). Never push there; anything public on it
