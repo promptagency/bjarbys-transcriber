@@ -82,8 +82,12 @@ Settings are plain React state — nothing is persisted between reloads.
 
 ## Repository conventions
 
-- `origin` = `promptagency/vem-sa-vad` (the fork). Finished, verified work may be committed and pushed straight
-  to `main`.
+- `origin` = `promptagency/vem-sa-vad` (the fork). **Every feature is developed on its own branch**
+  (`feature/<name>`), with commits that touch only that feature, and lands on `main` through a PR in this fork.
+  Keeping features apart means any one of them can be offered upstream without untangling it from others.
+  Small fixes (docs, typos, an isolated bug fix) may go straight to `main`.
+- PRs to upstream carry **one feature each**, built on upstream's `main`. A feature that depends on another
+  open upstream PR either waits for it to merge or is based on that PR's branch and says so.
 - `upstream` = `fltman/bjarbys-transcriber` (Anders's repo, read-only). Never push there; anything public on it
   (issues, PRs, comments) needs the owner's explicit go-ahead. PR #1 there offers speaker separation from the
   `speaker-separation` branch, which was rebuilt by hand from upstream `main` — so syncing upstream into this
