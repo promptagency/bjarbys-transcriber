@@ -12,7 +12,9 @@ import {
 import { EXPORT_FORMATS, type ExportFormat } from "../lib/exporters";
 
 /** The readable formats: paragraphs per speaker turn rather than one line per fragment. */
-const isDocument = (f: ExportFormat) => f === "md" || f === "doc";
+const isDocument = (f: ExportFormat) => f === "txt" || f === "md";
+// Two formats end in .txt, so these show their name rather than just the extension.
+const showLabel = (f: ExportFormat) => isDocument(f) || f === "lines";
 import { type DeviceMode, LANGUAGES, type Settings } from "../lib/settings";
 import { Field, Select } from "./ui";
 
@@ -133,7 +135,7 @@ export function AdvancedSettings({
                   }
                   className="size-4 rounded border-[var(--color-border)] bg-[var(--color-surface-2)] accent-sky-500"
                 />
-                {isDocument(f.value) ? f.label : `.${f.ext}`}
+                {showLabel(f.value) ? f.label : `.${f.ext}`}
               </label>
             );
           })}

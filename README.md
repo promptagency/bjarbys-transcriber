@@ -24,13 +24,14 @@ If you find it useful, consider
   real download size shown; backend-aware so you can't pick a broken combo.
 - 🎬 **Audio _and_ video** — MP3, WAV, M4A, OGG, FLAC and MP4 / MOV / WebM
   (the browser extracts the audio track).
-- 📝 **Export** to `.txt`, `.srt`, `.vtt`, and `.json` (with timestamps) — tick
-  as many formats as you like; the audio is only analysed once and every format
-  is rendered from that same result. Picking several saves them as one `.zip`.
-- 📄 **Readable documents** — `.md` or `.document.txt` for reading rather
-  than subtitling: one paragraph per speaker turn (a new one after a pause of
-  4 s or more), the speaker named once, a header with title, date, length and
-  speakers, and optional `[mm:ss]` timestamps.
+- 📄 **Readable documents** (the default) — `.txt` or `.md`: one paragraph per
+  speaker turn (a new one after a pause of 4 s or more), the speaker named
+  once, a header with title, date, length and speakers, and optional `[mm:ss]`
+  timestamps.
+- 📝 **More formats** — `.srt` and `.vtt` subtitles, `.json` (with
+  timestamps), and **Lines** (`.lines.txt`, one Whisper fragment per line, for
+  scripts). Tick as many as you like; the audio is only analysed once and every
+  format is rendered from that same result. Several are saved as one `.zip`.
 - 🗣️ **Speaker separation** (optional, experimental) — labels each line
   `Speaker 1`, `Speaker 2`, … via
   [pyannote](https://huggingface.co/pyannote/segmentation-3.0), and lets you
@@ -132,7 +133,7 @@ dependency. Each chunk in the `.json` export then carries `speaker` and
 Open a finished transcript to **name the speakers**: one field per detected
 speaker, applied immediately to the transcript, Copy and downloads. Names are
 per transcript, since "Speaker 1" is a different person in every recording.
-In `.txt`/`.srt`/`.vtt` and the documents the name replaces `Speaker N`; in `.json` the chunks
+In the documents, `.srt`/`.vtt` and Lines the name replaces `Speaker N`; in `.json` the chunks
 keep their numeric `speaker` and a top-level `speakers` object maps each
 number to its name. An automatic download happens before you've named
 anyone, so download again after naming.

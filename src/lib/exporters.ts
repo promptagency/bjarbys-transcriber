@@ -1,17 +1,19 @@
 // Turn a Whisper result into downloadable transcript formats.
 import type { TranscriptResult } from "./protocol";
 
-export type ExportFormat = "txt" | "srt" | "vtt" | "json" | "md" | "doc";
+// "txt" is the readable document; "lines" is the older one-fragment-per-line
+// text, kept for scripts and tools that read a transcript line by line.
+export type ExportFormat = "txt" | "md" | "srt" | "vtt" | "json" | "lines";
 
 export const EXPORT_FORMATS: { value: ExportFormat; label: string; ext: string }[] =
   [
-    { value: "txt", label: "Plain text (.txt)", ext: "txt" },
+    { value: "txt", label: "Document (.txt)", ext: "txt" },
+    { value: "md", label: "Document (.md)", ext: "md" },
     { value: "srt", label: "Subtitles (.srt)", ext: "srt" },
     { value: "vtt", label: "WebVTT (.vtt)", ext: "vtt" },
     { value: "json", label: "JSON (.json)", ext: "json" },
-    { value: "md", label: "Document (.md)", ext: "md" },
-    // A distinct suffix so it can sit next to the plain .txt in one zip.
-    { value: "doc", label: "Document (.txt)", ext: "document.txt" },
+    // A distinct suffix so it can sit next to the document .txt in one zip.
+    { value: "lines", label: "Lines (.txt)", ext: "lines.txt" },
   ];
 
 export function mimeFor(format: ExportFormat): string {
@@ -175,7 +177,7 @@ export function toJson(result: TranscriptResult, names: SpeakerNames = {}): stri
   );
 }
 
-// ── Readable documents (.md / .document.txt) ────────────────────────────────
+// ── Readable documents (.txt / .md) ────────────────────────────────
 // The other formats keep Whisper's own segmentation — one short fragment per
 // line — which suits tools but reads poorly. A document merges fragments into
 // paragraphs: one per speaker turn, also split at long pauses, with the
@@ -298,7 +300,7 @@ export function render(
   switch (format) {
     case "md":
       return toDocument(result, names, document, true);
-    case "doc":
+    case "txt":
       return toDocument(result, names, document, false);
     case "srt":
       return toSrt(result, names);
@@ -306,7 +308,7 @@ export function render(
       return toVtt(result, names);
     case "json":
       return toJson(result, names);
-    default:
+    case "lines":
       return toTxt(result, names);
   }
 }

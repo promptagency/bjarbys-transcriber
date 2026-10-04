@@ -25,7 +25,7 @@ export interface Settings {
   keepTranscripts: boolean;
   /** Whether the user has answered the one-time "keep transcripts?" prompt. */
   keepTranscriptsAsked: boolean;
-  /** Prefix each paragraph of the document formats (.md, .document.txt) with its time. */
+  /** Prefix each paragraph of the document formats (.txt, .md) with its time. */
   documentTimestamps: boolean;
 }
 
@@ -73,9 +73,10 @@ export function restoreSettings(raw: Record<string, unknown> | null): Settings {
   const isString = (v: unknown): v is string => typeof v === "string";
   const isBool = (v: unknown): v is boolean => typeof v === "boolean";
   const formats = Array.isArray(raw.exportFormats)
-    ? raw.exportFormats.filter((f): f is ExportFormat =>
-        EXPORT_FORMATS.some((e) => e.value === f),
-      )
+    ? raw.exportFormats
+        // "doc" was the document .txt before it became the default "txt".
+        .map((f) => (f === "doc" ? "txt" : f))
+        .filter((f): f is ExportFormat => EXPORT_FORMATS.some((e) => e.value === f))
     : [];
   return {
     modelId: pick(raw.modelId, (v): v is string => isString(v) && !!findModel(v), d.modelId),
