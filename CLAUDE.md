@@ -67,11 +67,13 @@ it (`speaker_conf` = margin to the runner-up), `smoothSpeakers` folds short low-
 surroundings and renumbers speakers by first appearance. Hard limits: 3 speakers at once, 240 min per file.
 The README documents why word-level timestamps were measured and rejected — don't reintroduce them.
 
-**Exports (`src/lib/exporters.ts`, `src/lib/zip.ts`).** txt/srt/vtt/json are all rendered from the one
+**Exports (`src/lib/exporters.ts`, `src/lib/zip.ts`).** All formats are rendered from the one
 stored `TranscriptResult`; lines get a speaker prefix when chunks carry speakers — the user's name from
 `job.speakerNames` (per job, edited in `JobQueue`) or `Speaker N` — and JSON's `text` is built from `toTxt()`
 so all formats agree. JSON keeps numeric `speaker` per chunk plus a `speakers` id→name map. The document
-formats (`md`, `doc` → `.document.txt`) go through `toDocument()`: chunks merge into paragraphs per speaker
+formats (`txt`, the default, and `md`) go through `toDocument()`; `lines` (→ `.lines.txt`) and Copy use
+`toTxt()`, one fragment per line. Old saved settings: `doc` maps to `txt`, and a `txt` saved next to `doc` maps to `lines`; a lone saved `txt`
+deliberately becomes the document. Documents: chunks merge into paragraphs per speaker
 turn, split at gaps ≥ `PARAGRAPH_PAUSE_SECONDS`; Markdown text is escaped (including list-like paragraph
 starts), the header date is local, and the title/timestamp option come from `downloadJob`. Several formats are saved as one store-only ZIP because browsers
 silently block bursts of downloads.

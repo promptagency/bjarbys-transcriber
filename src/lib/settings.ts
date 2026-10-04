@@ -25,7 +25,7 @@ export interface Settings {
   keepTranscripts: boolean;
   /** Whether the user has answered the one-time "keep transcripts?" prompt. */
   keepTranscriptsAsked: boolean;
-  /** Prefix each paragraph of the document formats (.md, .document.txt) with its time. */
+  /** Prefix each paragraph of the document formats (.txt, .md) with its time. */
   documentTimestamps: boolean;
 }
 
@@ -72,10 +72,14 @@ export function restoreSettings(raw: Record<string, unknown> | null): Settings {
     ok(value) ? value : fallback;
   const isString = (v: unknown): v is string => typeof v === "string";
   const isBool = (v: unknown): v is boolean => typeof v === "boolean";
+  // Before the document became the default, "doc" was the document .txt and
+  // "txt" the line-per-fragment one. A saved "txt" now means the document —
+  // except next to "doc", where the user clearly wanted both, so it becomes "lines".
+  const legacy = Array.isArray(raw.exportFormats) && raw.exportFormats.includes("doc");
   const formats = Array.isArray(raw.exportFormats)
-    ? raw.exportFormats.filter((f): f is ExportFormat =>
-        EXPORT_FORMATS.some((e) => e.value === f),
-      )
+    ? raw.exportFormats
+        .map((f) => (f === "doc" ? "txt" : legacy && f === "txt" ? "lines" : f))
+        .filter((f): f is ExportFormat => EXPORT_FORMATS.some((e) => e.value === f))
     : [];
   return {
     modelId: pick(raw.modelId, (v): v is string => isString(v) && !!findModel(v), d.modelId),
