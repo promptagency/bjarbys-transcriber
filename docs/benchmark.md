@@ -121,3 +121,33 @@ Whisper. Measured before building it:
 most ~20% saved on very pause-heavy recordings and a net loss on dense conversations; silence did not cause
 hallucinations. Untested: music and background noise, where Whisper is known to invent text — revisit if that
 shows up in real use.
+
+## Speaker labels on short lines — 2026-10-05
+
+`scripts/eval-diarization.mjs` (`DIAG=1` prints an error breakdown, counts only) on two labelled fixtures: the
+private 12-minute interview (231 scored lines, real Whisper timestamps) and a synthetic 12-minute dialogue from
+`scripts/make-dialogue-fixture.sh` (246 lines, 72 backchannels spoken over the other voice, exact timestamps,
+Alva + Daniel voices). Before the change, most wrong lines on the interview were interjections inside the other
+person's turn (14 of 23 such lines wrong); on the synthetic dialogue every wrong line was under 1.5 s.
+
+Rule: for a line under 1.5 s where the runner-up is active ≥ 40% of it, the speaker with the highest
+containment (overlap ÷ union of span and line) wins; `speaker_conf` is the containment margin, so smoothing
+leaves confident picks alone.
+
+| Fixture | Before: words / wrong lines / short lines wrong | After |
+|---|---|---|
+| Interview (real) | 94.7% / 22 / 14 of 34 | **95.6% / 21 / 12 of 34** |
+| Synthetic dialogue | 95.7% / 66 / 66 of 100 | **99.8% / 4 / 4 of 100** |
+
+- Results were stable across 1.5–2 s and a 20–40% second-voice threshold, so the rule is not tuned to one
+  setting.
+- Without the containment margin as confidence, the old smoothing folded the new picks back (synthetic: 29 wrong
+  lines instead of 4).
+- On the interview, lines of 1.5–3 s went from 6 to 7 wrong (the rule doesn't touch them; the change is in
+  how the neighbouring short line is now attributed).
+- **The interview figure is the realistic one.** The synthetic fixture feeds the eval its exact utterances; in
+  the app, Whisper merges or drops most backchannels spoken over someone else (a 2-minute synthetic dialogue
+  with 34 utterances came out as 13 lines), so many never become lines of their own. The interview fixture's
+  lines come from Whisper, so its +0.9 points is what to expect.
+- Trade-off: fewer lines are flagged unsure (interview: 36 instead of 44), and 8 of the remaining 21 errors are
+  flagged (before: 12 of 22).

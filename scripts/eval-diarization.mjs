@@ -186,7 +186,54 @@ const shortWrong = errors.filter((e) => e.dur < 1.5).reduce((n, e) => n + e.word
 const wrongWords = total - correct;
 console.log(`errors in utterances under 1.5 s: ${shortWrong}/${wrongWords} wrong words (${((100 * shortWrong) / wrongWords).toFixed(0)}%)`);
 
-if (errors.length) {
+// DIAG=1: what kind of errors these are — counts only, no transcript text.
+if (process.env.DIAG === "1") {
+  const label = (i) => mapping.get(predicted[i].speaker) ?? "null";
+  const tally = (name, keyOf) => {
+    const m = new Map();
+    rows.forEach((r, i) => {
+      if (truth[i] === "?") return;
+      const k = keyOf(r, i);
+      const e = m.get(k) ?? { n: 0, wrong: 0, wrongWords: 0 };
+      e.n++;
+      if (label(i) !== truth[i]) { e.wrong++; e.wrongWords += words(r.text); }
+      m.set(k, e);
+    });
+    console.log(`\n${name}`);
+    for (const [k, e] of [...m].sort()) console.log(`  ${k.padEnd(34)} ${String(e.wrong).padStart(3)}/${String(e.n).padEnd(4)} wrong  (${e.wrongWords} words)`);
+  };
+  const dur = (r) => Number(r.dur_s);
+  tally("by duration", (r) => { const d = dur(r); return d < 0.5 ? "a <0.5 s" : d < 1.5 ? "b 0.5–1.5 s" : d < 3 ? "c 1.5–3 s" : "d ≥3 s"; });
+  tally("by confidence", (r, i) => predicted[i].speaker == null ? "no speaker found" : predicted[i].speaker_conf <= LOW_CONFIDENCE ? "low (≤0.35)" : "high");
+  // Context from the labels: is this line a brief interjection between two turns
+  // of the other speaker, at a speaker change, or inside one speaker's turn?
+  const known = (j) => (j >= 0 && j < rows.length && truth[j] !== "?" ? truth[j] : null);
+  tally("by context (truth)", (r, i) => {
+    const p = known(i - 1), n = known(i + 1), t = truth[i];
+    if (p && n && p === n && p !== t) return "interjection inside other's turn";
+    if ((p && p !== t) || (n && n !== t)) return "at a speaker change";
+    return "inside own turn";
+  });
+  // Smoothing renumbers speakers, so the lines before it need their own mapping.
+  const overlapBefore = new Map();
+  rows.forEach((r, i) => {
+    if (truth[i] === "?") return;
+    const key = `${assigned[i].speaker}|${truth[i]}`;
+    overlapBefore.set(key, (overlapBefore.get(key) ?? 0) + words(r.text));
+  });
+  const mappingBefore = new Map();
+  for (const id of new Set(assigned.map((p) => p.speaker).filter((s) => s != null))) {
+    const [, best] = ["I", "S"].map((t) => [overlapBefore.get(`${id}|${t}`) ?? 0, t]).sort((x, y) => y[0] - x[0])[0];
+    mappingBefore.set(id, best);
+  }
+  tally("smoothing", (r, i) => {
+    const before = mappingBefore.get(assigned[i].speaker) ?? "null", after = label(i);
+    if (before === after) return "unchanged";
+    return after === truth[i] ? "fixed by smoothing" : before === truth[i] ? "broken by smoothing" : "changed, still wrong";
+  });
+}
+
+if (errors.length && process.env.DIAG !== "1") {
   console.log(`\nworst misattributions by word count:`);
   errors.sort((a, b) => b.words - a.words).slice(0, 12).forEach((e) =>
     console.log(`  #${String(e.idx).padStart(3)} ${e.at}  truth=${e.truth} got=${e.got} conf=${e.conf}  ${e.text}`));
