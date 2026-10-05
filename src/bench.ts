@@ -15,6 +15,7 @@ const deviceSel = $<HTMLSelectElement>("device");
 const dtypeSel = $<HTMLSelectElement>("dtype");
 const langSel = $<HTMLSelectElement>("language");
 const runsInput = $<HTMLInputElement>("runs");
+const strideInput = $<HTMLInputElement>("stride");
 const diarizeBox = $<HTMLInputElement>("diarize");
 const runBtn = $<HTMLButtonElement>("run");
 const copyBtn = $<HTMLButtonElement>("copy");
@@ -24,6 +25,7 @@ const transcriptPre = $<HTMLPreElement>("transcript");
 
 interface Row {
   model: string;
+  strideS: number;
   dtype: Dtype;
   device: string;
   file: string;
@@ -153,6 +155,7 @@ async function runOnce(file: File, reference: string | null) {
       language: englishOnly ? null : langSel.value || null,
       task: "transcribe",
       retainAudio: diarize,
+      strideS: Number(strideInput.value),
     },
     ["result"],
     [audio.buffer],
@@ -170,6 +173,7 @@ async function runOnce(file: File, reference: string | null) {
 
   const row: Row = {
     model: findModel(modelId)!.name,
+    strideS: Number(strideInput.value),
     dtype: ready.dtype,
     device: ready.device === device ? ready.device : `${ready.device} (fell back)`,
     file: file.name,
@@ -183,6 +187,8 @@ async function runOnce(file: File, reference: string | null) {
     // English-only models get no language token at all.
     language: englishOnly ? "en (model)" : (result.language ?? (langSel.value || "–")),
   };
+  // The whole result, for looking at where errors fall (benchLast in the console).
+  (window as unknown as { benchLast: unknown }).benchLast = { row, reference, result };
   return { row, text: result.text };
 }
 
@@ -216,7 +222,7 @@ runBtn.onclick = async () => {
 const fmt = (n: number | null, digits = 1) => (n == null ? "–" : n.toFixed(digits));
 const speed = (r: Row) => (r.transcribeS > 0 ? r.audioS / r.transcribeS : 0);
 const cells = (r: Row, i: number) => [
-  String(i + 1), r.model, r.dtype, r.device, `${r.audioS} s`,
+  String(i + 1), r.model, r.dtype, r.device, `${r.strideS} s`, `${r.audioS} s`,
   fmt(r.decodeS), fmt(r.loadS), fmt(r.transcribeS), `${fmt(speed(r))}×`,
   fmt(r.diarizeS), r.wer == null ? "–" : `${(r.wer * 100).toFixed(1)}%`, String(r.words), r.language,
 ];
@@ -228,7 +234,7 @@ function render() {
       for (const [j, c] of cells(r, i).entries()) {
         const td = document.createElement("td");
         td.textContent = c;
-        if (j >= 4 && j <= 11) td.className = "num";
+        if (j >= 4 && j <= 12) td.className = "num";
         tr.append(td);
       }
       return tr;
@@ -247,7 +253,7 @@ async function environment(): Promise<string> {
 }
 
 copyBtn.onclick = async () => {
-  const head = ["#", "Model", "Quality", "Device", "Audio", "Decode s", "Load s", "Transcribe s", "× real time", "Speakers s", "WER", "Words", "Lang"];
+  const head = ["#", "Model", "Quality", "Device", "Overlap", "Audio", "Decode s", "Load s", "Transcribe s", "× real time", "Speakers s", "WER", "Words", "Lang"];
   const md = [
     `Benchmark — ${await environment()}`,
     `File: ${rows[0]?.file ?? "–"}`,

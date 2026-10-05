@@ -54,3 +54,23 @@ Observations:
   have not been compared yet.
 - The output has 147 more words than the script (4386 vs 4239). Part is formatting, but repeated text at the
   overlaps between 30-second chunks is a suspect worth checking.
+
+## Chunk overlap — 2026-10-05
+
+Whisper hears 30-second windows; neighbouring windows overlap by the *stride* on each side, and Transformers.js
+merges the twice-transcribed overlap. Same machine and file as the baseline, KB-Whisper Base, q4f16, WebGPU.
+*Repeats* = distinct 6-word phrases that occur more often in the transcript than in the script.
+
+| Overlap per side | Transcribe s | × real time | WER | Words | Dropped | Inserted | Repeats |
+|---|---|---|---|---|---|---|---|
+| 5 s (Transformers.js default, the app until now) | 268 | 5.7× | 10.4% | 4386 | 38 | 196 | 86 |
+| **2.5 s (the app now)** | **171** | **8.9×** | **7.2%** | **4240** | 38 | 50 | 1 |
+| 1 s | 157 | 9.7× | 7.6% | 4210 | 62 | 44 | 0 |
+| 0 s | 147 | 10.3× | 8.0% | 4196 | 72 | 40 | 0 |
+
+- **At 5 s the merge sometimes fails**: 160 of the 196 inserted words were 12 runs of whole repeated
+  sentences, almost all starting 1–6 s before a window boundary.
+- **Without overlap words are lost at the cuts**: at 0 s, 40 of the 72 dropped words lie within 2 s of a
+  30-second cut (13% would be chance).
+- **Real speech** (the private 12-minute interview excerpt, Node, CPU): 5 s → 13 repeated 6-word phrases in
+  46 s; 2.5 s → 0 in 38 s. No independent reference exists for that recording, so its WER is not measured.

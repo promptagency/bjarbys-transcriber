@@ -51,6 +51,8 @@ rejected so the queue can't hang.
 PCM on the main thread (`src/lib/audio.ts`, Web Audio) and **transferred** to the worker. When speaker
 separation will follow, `transcribe` is sent with `retainAudio`, and the worker keeps that buffer for the
 next `diarize` message instead of the page sending a second copy (~230 MB per hour of audio).
+Whisper hears 30 s windows overlapping by 2.5 s per side (`STRIDE_LENGTH_S`): the library default of 5 s repeated
+whole sentences at the seams and 0–1 s dropped words (docs/benchmark.md) — re-run the benchmark before changing it.
 `job.willDiarize` is fixed when the job starts, so toggling the setting mid-job can't skew progress.
 Each job keeps its original media (`getMedia()` → `job.media`; decoding happens in `runJob`) so the review view
 (`src/components/TranscriptReview.tsx`) can play single lines, and keeps `originalResult` so edited lines can be

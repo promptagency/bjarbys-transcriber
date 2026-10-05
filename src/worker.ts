@@ -38,8 +38,12 @@ let loadedKey = "";
 // processes each window independently, so estimating whole-file progress
 // needs to know how far each window advances into the audio.
 const CHUNK_LENGTH_S = 30;
-const STRIDE_LENGTH_S = 5;
-const WINDOW_JUMP_S = CHUNK_LENGTH_S - 2 * STRIDE_LENGTH_S;
+// Overlap on each side of a window. Transformers.js's default (5 s, a sixth of
+// the window) sometimes failed to merge the doubly-transcribed overlap and
+// repeated whole sentences; 2.5 s removed the repeats and did a third less
+// work, while 0–1 s dropped words at the cuts. See docs/benchmark.md.
+const STRIDE_LENGTH_S = 2.5;
+
 
 // ── Speaker separation (pyannote segmentation-3.0) ──────────────────────────
 // A tiny (~1.5 MB), separate model used only to detect *who* is speaking when.
@@ -149,13 +153,15 @@ function wasmDtypeFor(dtype: Dtype): Dtype {
 function makeProgressReporter(
   jobId: string,
   durationSec: number,
+  strideS: number,
 ): (localSec: number) => void {
+  const windowJumpS = CHUNK_LENGTH_S - 2 * strideS;
   let windowIndex = 0;
   let lastLocal = 0;
   return (localSec: number) => {
     if (localSec + 0.5 < lastLocal) windowIndex += 1;
     lastLocal = localSec;
-    const globalSec = windowIndex * WINDOW_JUMP_S + localSec;
+    const globalSec = windowIndex * windowJumpS + localSec;
     const progress = durationSec > 0 ? globalSec / durationSec : 0;
     post({
       type: "transcribe-progress",
@@ -371,7 +377,8 @@ self.addEventListener("message", async (event: MessageEvent<ToWorker>) => {
           ? await detectLanguage(pipe, msg.audio, samplingRate)
           : null;
       const language = msg.language ?? detected;
-      const reportProgress = makeProgressReporter(msg.jobId, durationSec);
+      const strideS = msg.strideS ?? STRIDE_LENGTH_S;
+      const reportProgress = makeProgressReporter(msg.jobId, durationSec, strideS);
       const streamer = new WhisperTextStreamer(
         pipe.tokenizer as WhisperTokenizer,
         { on_chunk_start: reportProgress, on_chunk_end: reportProgress },
@@ -379,7 +386,7 @@ self.addEventListener("message", async (event: MessageEvent<ToWorker>) => {
 
       const output = (await pipe(msg.audio, {
         chunk_length_s: CHUNK_LENGTH_S,
-        stride_length_s: STRIDE_LENGTH_S,
+        stride_length_s: strideS,
         return_timestamps: true,
         streamer,
         // English-only models have neither a language nor a task token.
