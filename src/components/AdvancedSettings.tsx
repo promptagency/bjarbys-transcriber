@@ -8,6 +8,7 @@ import {
   findModel,
   formatSize,
   isEnglishOnly,
+  tierSizeMB,
 } from "../lib/models";
 import { EXPORT_FORMATS, type ExportFormat } from "../lib/exporters";
 
@@ -23,12 +24,15 @@ export function AdvancedSettings({
   onChange,
   resolvedDevice,
   webgpuAvailable,
+  gpuF16,
   disabled,
 }: {
   settings: Settings;
   onChange: (patch: Partial<Settings>) => void;
   resolvedDevice: Backend;
   webgpuAvailable: boolean;
+  /** Whether the GPU has `shader-f16` — decides what "Balanced (GPU)" downloads. */
+  gpuF16: boolean;
   disabled?: boolean;
 }) {
   const model = findModel(settings.modelId)!;
@@ -59,7 +63,7 @@ export function AdvancedSettings({
 
       <Field
         label="Quality / size"
-        hint={currentTier ? `${formatSize(currentTier.sizeMB)} download` : ""}
+        hint={currentTier ? `${formatSize(tierSizeMB(currentTier, gpuF16))} download` : ""}
       >
         <Select
           value={settings.dtype}
@@ -68,7 +72,7 @@ export function AdvancedSettings({
         >
           {tiers.map((t) => (
             <option key={t.dtype} value={t.dtype}>
-              {DTYPE_LABEL[t.dtype]} — {formatSize(t.sizeMB)}
+              {DTYPE_LABEL[t.dtype]} — {formatSize(tierSizeMB(t, gpuF16))}
             </option>
           ))}
         </Select>

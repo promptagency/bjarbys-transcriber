@@ -172,17 +172,34 @@ const createPipeline = pipeline as unknown as (
 
 type DtypeArg = string | Record<string, string>;
 
-// Whisper's encoder is VERY sensitive to quantization on the WebGPU backend:
-// anything below fp32 (fp16/q4f16/q4) makes base+ models emit a single token
-// then stop (verified empirically — only tiny survives 4-bit). So on WebGPU we
-// pin the encoder to fp32 and 4-bit only the (large) decoder — the exact config
-// the official transformers.js Whisper examples use. On WASM a single integer
-// dtype works fine. (transformers.js issue #1317 + dtypes guide.)
-function resolveDtype(dtype: Dtype, device: Backend): DtypeArg {
+// The "Balanced (GPU)" tier: fp16 encoder + q4f16 decoder (4-bit weights,
+// 16-bit maths). 16-bit needs a GPU with `shader-f16`; without it we load the
+// fp32 encoder + q4 decoder this app always used. Measured (see
+// docs/webgpu-quantization.md): on transformers.js 3.x any 16-bit variant made Whisper
+// emit garbage on WebGPU (4.x fixed that), and a 4-bit encoder — fine on clean
+// Swedish — made the multilingual model drop speech after a language switch.
+// Asked on every model load rather than cached: a passing failure (e.g. while
+// the GPU process restarts) must not pin the larger fallback for the session.
+async function hasShaderF16(): Promise<boolean> {
+  try {
+    const gpu = (navigator as Navigator & { gpu?: { requestAdapter(): Promise<{ features: Set<string> } | null> } }).gpu;
+    const adapter = await gpu?.requestAdapter();
+    return !!adapter?.features.has("shader-f16");
+  } catch {
+    return false;
+  }
+}
+
+/** fp32 encoder + q4 decoder: the GPU tier without 16-bit maths. */
+const GPU_NO_F16: DtypeArg = { encoder_model: "fp32", decoder_model_merged: "q4" };
+
+async function resolveDtype(dtype: Dtype, device: Backend): Promise<DtypeArg> {
   if (device === "webgpu") {
     if (dtype === "fp32") return "fp32";
     // Our "Balanced (GPU)" tier:
-    return { encoder_model: "fp32", decoder_model_merged: "q4" };
+    return (await hasShaderF16())
+      ? { encoder_model: "fp16", decoder_model_merged: "q4f16" }
+      : GPU_NO_F16;
   }
   return dtype; // WASM/CPU: q8 (default), q4, or fp32
 }
@@ -191,10 +208,11 @@ async function build(
   modelId: string,
   dtype: Dtype,
   device: Backend,
+  dtypeArg?: DtypeArg,
 ): Promise<AutomaticSpeechRecognitionPipeline> {
   return await createPipeline("automatic-speech-recognition", modelId, {
     device,
-    dtype: resolveDtype(dtype, device),
+    dtype: dtypeArg ?? (await resolveDtype(dtype, device)),
     progress_callback: (data: unknown) =>
       post({ type: "download", data: data as FileProgress }),
   });
@@ -224,6 +242,20 @@ async function ensurePipeline(
     loadedKey = key;
     return pipe;
   } catch (err) {
+    // If the 16-bit GPU variant fails to load, the 32-bit one may still work
+    // on the GPU — far faster than dropping to the CPU.
+    if (device === "webgpu" && dtype !== "fp32") {
+      const tried = await resolveDtype(dtype, device);
+      if (tried !== GPU_NO_F16) {
+        try {
+          pipe = await build(modelId, dtype, device, GPU_NO_F16);
+          loadedKey = key;
+          return pipe;
+        } catch {
+          /* fall through to the CPU */
+        }
+      }
+    }
     if (device === "webgpu") {
       const to: Backend = "wasm";
       const fallbackDtype = wasmDtypeFor(dtype);

@@ -54,9 +54,13 @@ reverted. Manual edits rewrite `job.result` (and rebuild its flat `text`), so ev
 
 **Models (`src/lib/models.ts`, `resolveDtype` in the worker).** Whisper via Transformers.js, downloaded from
 the Hugging Face CDN and cached by the browser. Each model lists quantization tiers; `availableTiers()` hides
-combinations that break on a backend. On **WebGPU the encoder must stay fp32** (quantized encoders make
-base+ models emit one token and stop) — the "Balanced (GPU)" tier is fp32 encoder + q4 decoder. 8-bit
-decoders are CPU-only. A failed WebGPU load falls back to WASM with a CPU-safe dtype.
+combinations that break on a backend. The "Balanced (GPU)" tier (`q4f16` in settings) loads an **fp16 encoder +
+q4f16 decoder**, or fp32 encoder + q4 decoder when the GPU lacks `shader-f16` (`resolveDtype`). Don't put the
+encoder at 4 bits: it measured fine on Swedish but dropped speech after a language switch. 16-bit on WebGPU
+needs transformers.js 4.x (3.x produced garbage). 8-bit decoders are CPU-only (~10× slower on WebGPU).
+Measurements: `docs/webgpu-quantization.md`. Transformers.js pins *development* builds of `onnxruntime-web`;
+`package.json` `overrides` forces the latest stable release instead — when upgrading Transformers.js, move
+the override to the stable ONNX Runtime closest to what it pins, and re-test GPU, CPU and speaker separation. A failed WebGPU load falls back to WASM with a CPU-safe dtype.
 
 **Speaker separation (`src/lib/diarize.ts`).** pyannote segmentation-3.0 (ONNX, ~1.5 MB, loaded lazily on
 WASM) emits a *powerset* over 3 local speakers — `decodeActivity` turns it into per-speaker spans where
