@@ -279,7 +279,8 @@ without labelling hours of audio.
 `src/worker.ts` runs the Transformers.js ASR pipeline in a Web Worker. Audio is
 decoded to mono 16 kHz PCM on the main thread (`src/lib/audio.ts`) and
 transferred to the worker. Long audio is chunked (`chunk_length_s: 30`) with a
-5 s stride. See `src/lib/models.ts` for the model catalog.
+2.5 s overlap on each side — the library's default of 5 s repeated whole
+sentences at the seams (see `docs/benchmark.md`). See `src/lib/models.ts` for the model catalog.
 
 Progress comes from a `WhisperTextStreamer`: its chunk callbacks report
 timestamps within Whisper's current 30 s window, and the worker reconstructs a
