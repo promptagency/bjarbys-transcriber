@@ -151,3 +151,20 @@ leaves confident picks alone.
   lines come from Whisper, so its +0.9 points is what to expect.
 - Trade-off: fewer lines are flagged unsure (interview: 36 instead of 44), and 8 of the remaining 21 errors are
   flagged (before: 12 of 22).
+
+## KB-Whisper transcription styles — 2026-10-05
+
+KBLab publishes three Stage-2 styles per model as git tags: **subtitle** (condensed), **standard** (the default,
+on `main`, what the app uses) and **strict** (closer to verbatim). On their benchmarks strict scores slightly
+worse WER (Base: 10.4% vs 9.1% on FLEURS), as expected against tidied references.
+
+None of the alternatives is usable in the browser as published:
+
+- **subtitle** has no `onnx/` folder (tiny, base, small, large; medium has no subtitle tag at all).
+- **strict** has an `onnx/` folder, but its files are byte-identical to `main`'s (same LFS hashes for
+  `encoder_model_quantized`, `decoder_model_merged_quantized`, `decoder_model_merged_q4f16`), while its
+  `model.safetensors` differs. Loading `revision: "strict"` in Transformers.js therefore gives the *standard*
+  style — confirmed on the interview excerpt: identical output, word for word.
+
+Using strict would mean exporting its weights to ONNX ourselves (Optimum), quantizing, and hosting the files.
+Not done; worth it only if near-verbatim transcripts are wanted.
