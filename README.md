@@ -68,8 +68,8 @@ npm run dev      # open http://localhost:5173
 - **Use a browser with WebGPU** (Chrome or Edge are the safe choice) for
   speed: the models then run on the GPU. Without WebGPU the app falls back to
   the CPU, which works but is much slower.
-- **The first transcription downloads the model** (about 200 MB for the
-  default, KB-Whisper Base) from Hugging Face. The browser caches it, so later runs
+- **The first transcription downloads the model** (about 110 MB for the
+  default, KB-Whisper Base, on a GPU; about 180 MB on CPU) from Hugging Face. The browser caches it, so later runs
   start straight away.
 - **Podcasts work in `npm run dev`:** the dev server includes a stand-in for
   `proxy.php` (see [below](#podcasts--proxyphp)). `npm run preview` doesn't
@@ -116,10 +116,13 @@ podcasts work for any host that happens to send CORS headers.
 | **Multilingual — Whisper** | tiny · base · small · large-v3-turbo | ~100 languages. Turbo is the fast flagship (WebGPU). |
 | **English — Whisper** | tiny · base · small (`.en`) | Slightly better on English. |
 
-Quantization: **4-bit (q4f16)** is the small/fast default on **WebGPU**;
-**8-bit (q8)** is the default on **CPU/WASM** (an 8-bit *decoder* misbehaves on
-WebGPU, so it's offered only on CPU); **full (fp32)** is available for the
-smaller models.
+Quantization: **Balanced (GPU)** is the default on **WebGPU** — a 16-bit encoder
+with a 4-bit decoder, about half the download of full precision with the same
+accuracy in our tests (GPUs without 16-bit support get a 32-bit encoder instead).
+**8-bit (q8)** is the default on **CPU/WASM** (an 8-bit *decoder* is ~10× slower
+on WebGPU, so it's offered only on CPU); **full (fp32)** is available for the
+smaller models. The measurements behind these choices are in
+[`docs/webgpu-quantization.md`](docs/webgpu-quantization.md).
 
 ### Speaker separation
 

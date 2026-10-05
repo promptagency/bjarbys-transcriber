@@ -172,17 +172,33 @@ const createPipeline = pipeline as unknown as (
 
 type DtypeArg = string | Record<string, string>;
 
-// Whisper's encoder is VERY sensitive to quantization on the WebGPU backend:
-// anything below fp32 (fp16/q4f16/q4) makes base+ models emit a single token
-// then stop (verified empirically — only tiny survives 4-bit). So on WebGPU we
-// pin the encoder to fp32 and 4-bit only the (large) decoder — the exact config
-// the official transformers.js Whisper examples use. On WASM a single integer
-// dtype works fine. (transformers.js issue #1317 + dtypes guide.)
-function resolveDtype(dtype: Dtype, device: Backend): DtypeArg {
+// The "Balanced (GPU)" tier: fp16 encoder + q4f16 decoder (4-bit weights,
+// 16-bit maths). 16-bit needs a GPU with `shader-f16`; without it we load the
+// fp32 encoder + q4 decoder this app always used. Measured (see
+// docs/webgpu-quantization.md): on transformers.js 3.x any 16-bit variant made Whisper
+// emit garbage on WebGPU (4.x fixed that), and a 4-bit encoder — fine on clean
+// Swedish — made the multilingual model drop speech after a language switch.
+let gpuHasF16: Promise<boolean> | null = null;
+function hasShaderF16(): Promise<boolean> {
+  gpuHasF16 ??= (async () => {
+    try {
+      const gpu = (navigator as Navigator & { gpu?: { requestAdapter(): Promise<{ features: Set<string> } | null> } }).gpu;
+      const adapter = await gpu?.requestAdapter();
+      return !!adapter?.features.has("shader-f16");
+    } catch {
+      return false;
+    }
+  })();
+  return gpuHasF16;
+}
+
+async function resolveDtype(dtype: Dtype, device: Backend): Promise<DtypeArg> {
   if (device === "webgpu") {
     if (dtype === "fp32") return "fp32";
     // Our "Balanced (GPU)" tier:
-    return { encoder_model: "fp32", decoder_model_merged: "q4" };
+    return (await hasShaderF16())
+      ? { encoder_model: "fp16", decoder_model_merged: "q4f16" }
+      : { encoder_model: "fp32", decoder_model_merged: "q4" };
   }
   return dtype; // WASM/CPU: q8 (default), q4, or fp32
 }
@@ -194,7 +210,7 @@ async function build(
 ): Promise<AutomaticSpeechRecognitionPipeline> {
   return await createPipeline("automatic-speech-recognition", modelId, {
     device,
-    dtype: resolveDtype(dtype, device),
+    dtype: await resolveDtype(dtype, device),
     progress_callback: (data: unknown) =>
       post({ type: "download", data: data as FileProgress }),
   });

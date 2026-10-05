@@ -40,10 +40,13 @@ export const DTYPE_LABEL: Record<Dtype, string> = {
   fp32: "Full quality (largest)",
 };
 
-// NOTE on sizes: the "Balanced (GPU)" tier loads an fp32 encoder + a 4-bit (q4)
-// decoder. On WebGPU the encoder MUST stay fp32 or Whisper emits a single token
-// then stops (verified), so its size = encoder_fp32 (incl. external-data for big
-// models) + decoder_merged_q4. The "Balanced (CPU)" (q8) tier is 8-bit both and
+// NOTE on sizes: the "Balanced (GPU)" tier is an fp16 encoder + a q4f16 merged
+// decoder (incl. external-data for big models). It needs transformers.js 4.x —
+// on 3.x any 16-bit weights made Whisper emit garbage on WebGPU — and a GPU with
+// `shader-f16`; without it the worker loads fp32 encoder + q4 decoder instead
+// (larger). A 4-bit encoder is NOT used: it measured fine on Swedish but made the
+// multilingual model drop speech when the language changed mid-file. See
+// docs/webgpu-quantization.md. The "Balanced (CPU)" (q8) tier is 8-bit both and
 // is much smaller. "Full" (fp32) is offered only for the smaller models whose
 // weights are inline.
 export const MODELS: ModelOption[] = [
@@ -55,7 +58,7 @@ export const MODELS: ModelOption[] = [
     language: "Swedish (also handles English)",
     blurb: "Fastest Swedish model. Great for quick drafts and weak hardware.",
     tiers: [
-      { dtype: "q4f16", sizeMB: 120 },
+      { dtype: "q4f16", sizeMB: 62 },
       { dtype: "q8", sizeMB: 120 },
       { dtype: "fp32", sizeMB: 151 },
     ],
@@ -67,7 +70,7 @@ export const MODELS: ModelOption[] = [
     language: "Swedish (also handles English)",
     blurb: "Good balance of speed and accuracy for Swedish.",
     tiers: [
-      { dtype: "q4f16", sizeMB: 206 },
+      { dtype: "q4f16", sizeMB: 110 },
       { dtype: "q8", sizeMB: 182 },
       { dtype: "fp32", sizeMB: 291 },
     ],
@@ -80,7 +83,7 @@ export const MODELS: ModelOption[] = [
     language: "Swedish (also handles English)",
     blurb: "Noticeably better Swedish accuracy. Worth it on a decent machine.",
     tiers: [
-      { dtype: "q4f16", sizeMB: 586 },
+      { dtype: "q4f16", sizeMB: 322 },
       { dtype: "q8", sizeMB: 407 },
       { dtype: "fp32", sizeMB: 968 },
     ],
@@ -92,7 +95,7 @@ export const MODELS: ModelOption[] = [
     language: "Swedish (also handles English)",
     blurb: "High Swedish accuracy. Large download — best with WebGPU.",
     tiers: [
-      { dtype: "q4f16", sizeMB: 1699 },
+      { dtype: "q4f16", sizeMB: 951 },
       { dtype: "q8", sizeMB: 986 },
     ],
     gpuPreferred: true,
@@ -104,7 +107,7 @@ export const MODELS: ModelOption[] = [
     language: "Swedish (also handles English)",
     blurb: "Best-in-class Swedish. Very large — WebGPU strongly recommended.",
     tiers: [
-      { dtype: "q4f16", sizeMB: 3346 },
+      { dtype: "q4f16", sizeMB: 1884 },
       { dtype: "q8", sizeMB: 1822 },
     ],
     gpuPreferred: true,
@@ -118,7 +121,7 @@ export const MODELS: ModelOption[] = [
     language: "~100 languages",
     blurb: "Tiny multilingual model. Fastest, lowest accuracy.",
     tiers: [
-      { dtype: "q4f16", sizeMB: 120 },
+      { dtype: "q4f16", sizeMB: 63 },
       { dtype: "q8", sizeMB: 41 },
       { dtype: "fp32", sizeMB: 151 },
     ],
@@ -130,7 +133,7 @@ export const MODELS: ModelOption[] = [
     language: "~100 languages",
     blurb: "Balanced multilingual model. A solid default.",
     tiers: [
-      { dtype: "q4f16", sizeMB: 206 },
+      { dtype: "q4f16", sizeMB: 110 },
       { dtype: "q8", sizeMB: 77 },
       { dtype: "fp32", sizeMB: 291 },
     ],
@@ -143,7 +146,7 @@ export const MODELS: ModelOption[] = [
     language: "~100 languages",
     blurb: "Better multilingual accuracy at a larger size.",
     tiers: [
-      { dtype: "q4f16", sizeMB: 586 },
+      { dtype: "q4f16", sizeMB: 322 },
       { dtype: "q8", sizeMB: 249 },
       { dtype: "fp32", sizeMB: 968 },
     ],
@@ -155,7 +158,7 @@ export const MODELS: ModelOption[] = [
     language: "~100 languages",
     blurb: "Near large-v3 accuracy at a fraction of the speed cost. WebGPU recommended.",
     tiers: [
-      { dtype: "q4f16", sizeMB: 2882 },
+      { dtype: "q4f16", sizeMB: 1468 },
       { dtype: "q8", sizeMB: 1085 },
     ],
     gpuPreferred: true,
@@ -169,7 +172,7 @@ export const MODELS: ModelOption[] = [
     language: "English only",
     blurb: "English-only tiny model. Fastest for English.",
     tiers: [
-      { dtype: "q4f16", sizeMB: 120 },
+      { dtype: "q4f16", sizeMB: 63 },
       { dtype: "q8", sizeMB: 41 },
       { dtype: "fp32", sizeMB: 151 },
     ],
@@ -181,7 +184,7 @@ export const MODELS: ModelOption[] = [
     language: "English only",
     blurb: "English-only base model. Good everyday choice for English.",
     tiers: [
-      { dtype: "q4f16", sizeMB: 206 },
+      { dtype: "q4f16", sizeMB: 110 },
       { dtype: "q8", sizeMB: 77 },
       { dtype: "fp32", sizeMB: 291 },
     ],
@@ -193,7 +196,7 @@ export const MODELS: ModelOption[] = [
     language: "English only",
     blurb: "English-only small model. Highest English accuracy here.",
     tiers: [
-      { dtype: "q4f16", sizeMB: 586 },
+      { dtype: "q4f16", sizeMB: 322 },
       { dtype: "q8", sizeMB: 249 },
       { dtype: "fp32", sizeMB: 968 },
     ],
@@ -242,8 +245,9 @@ export function isEnglishOnly(id: string): boolean {
 }
 
 // Which dtypes are SAFE on each backend.
-//  • WebGPU: avoid 8-bit integer decoders — they produce gibberish on the
-//    WebGPU backend (transformers.js issue #1317). Use 4-bit+fp16 or full.
+//  • WebGPU: avoid 8-bit integer decoders — on transformers.js 3.x they produced
+//    gibberish (issue #1317); on 4.x they're correct but ~10× slower. Use
+//    4-bit+fp16 or full.
 //  • WASM/CPU: avoid fp16-based variants (slow / unsupported); 8-bit and 4-bit
 //    integer are the sweet spot.
 const WEBGPU_DTYPES: Dtype[] = ["q4f16", "fp32"];
