@@ -238,14 +238,14 @@ async function detectLanguage(
         lang_to_id?: Record<string, number>;
         decoder_start_token_id?: number;
       };
-      (inputs: Record<string, unknown>): Promise<{ logits: Tensor }>;
+      (inputs: Record<string, unknown>): Promise<Record<string, Tensor>>;
     };
     const config = model.generation_config;
     if (!config?.lang_to_id || config.decoder_start_token_id == null) return null;
     const { input_features } = await (
       p.processor as unknown as (a: Float32Array) => Promise<{ input_features: Tensor }>
     )(audio.subarray(0, CHUNK_LENGTH_S * samplingRate));
-    const { logits } = await model({
+    const outputs = await model({
       input_features,
       decoder_input_ids: new Tensor(
         "int64",
@@ -253,16 +253,26 @@ async function detectLanguage(
         [1, 1],
       ),
     });
-    const scores = logits.data as Float32Array;
-    let best: string | null = null;
-    let bestScore = -Infinity;
-    for (const [token, id] of Object.entries(config.lang_to_id)) {
-      if (scores[id] > bestScore) {
-        bestScore = scores[id];
-        best = token.slice(2, -2); // "<|sv|>" → "sv"
+    try {
+      // A 16-bit decoder returns float16 logits; without Float16Array in the
+      // browser those arrive as raw bits, so convert before comparing.
+      const scores = outputs.logits.to("float32").data as Float32Array;
+      let best: string | null = null;
+      let bestScore = -Infinity;
+      for (const [token, id] of Object.entries(config.lang_to_id)) {
+        if (scores[id] > bestScore) {
+          bestScore = scores[id];
+          best = token.slice(2, -2); // "<|sv|>" → "sv"
+        }
+      }
+      return best;
+    } finally {
+      // On WebGPU the decoder's key/value outputs stay on the GPU; generate()
+      // frees them itself, but this direct call must, or every job leaks them.
+      for (const tensor of Object.values(outputs)) {
+        if (tensor?.location === "gpu-buffer") tensor.dispose();
       }
     }
-    return best;
   } catch {
     return null; // fall back to Transformers.js's own default
   }
