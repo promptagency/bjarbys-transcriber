@@ -292,6 +292,20 @@ function typicalChunkSeconds(chunks: TranscriptChunk[]): number {
 }
 
 /**
+ * Short lines where a second voice is clearly present: a backchannel ("ja",
+ * "mm") spoken over someone else's turn is the most common misattribution, and
+ * "who talks longest here" picks the person who kept talking through it. For
+ * these the speaker whose speech is most *contained* in the line wins instead
+ * (overlap ÷ union of their span and the line), since an interjection starts
+ * and ends with the line while the other person talks straight through it.
+ * Measured with scripts/eval-diarization.mjs on the labelled interview and a
+ * synthetic dialogue (scripts/make-dialogue-fixture.sh); see docs/benchmark.md.
+ */
+const SHORT_LINE_SECONDS = 1.5;
+/** The runner-up must be active for at least this share of the line. */
+const SECOND_VOICE_SHARE = 0.4;
+
+/**
  * Assign each chunk the speaker who is active for the most of its duration.
  *
  * Weighted by total active time across the whole chunk rather than by a single
@@ -346,14 +360,20 @@ export function assignSpeakers(
     let topId: number | null = null;
     let topTime = 0;
     let secondTime = 0;
+    // Per speaker: the best overlap ÷ union of one of their spans with the line.
+    const contained = new Map<number, number>();
 
     for (const [id, list] of bySpeaker) {
       let total = 0;
+      let best = 0;
       for (let i = firstCandidate(list, start); i < list.length; i++) {
         const span = list[i];
         if (span.start >= end) break;
-        total += Math.min(end, span.end) - Math.max(start, span.start);
+        const overlap = Math.min(end, span.end) - Math.max(start, span.start);
+        total += overlap;
+        best = Math.max(best, overlap / (Math.max(end, span.end) - Math.min(start, span.start)));
       }
+      if (best > 0) contained.set(id, best);
       if (total > topTime) {
         secondTime = topTime;
         topTime = total;
@@ -368,12 +388,19 @@ export function assignSpeakers(
       return { ...chunk, speaker: null, speaker_conf: 0 };
     }
 
+    let confidence = (topTime - secondTime) / topTime;
+    const duration = end - start;
+    if (duration > 0 && duration < SHORT_LINE_SECONDS && secondTime >= SECOND_VOICE_SHARE * duration) {
+      const [first, second] = [...contained].sort((a, b) => b[1] - a[1]);
+      topId = first[0];
+      confidence = second ? (first[1] - second[1]) / first[1] : 1;
+    }
+
     let index = seenIds.indexOf(topId);
     if (index === -1) {
       index = seenIds.length;
       seenIds.push(topId);
     }
-    const confidence = (topTime - secondTime) / topTime;
     return {
       ...chunk,
       speaker: index + 1,

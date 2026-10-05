@@ -35,7 +35,7 @@ node --experimental-strip-types scripts/eval-word-timestamps.mjs <fixture-dir> [
 
 The fixture (`excerpt.wav` + `labels.csv`/`labels_TOFILL.csv`) lives **outside the repo** and is confidential
 client audio: never copy it into the repo, and don't quote its transcript in commits, PRs or READMEs. Figures
-quoted in the README (e.g. 94.7% word accuracy) come from `eval-diarization.mjs`; re-run it and update the
+quoted in the README (e.g. 95.6% word accuracy) come from `eval-diarization.mjs`; re-run it and update the
 README when diarization logic or scoring changes.
 
 ## Architecture
@@ -78,7 +78,8 @@ WASM) emits a *powerset* over 3 local speakers — `decodeActivity` turns it int
 silence and overlap are not extra speakers. Long audio is split into 25-min windows overlapping by 2 min
 (`planWindows`), speakers are matched across seams (`stitchWindows`), and on out-of-memory the worker
 halves the window and retries. `assignSpeakers` gives each Whisper chunk to whoever talks longest across
-it (`speaker_conf` = margin to the runner-up), `smoothSpeakers` folds short low-confidence runs into their
+it (`speaker_conf` = margin to the runner-up) — except a line under 1.5 s with a clearly active second voice,
+which goes to the speaker whose speech is most contained in it (backchannels over someone else's turn), `smoothSpeakers` folds short low-confidence runs into their
 surroundings and renumbers speakers by first appearance. Hard limits: 3 speakers at once, 240 min per file.
 The README documents why word-level timestamps were measured and rejected — don't reintroduce them.
 

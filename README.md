@@ -159,7 +159,7 @@ Corrections flow into Copy and every export; corrected chunks carry
 *No speaker*). If you've opted in to keeping transcripts, edits and names are
 kept with them across reloads.
 
-**Measured accuracy: 94.7%** of words attributed to the correct speaker, on a
+**Measured accuracy: 95.6%** of words attributed to the correct speaker, on a
 hand-labelled 12-minute two-person Swedish interview (231 utterances, 2116
 words). Lines where no speaker was detected count as wrong. Reproduce with `scripts/eval-diarization.mjs` — see
 [Evaluating speaker separation](#evaluating-speaker-separation).
@@ -177,17 +177,23 @@ That figure is for a clean recording of two people. Known limits:
   out as 2 speakers. But someone who stays silent through an entire overlap
   cannot be matched and is given a fresh label rather than a guessed one, so
   very long or very lopsided recordings may still show extra speakers.
-- **Short interjections are the main error.** Half of the wrong words sit in
-  utterances under 1.5 s — typically a backchannel ("Just det.") spoken over
-  someone still talking. A chunk's audio is dominated by the other speaker
-  even though the transcribed words are the interjector's, so time-weighted
-  attribution gets it wrong, sometimes confidently. See
+- **Short interjections are still the main error.** A backchannel ("Just det.")
+  spoken over someone still talking sits in a chunk whose audio is dominated by
+  the other speaker, so "who talks longest" gets it wrong. For lines under
+  1.5 s where a second voice is clearly active, the speaker whose speech is most
+  *contained* in the line now wins instead — an interjection starts and ends
+  with it, while the other person talks straight through. That took the
+  interview from 94.7% to 95.6% (22 → 21 wrong lines, 14 → 12 of 34 short lines
+  wrong) and a synthetic dialogue full of backchannels from 95.7% to 99.8%
+  (`scripts/make-dialogue-fixture.sh`; details in `docs/benchmark.md`). Most of
+  the remaining wrong words are still in short lines. See
   [Why not word-level timestamps?](#why-not-word-level-timestamps) — the
   obvious fix was measured and makes attribution worse, not better.
 - **`speaker_conf`** is the margin between the top two speakers' talk time
   within a chunk. Low values mean overlapping speech rather than a wrong
-  answer; `speaker` is `null` where no speech was detected at all. About half
-  the errors above are already flagged this way.
+  answer; `speaker` is `null` where no speech was detected at all. For a short
+  line decided by containment it is the margin in containment instead. About
+  40% of the remaining errors are flagged this way.
 
 ### Why not word-level timestamps?
 
@@ -213,7 +219,7 @@ entirely on a glitch. Removing the padding loses more than it recovers, so
 phrase-sized units are the right granularity and the errors above are the
 price of it.
 
-(Those percentages are not comparable to the 94.7% quoted earlier: this
+(Those percentages are not comparable to the 95.6% quoted earlier: this
 experiment uses a different ASR model and scores against time intervals rather
 than per labelled utterance. Only the three rows are comparable to each other.)
 
