@@ -74,3 +74,25 @@ merges the twice-transcribed overlap. Same machine and file as the baseline, KB-
   30-second cut (13% would be chance).
 - **Real speech** (the private 12-minute interview excerpt, Node, CPU): 5 s → 13 repeated 6-word phrases in
   46 s; 2.5 s → 0 in 38 s. No independent reference exists for that recording, so its WER is not measured.
+
+## GPU or CPU by default? — 2026-10-05
+
+Should "Auto" prefer the CPU (multithreaded WASM, q8) on this kind of machine? Same machine, 2.5 s overlap.
+Multithreading needs `crossOriginIsolated` (the dev server's COOP/COEP); without it the CPU runs on one thread.
+
+5-minute file (`bench-5min.wav`, 848 words):
+
+| Model | GPU (q4f16) | CPU (q8) | GPU WER | CPU WER |
+|---|---|---|---|---|
+| KB-Whisper Tiny | 33.8 s (9.3×) | 23.6 s (13.4×) | 8.5% | 8.7% |
+| KB-Whisper Base | 44.3 s (7.1×) | 34.4 s (9.2×) | 6.4% | 9.8% |
+| KB-Whisper Small | 76.0 s (4.2×) | 91.5 s (3.5×)¹ | 8.4% | 5.9% |
+
+¹ The tab went to the background near the end of this run, so the time may be inflated.
+
+25-minute file, KB-Whisper Base: GPU 171 s (8.9×), 7.2% WER; CPU 167.7 s (9.1×), 9.4% WER.
+
+**Decision: keep the GPU as the automatic choice.** For the default model the two are equally fast once the
+overlap is 2.5 s (the CPU's earlier lead came from the 5 s overlap's extra work), and the GPU is more accurate
+and downloads less (110 MB vs 182 MB). Only Tiny is clearly faster on the CPU, and it is rarely the right model.
+WER differences on the 5-minute file (±3 points between devices, in both directions) are within its noise.
