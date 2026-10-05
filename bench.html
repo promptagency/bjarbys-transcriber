@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vem sa vad? — benchmark</title>
+    <style>
+      :root { color-scheme: dark; }
+      body { font: 14px/1.5 system-ui, sans-serif; background: #0b1020; color: #dbe2f0; margin: 0; padding: 24px; }
+      main { max-width: 1100px; margin: 0 auto; }
+      h1 { font-size: 20px; margin: 0 0 4px; }
+      p.note { color: #8b97ad; margin: 0 0 20px; }
+      fieldset { border: 1px solid #263049; border-radius: 10px; padding: 12px 16px; margin: 0 0 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px 16px; }
+      legend { padding: 0 6px; color: #8b97ad; }
+      label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #8b97ad; }
+      label.inline { flex-direction: row; align-items: center; gap: 8px; font-size: 14px; color: #dbe2f0; }
+      select, input[type=number] { background: #141b2f; color: inherit; border: 1px solid #263049; border-radius: 6px; padding: 5px 6px; font: inherit; }
+      button { background: #0ea5e9; color: white; border: 0; border-radius: 8px; padding: 8px 16px; font: inherit; font-weight: 600; cursor: pointer; }
+      button.secondary { background: #263049; }
+      button:disabled { opacity: 0.5; cursor: default; }
+      #status { margin: 12px 0; color: #8b97ad; min-height: 1.5em; }
+      table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; margin-top: 8px; }
+      th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #1c2440; white-space: nowrap; }
+      th { color: #8b97ad; font-weight: 500; }
+      td.num { text-align: right; }
+      pre { white-space: pre-wrap; background: #141b2f; padding: 12px; border-radius: 8px; color: #8b97ad; max-height: 240px; overflow: auto; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Benchmark</h1>
+      <p class="note">
+        Developer page (only in <code>npm run dev</code>). Runs the app's own worker on a file you pick —
+        nothing is uploaded or copied. Make a reproducible Swedish recording with
+        <code>scripts/make-bench-audio.sh</code>.
+      </p>
+
+      <fieldset>
+        <legend>Input</legend>
+        <label>Audio or video file <input id="audio" type="file" accept="audio/*,video/*" /></label>
+        <label>Reference text (optional, for word error rate) <input id="ref" type="file" accept=".txt,text/plain" /></label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Settings</legend>
+        <label>Model <select id="model"></select></label>
+        <label>Device <select id="device"><option value="webgpu">GPU (WebGPU)</option><option value="wasm">CPU (WASM)</option></select></label>
+        <label>Quality <select id="dtype"></select></label>
+        <label>Language <select id="language"></select></label>
+        <label>Runs <input id="runs" type="number" min="1" max="10" value="1" /></label>
+        <label class="inline"><input id="diarize" type="checkbox" /> Speaker separation</label>
+      </fieldset>
+
+      <button id="run">Run</button>
+      <button id="copy" class="secondary">Copy results as Markdown</button>
+      <div id="status"></div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Model</th><th>Quality</th><th>Device</th><th>Audio</th>
+            <th>Decode s</th><th>Load s</th><th>Transcribe s</th><th>× real time</th>
+            <th>Speakers s</th><th>WER</th><th>Words</th><th>Lang</th>
+          </tr>
+        </thead>
+        <tbody id="results"></tbody>
+      </table>
+
+      <h2 style="font-size:14px;color:#8b97ad;margin-top:24px">Last transcript (start)</h2>
+      <pre id="transcript"></pre>
+    </main>
+    <script type="module" src="/src/bench.ts"></script>
+  </body>
+</html>

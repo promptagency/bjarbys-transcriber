@@ -22,6 +22,10 @@ npm run preview     # serves dist/ — has NO podcast proxy, so podcasts mostly 
 There is no test runner and no linter. Verify changes with `npm run typecheck` / `npm run build`, and in the
 browser for anything touching transcription (Chrome/Edge for WebGPU).
 
+Transcription speed and word error rate are measured in the browser with `bench.html` (dev server only) on a
+recording from `scripts/make-bench-audio.sh` — see `docs/benchmark.md`, and add a row there when a change is
+meant to make things faster or more accurate. Keep the tab visible while it runs.
+
 Speaker-separation accuracy is measured with scripts that run the shipping `src/lib/diarize.ts` under Node:
 
 ```bash

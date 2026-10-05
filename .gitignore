@@ -12,3 +12,6 @@ yarn-error.log*
 
 # Temporary audio for manual browser tests (see CLAUDE.md)
 public/test-audio/
+
+# Benchmark recordings (scripts/make-bench-audio.sh)
+bench-audio/
