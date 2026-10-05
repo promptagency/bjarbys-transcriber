@@ -2,7 +2,7 @@
 
 Question: is the old rule "on WebGPU the encoder must stay fp32" (`src/worker.ts`) still true?
 
-Setup: a throwaway harness (kept on branch `spike/webgpu-encoder`, `src/spike-webgpu.ts`) ran the ASR pipeline on WebGPU on the main thread, with the app's options
+Setup: a throwaway harness (since deleted) ran the ASR pipeline on WebGPU on the main thread, with the app's options
 (30 s chunks, 5 s stride, timestamps, `sv`). Audio: 45 s of Swedish read by macOS `say -v Alva` from a
 known 112-word script. Score is word error rate (WER) against the script. Hardware: Apple GPU (Metal 3,
 `shader-f16` reported), Chrome 153. Run times were measured in a hidden tab and are only roughly comparable.
