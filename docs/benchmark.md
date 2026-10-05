@@ -43,9 +43,14 @@ Apple M1 Pro (32 GB), Chrome 153, WebGPU (Apple Metal 3, `shader-f16`), 10 CPU t
 |---|---|---|---|---|---|---|---|---|---|
 | KB-Whisper Base | q4f16 | webgpu | 2.5 | 1.6 | 269.9 | 5.6× | – | 10.4% | 4386 |
 | KB-Whisper Base | q4f16 | webgpu | 2.5 | 1.6 | 268.2 | 5.7× | 16.5 | 10.4% | 4386 |
+| KB-Whisper Base | q8 | wasm | 2.4 | 1.4 | 203.2 | 7.5× | – | 10.3% | 4331 |
 
 Observations:
 
 - Transcription is ~94% of the time; speaker separation is ~6%. Speed work should target Whisper.
+- **On this Mac the CPU beats the GPU for Base**: 203 s vs 268 s on the same file, same accuracy (a 2-minute
+  file agrees: 16.3 s vs 18.3 s). The dev server sends COOP/COEP, so WASM runs multithreaded here; a plain
+  static deployment without those headers would run the CPU single-threaded and much slower. Larger models
+  have not been compared yet.
 - The output has 147 more words than the script (4386 vs 4239). Part is formatting, but repeated text at the
   overlaps between 30-second chunks is a suspect worth checking.

@@ -62,7 +62,6 @@ refreshDtypes();
 // ── Worker ────────────────────────────────────────────────────────────────
 const worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module" });
 let waiting: { resolve: (m: FromWorker) => void; reject: (e: Error) => void; types: FromWorker["type"][] } | null = null;
-let actualDevice = "";
 
 /** Message types seen, in order — shows where a stuck run stopped. */
 const trace: string[] = [];
@@ -76,7 +75,6 @@ worker.onerror = (e) => {
 worker.onmessage = (e: MessageEvent<FromWorker>) => {
   const msg = e.data;
   if (trace.at(-1) !== msg.type) trace.push(msg.type);
-  if (msg.type === "device-fallback") actualDevice = `${msg.to} (fell back)`;
   if (msg.type === "download" && msg.data.status === "progress" && msg.data.file) {
     phase(`Downloading ${msg.data.file} ${Math.round(msg.data.progress ?? 0)}%…`, "download");
   }
@@ -135,9 +133,13 @@ async function runOnce(file: File, reference: string | null) {
   const audioS = Math.round(durationOf(audio));
 
   phase("Loading model…");
-  actualDevice = device;
   t = performance.now();
-  await request({ type: "load", modelId, dtype, device }, ["ready"]);
+  // The worker may fall back from WebGPU to the CPU with a different quality;
+  // its reply says what actually loaded.
+  const ready = (await request({ type: "load", modelId, dtype, device }, ["ready"])) as {
+    dtype: Dtype;
+    device: Backend;
+  };
   const loadS = seconds(performance.now() - t);
 
   const diarize = diarizeBox.checked;
@@ -168,8 +170,8 @@ async function runOnce(file: File, reference: string | null) {
 
   const row: Row = {
     model: findModel(modelId)!.name,
-    dtype,
-    device: actualDevice,
+    dtype: ready.dtype,
+    device: ready.device === device ? ready.device : `${ready.device} (fell back)`,
     file: file.name,
     audioS,
     decodeS,
@@ -178,7 +180,8 @@ async function runOnce(file: File, reference: string | null) {
     diarizeS,
     wer: reference ? wordErrorRate(reference, result.text) : null,
     words: words(result.text).length,
-    language: result.language ?? (langSel.value || "–"),
+    // English-only models get no language token at all.
+    language: englishOnly ? "en (model)" : (result.language ?? (langSel.value || "–")),
   };
   return { row, text: result.text };
 }
