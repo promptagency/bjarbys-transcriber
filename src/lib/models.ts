@@ -9,6 +9,11 @@ export interface Tier {
   dtype: Dtype;
   /** Total download in MB (encoder + merged decoder). */
   sizeMB: number;
+  /**
+   * Download on a GPU without `shader-f16`, where "Balanced (GPU)" loads the
+   * fp32 encoder + q4 decoder instead (see resolveDtype in the worker).
+   */
+  noF16SizeMB?: number;
 }
 
 export type ModelGroup =
@@ -58,7 +63,7 @@ export const MODELS: ModelOption[] = [
     language: "Swedish (also handles English)",
     blurb: "Fastest Swedish model. Great for quick drafts and weak hardware.",
     tiers: [
-      { dtype: "q4f16", sizeMB: 62 },
+      { dtype: "q4f16", sizeMB: 62, noF16SizeMB: 120 },
       { dtype: "q8", sizeMB: 120 },
       { dtype: "fp32", sizeMB: 151 },
     ],
@@ -70,7 +75,7 @@ export const MODELS: ModelOption[] = [
     language: "Swedish (also handles English)",
     blurb: "Good balance of speed and accuracy for Swedish.",
     tiers: [
-      { dtype: "q4f16", sizeMB: 110 },
+      { dtype: "q4f16", sizeMB: 110, noF16SizeMB: 206 },
       { dtype: "q8", sizeMB: 182 },
       { dtype: "fp32", sizeMB: 291 },
     ],
@@ -83,7 +88,7 @@ export const MODELS: ModelOption[] = [
     language: "Swedish (also handles English)",
     blurb: "Noticeably better Swedish accuracy. Worth it on a decent machine.",
     tiers: [
-      { dtype: "q4f16", sizeMB: 322 },
+      { dtype: "q4f16", sizeMB: 322, noF16SizeMB: 586 },
       { dtype: "q8", sizeMB: 407 },
       { dtype: "fp32", sizeMB: 968 },
     ],
@@ -95,7 +100,7 @@ export const MODELS: ModelOption[] = [
     language: "Swedish (also handles English)",
     blurb: "High Swedish accuracy. Large download — best with WebGPU.",
     tiers: [
-      { dtype: "q4f16", sizeMB: 951 },
+      { dtype: "q4f16", sizeMB: 951, noF16SizeMB: 1699 },
       { dtype: "q8", sizeMB: 986 },
     ],
     gpuPreferred: true,
@@ -107,7 +112,7 @@ export const MODELS: ModelOption[] = [
     language: "Swedish (also handles English)",
     blurb: "Best-in-class Swedish. Very large — WebGPU strongly recommended.",
     tiers: [
-      { dtype: "q4f16", sizeMB: 1884 },
+      { dtype: "q4f16", sizeMB: 1884, noF16SizeMB: 3346 },
       { dtype: "q8", sizeMB: 1822 },
     ],
     gpuPreferred: true,
@@ -121,7 +126,7 @@ export const MODELS: ModelOption[] = [
     language: "~100 languages",
     blurb: "Tiny multilingual model. Fastest, lowest accuracy.",
     tiers: [
-      { dtype: "q4f16", sizeMB: 63 },
+      { dtype: "q4f16", sizeMB: 63, noF16SizeMB: 120 },
       { dtype: "q8", sizeMB: 41 },
       { dtype: "fp32", sizeMB: 151 },
     ],
@@ -133,7 +138,7 @@ export const MODELS: ModelOption[] = [
     language: "~100 languages",
     blurb: "Balanced multilingual model. A solid default.",
     tiers: [
-      { dtype: "q4f16", sizeMB: 110 },
+      { dtype: "q4f16", sizeMB: 110, noF16SizeMB: 206 },
       { dtype: "q8", sizeMB: 77 },
       { dtype: "fp32", sizeMB: 291 },
     ],
@@ -146,7 +151,7 @@ export const MODELS: ModelOption[] = [
     language: "~100 languages",
     blurb: "Better multilingual accuracy at a larger size.",
     tiers: [
-      { dtype: "q4f16", sizeMB: 322 },
+      { dtype: "q4f16", sizeMB: 322, noF16SizeMB: 586 },
       { dtype: "q8", sizeMB: 249 },
       { dtype: "fp32", sizeMB: 968 },
     ],
@@ -158,7 +163,7 @@ export const MODELS: ModelOption[] = [
     language: "~100 languages",
     blurb: "Near large-v3 accuracy at a fraction of the speed cost. WebGPU recommended.",
     tiers: [
-      { dtype: "q4f16", sizeMB: 1468 },
+      { dtype: "q4f16", sizeMB: 1468, noF16SizeMB: 2882 },
       { dtype: "q8", sizeMB: 1085 },
     ],
     gpuPreferred: true,
@@ -172,7 +177,7 @@ export const MODELS: ModelOption[] = [
     language: "English only",
     blurb: "English-only tiny model. Fastest for English.",
     tiers: [
-      { dtype: "q4f16", sizeMB: 63 },
+      { dtype: "q4f16", sizeMB: 63, noF16SizeMB: 120 },
       { dtype: "q8", sizeMB: 41 },
       { dtype: "fp32", sizeMB: 151 },
     ],
@@ -184,7 +189,7 @@ export const MODELS: ModelOption[] = [
     language: "English only",
     blurb: "English-only base model. Good everyday choice for English.",
     tiers: [
-      { dtype: "q4f16", sizeMB: 110 },
+      { dtype: "q4f16", sizeMB: 110, noF16SizeMB: 206 },
       { dtype: "q8", sizeMB: 77 },
       { dtype: "fp32", sizeMB: 291 },
     ],
@@ -196,7 +201,7 @@ export const MODELS: ModelOption[] = [
     language: "English only",
     blurb: "English-only small model. Highest English accuracy here.",
     tiers: [
-      { dtype: "q4f16", sizeMB: 322 },
+      { dtype: "q4f16", sizeMB: 322, noF16SizeMB: 586 },
       { dtype: "q8", sizeMB: 249 },
       { dtype: "fp32", sizeMB: 968 },
     ],
@@ -273,6 +278,11 @@ export function defaultDtype(model: ModelOption, backend: Backend): Dtype {
   }
   // Fallback: first valid tier, else the model's smallest declared tier.
   return (tiers[0] ?? model.tiers[0]).dtype;
+}
+
+/** What this tier actually downloads, given whether the GPU has `shader-f16`. */
+export function tierSizeMB(tier: Tier, gpuF16: boolean): number {
+  return !gpuF16 && tier.noF16SizeMB ? tier.noF16SizeMB : tier.sizeMB;
 }
 
 export function tierFor(model: ModelOption, dtype: Dtype): Tier | undefined {

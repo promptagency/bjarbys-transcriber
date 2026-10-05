@@ -178,19 +178,20 @@ type DtypeArg = string | Record<string, string>;
 // docs/webgpu-quantization.md): on transformers.js 3.x any 16-bit variant made Whisper
 // emit garbage on WebGPU (4.x fixed that), and a 4-bit encoder — fine on clean
 // Swedish — made the multilingual model drop speech after a language switch.
-let gpuHasF16: Promise<boolean> | null = null;
-function hasShaderF16(): Promise<boolean> {
-  gpuHasF16 ??= (async () => {
-    try {
-      const gpu = (navigator as Navigator & { gpu?: { requestAdapter(): Promise<{ features: Set<string> } | null> } }).gpu;
-      const adapter = await gpu?.requestAdapter();
-      return !!adapter?.features.has("shader-f16");
-    } catch {
-      return false;
-    }
-  })();
-  return gpuHasF16;
+// Asked on every model load rather than cached: a passing failure (e.g. while
+// the GPU process restarts) must not pin the larger fallback for the session.
+async function hasShaderF16(): Promise<boolean> {
+  try {
+    const gpu = (navigator as Navigator & { gpu?: { requestAdapter(): Promise<{ features: Set<string> } | null> } }).gpu;
+    const adapter = await gpu?.requestAdapter();
+    return !!adapter?.features.has("shader-f16");
+  } catch {
+    return false;
+  }
 }
+
+/** fp32 encoder + q4 decoder: the GPU tier without 16-bit maths. */
+const GPU_NO_F16: DtypeArg = { encoder_model: "fp32", decoder_model_merged: "q4" };
 
 async function resolveDtype(dtype: Dtype, device: Backend): Promise<DtypeArg> {
   if (device === "webgpu") {
@@ -198,7 +199,7 @@ async function resolveDtype(dtype: Dtype, device: Backend): Promise<DtypeArg> {
     // Our "Balanced (GPU)" tier:
     return (await hasShaderF16())
       ? { encoder_model: "fp16", decoder_model_merged: "q4f16" }
-      : { encoder_model: "fp32", decoder_model_merged: "q4" };
+      : GPU_NO_F16;
   }
   return dtype; // WASM/CPU: q8 (default), q4, or fp32
 }
@@ -207,10 +208,11 @@ async function build(
   modelId: string,
   dtype: Dtype,
   device: Backend,
+  dtypeArg?: DtypeArg,
 ): Promise<AutomaticSpeechRecognitionPipeline> {
   return await createPipeline("automatic-speech-recognition", modelId, {
     device,
-    dtype: await resolveDtype(dtype, device),
+    dtype: dtypeArg ?? (await resolveDtype(dtype, device)),
     progress_callback: (data: unknown) =>
       post({ type: "download", data: data as FileProgress }),
   });
@@ -240,6 +242,20 @@ async function ensurePipeline(
     loadedKey = key;
     return pipe;
   } catch (err) {
+    // If the 16-bit GPU variant fails to load, the 32-bit one may still work
+    // on the GPU — far faster than dropping to the CPU.
+    if (device === "webgpu" && dtype !== "fp32") {
+      const tried = await resolveDtype(dtype, device);
+      if (tried !== GPU_NO_F16) {
+        try {
+          pipe = await build(modelId, dtype, device, GPU_NO_F16);
+          loadedKey = key;
+          return pipe;
+        } catch {
+          /* fall through to the CPU */
+        }
+      }
+    }
     if (device === "webgpu") {
       const to: Backend = "wasm";
       const fallbackDtype = wasmDtypeFor(dtype);

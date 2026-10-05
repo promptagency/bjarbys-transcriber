@@ -30,6 +30,7 @@ import {
   formatSize,
   isEnglishOnly,
   tierFor,
+  tierSizeMB,
 } from "./lib/models";
 import { type Settings, restoreSettings } from "./lib/settings";
 import {
@@ -119,6 +120,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>("files");
   const [showSettings, setShowSettings] = useState(false);
   const [webgpuAvailable, setWebgpuAvailable] = useState(false);
+  const [gpuF16, setGpuF16] = useState(true);
 
   const [jobs, setJobs] = useState<Job[]>([]);
   const jobsRef = useRef<Job[]>([]);
@@ -131,11 +133,16 @@ export default function App() {
       try {
         const gpu = (
           navigator as unknown as {
-            gpu?: { requestAdapter: () => Promise<unknown> };
+            gpu?: {
+              requestAdapter: () => Promise<{ features: Set<string> } | null>;
+            };
           }
         ).gpu;
-        const ok = !!gpu && !!(await gpu.requestAdapter());
-        if (!cancelled) setWebgpuAvailable(ok);
+        const adapter = gpu ? await gpu.requestAdapter() : null;
+        if (!cancelled) {
+          setWebgpuAvailable(!!adapter);
+          setGpuF16(!!adapter?.features.has("shader-f16"));
+        }
       } catch {
         if (!cancelled) setWebgpuAvailable(false);
       }
@@ -720,7 +727,7 @@ export default function App() {
               ready
             </span>
           ) : (
-            <span>{formatSize(currentTier.sizeMB)} · loads on first file</span>
+            <span>{formatSize(tierSizeMB(currentTier, gpuF16))} · loads on first file</span>
           )}
         </div>
         <button
@@ -744,7 +751,7 @@ export default function App() {
           className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/40 px-4 py-2 text-sm text-slate-300 transition hover:border-sky-400/30 hover:text-white"
         >
           <Download className="size-4" />
-          Pre-download {model.name} ({formatSize(currentTier.sizeMB)})
+          Pre-download {model.name} ({formatSize(tierSizeMB(currentTier, gpuF16))})
         </button>
       )}
 
@@ -759,6 +766,7 @@ export default function App() {
             onChange={patchSettings}
             resolvedDevice={resolvedDevice}
             webgpuAvailable={webgpuAvailable}
+            gpuF16={gpuF16}
             disabled={state.status === "loading"}
           />
           {state.status === "ready" && !loadedForModel && (
