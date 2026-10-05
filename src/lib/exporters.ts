@@ -170,7 +170,12 @@ export function toJson(result: TranscriptResult, names: SpeakerNames = {}): stri
     : undefined;
   return (
     JSON.stringify(
-      { text: toTxt(result, names).trim(), ...(speakers && { speakers }), chunks },
+      {
+        text: toTxt(result, names).trim(),
+        ...(result.language && { language: result.language }),
+        ...(speakers && { speakers }),
+        chunks,
+      },
       null,
       2,
     ) + "\n"

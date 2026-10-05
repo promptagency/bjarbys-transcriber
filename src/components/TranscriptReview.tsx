@@ -8,6 +8,15 @@ import { speakerLabel, speakersIn } from "../lib/exporters";
 /** A chunk with no end timestamp plays up to the next chunk, or this long. */
 const FALLBACK_PLAY_SECONDS = 5;
 
+/** "sv" → "Swedish"; the code itself if the browser can't name it. */
+function languageName(code: string): string {
+  try {
+    return new Intl.DisplayNames(["en"], { type: "language" }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+}
+
 function clock(seconds: number): string {
   const s = Math.max(0, Math.floor(seconds));
   const m = Math.floor(s / 60);
@@ -151,19 +160,24 @@ export function TranscriptReview({
       )}
 
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
-        {hasSpeakers ? (
-          <label className="flex cursor-pointer items-center gap-2">
-            <input
-              type="checkbox"
-              checked={onlyUnsure}
-              onChange={(e) => setOnlyUnsure(e.target.checked)}
-              className="size-3.5 accent-amber-500"
-            />
-            Only unsure lines ({unsureCount})
-          </label>
-        ) : (
-          <span />
-        )}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          {hasSpeakers && (
+            <label className="flex cursor-pointer items-center gap-2">
+              <input
+                type="checkbox"
+                checked={onlyUnsure}
+                onChange={(e) => setOnlyUnsure(e.target.checked)}
+                className="size-3.5 accent-amber-500"
+              />
+              Only unsure lines ({unsureCount})
+            </label>
+          )}
+          {result.language && (
+            <span title="Auto-detected from the first 30 seconds">
+              Detected language: {languageName(result.language)}
+            </span>
+          )}
+        </div>
         {job.restored ? (
           <span>
             Restored after a reload · the audio isn&rsquo;t kept, so lines
