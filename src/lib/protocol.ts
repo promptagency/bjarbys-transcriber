@@ -61,6 +61,8 @@ export type ToWorker =
        * hour of speech that is a redundant ~230 MB.
        */
       retainAudio?: boolean;
+      /** Benchmark only: override the overlap between 30 s chunks (seconds per side). */
+      strideS?: number;
     }
   | {
       // Uses the audio retained by the preceding `transcribe` for this job.

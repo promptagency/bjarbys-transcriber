@@ -124,10 +124,13 @@ function score(units, label) {
   return (100 * correct) / total;
 }
 
-const phrase = await asr(audio, { chunk_length_s: 30, stride_length_s: 5, return_timestamps: true, language: "sv", task: "transcribe" });
+// Same overlap as the app (STRIDE_LENGTH_S in src/worker.ts).
+const STRIDE_S = 2.5;
+
+const phrase = await asr(audio, { chunk_length_s: 30, stride_length_s: STRIDE_S, return_timestamps: true, language: "sv", task: "transcribe" });
 const a = score(phrase.chunks ?? [], "PHRASE-level attribution (what ships today)");
 
-const word = await asr(audio, { chunk_length_s: 30, stride_length_s: 5, return_timestamps: "word", language: "sv", task: "transcribe" });
+const word = await asr(audio, { chunk_length_s: 30, stride_length_s: STRIDE_S, return_timestamps: "word", language: "sv", task: "transcribe" });
 const b = score(word.chunks ?? [], "WORD-level attribution (the proposed change)");
 
 // Middle ground: keep phrase-sized units, but trim each to the span its words
