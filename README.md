@@ -19,7 +19,11 @@ If you find it useful, consider
   **auto-downloads** each transcript.
 - 🇸🇪 **Swedish that actually works** — choose **KB-Whisper** (KBLab / National
   Library of Sweden) tiny → large, alongside standard multilingual and
-  English-only Whisper models.
+  English-only Whisper models. The multilingual models **detect the language**
+  themselves and show which one they heard.
+- ⚡ **Fast** — on a 2021 MacBook Pro (M1 Pro), 25 minutes of Swedish
+  transcribes in under 3 minutes with the default model, about 9× real time
+  ([benchmark](#speed-and-accuracy); 7% word error on clean synthetic speech).
 - 🎚️ **Pick your model & size** — every model offers quantization tiers with the
   real download size shown; backend-aware so you can't pick a broken combo.
 - 🎬 **Audio _and_ video** — MP3, WAV, M4A, OGG, FLAC and MP4 / MOV / WebM
@@ -65,9 +69,12 @@ npm install
 npm run dev      # open http://localhost:5173
 ```
 
-- **Use a browser with WebGPU** (Chrome or Edge are the safe choice) for
-  speed: the models then run on the GPU. Without WebGPU the app falls back to
-  the CPU, which works but is much slower.
+- **Use a browser with WebGPU** (Chrome or Edge are the safe choice): the
+  models then run on the GPU. Without WebGPU the app falls back to the CPU. In
+  `npm run dev` that runs multithreaded and, for the default model, about as
+  fast as the GPU but a little less accurate; on a server without the
+  cross-origin isolation headers (see below) it is single-threaded and much
+  slower.
 - **The first transcription downloads the model** (about 110 MB for the
   default, KB-Whisper Base, on a GPU; about 180 MB on CPU) from Hugging Face. The browser caches it, so later runs
   start straight away.
@@ -92,7 +99,9 @@ A ready-to-use **`.htaccess`** and the podcast **`proxy.php`** are included in
 - **HTTPS is required** for the microphone (`getUserMedia`) and WebGPU. The
   `.htaccess` force-redirects to HTTPS (localhost is exempt).
 - **No COOP/COEP headers needed** for WebGPU or single-threaded WASM — they're
-  left commented out in `.htaccess`.
+  left commented out in `.htaccess`. Enabling them (as `npm run dev` does)
+  makes the CPU fallback multithreaded, which matters for visitors without
+  WebGPU; that setup has not been tested on a deployed server.
 - **Serving from a subfolder** needs no rebuild: the build uses relative paths
   (`base: './'` in `vite.config.ts`). If Apache's fallback misbehaves there,
   add a `RewriteBase` to `.htaccess`.
@@ -255,8 +264,9 @@ attribution outweighs worse transcription has not been measured.
 
 Exporting KB-Whisper with `output_attentions=True` would remove that
 obstacle — but the measurement above says it would not be worth doing, since
-finer spans attribute worse. `speaker_conf` already flags roughly half of these
-errors, and that remains the sensible mitigation.
+finer spans attribute worse. The containment rule for short lines (above) and
+`speaker_conf`, which flags about 40% of the remaining errors, are the
+mitigations instead.
 
 ### Evaluating speaker separation
 
@@ -280,11 +290,42 @@ landing on a window boundary, and duplicated spans. Pass `windowMinutes` to forc
 the windowed path on a short clip — handy for exercising boundary behaviour
 without labelling hours of audio.
 
+## Speed and accuracy
+
+Changes that claim to make transcription faster or more accurate are measured,
+not eyeballed. `npm run dev` serves a benchmark page at
+`http://localhost:5173/bench.html` that runs the app's own worker on any local
+file and reports time, × real time and word error rate against a reference
+text; `scripts/make-bench-audio.sh` builds a reproducible Swedish recording with
+a known script (public-domain Lagerlöf read by the macOS voice Alva). Results
+and decisions are kept in [`docs/benchmark.md`](docs/benchmark.md).
+
+On a 25-minute recording (M1 Pro, Chrome, KB-Whisper Base on WebGPU):
+
+| | Before | Now |
+|---|---|---|
+| Transcription time | 268 s (5.7× real time) | **171 s (8.9×)** |
+| Word error rate | 10.4% | **7.2%** |
+| Model download | ~206 MB | **~110 MB** |
+| Speaker accuracy (real interview) | 94.7% | **95.6%** |
+
+What changed: Transformers.js 4 with a 16-bit encoder and 4-bit decoder on the
+GPU; half the overlap between Whisper's 30-second windows, which had been
+repeating whole sentences at the seams; real language detection for "Any
+language", which had silently assumed English; and short interjections
+attributed to the person who says them. Measured and deliberately *not*
+changed: preferring the CPU, skipping silence before Whisper, and KB-Whisper's
+"strict"/"subtitle" styles, whose browser builds are not actually published —
+see the benchmark notes for why.
+
 ## How it works
 
 `src/worker.ts` runs the Transformers.js ASR pipeline in a Web Worker. Audio is
 decoded to mono 16 kHz PCM on the main thread (`src/lib/audio.ts`) and
-transferred to the worker. Long audio is chunked (`chunk_length_s: 30`) with a
+transferred to the worker. When the language is left on auto-detect, the
+worker asks Whisper which language token it predicts for the first 30 s and
+transcribes the whole file in that language (Transformers.js itself would
+assume English). Long audio is chunked (`chunk_length_s: 30`) with a
 2.5 s overlap on each side — the library's default of 5 s repeated whole
 sentences at the seams (see `docs/benchmark.md`). See `src/lib/models.ts` for the model catalog.
 
@@ -296,7 +337,9 @@ With speaker separation on, the worker runs the pyannote model over the same
 PCM and decodes its powerset output into per-speaker activity spans — silence
 and simultaneous speech are *not* speakers, which is easy to get wrong.
 `src/lib/diarize.ts` then attributes each Whisper chunk to whoever holds the
-floor longest across it, and merges away brief low-confidence blips.
+floor longest across it — except a short line with a second voice active,
+which goes to the speaker whose speech is most contained in it — and merges
+away brief low-confidence blips.
 
 ## License
 
