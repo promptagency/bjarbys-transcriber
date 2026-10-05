@@ -96,3 +96,28 @@ Multithreading needs `crossOriginIsolated` (the dev server's COOP/COEP); without
 overlap is 2.5 s (the CPU's earlier lead came from the 5 s overlap's extra work), and the GPU is more accurate
 and downloads less (110 MB vs 182 MB). Only Tiny is clearly faster on the CPU, and it is rarely the right model.
 WER differences on the 5-minute file (±3 points between devices, in both directions) are within its noise.
+
+## Skip silence before Whisper? — 2026-10-05
+
+Idea: run speech detection (pyannote, already used for speaker separation) first and send only speech to
+Whisper. Measured before building it:
+
+- **Real interview:** the private 12-minute excerpt is 97.2% speech by pyannote, with no gap of 2 s or more
+  (longest 1.9 s). It is the densest part of its interview, so it is the worst case for this idea, but
+  conversations leave little to skip.
+- **Synthetic, heavy silence:** `scripts/make-bench-audio.sh 25 bench-audio 30` adds pauses (mostly 1–4 s, some
+  10–65 s) to the same script: 2099 s, of which pyannote finds 72.6% speech. KB-Whisper Base, q4f16, WebGPU,
+  2.5 s overlap:
+
+  | File | Audio | Transcribe s | × real time | WER | Words |
+  |---|---|---|---|---|---|
+  | `bench-25min.wav` (no pauses) | 1519 s | 171 | 8.9× | 7.2% | 4240 |
+  | `bench-25min-pauses30.wav` | 2099 s | 216.9 | 9.7× | 7.6% | 4257 |
+
+  The 580 s of silence cost 46 s. No transcript segment consisted only of words absent from the script —
+  Whisper did not invent text in the silences.
+
+**Decision: not now.** Skipping silence would need speech detection on every file (~6–8% of the time), for at
+most ~20% saved on very pause-heavy recordings and a net loss on dense conversations; silence did not cause
+hallucinations. Untested: music and background noise, where Whisper is known to invent text — revisit if that
+shows up in real use.
