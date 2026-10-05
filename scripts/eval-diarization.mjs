@@ -214,8 +214,20 @@ if (process.env.DIAG === "1") {
     if ((p && p !== t) || (n && n !== t)) return "at a speaker change";
     return "inside own turn";
   });
+  // Smoothing renumbers speakers, so the lines before it need their own mapping.
+  const overlapBefore = new Map();
+  rows.forEach((r, i) => {
+    if (truth[i] === "?") return;
+    const key = `${assigned[i].speaker}|${truth[i]}`;
+    overlapBefore.set(key, (overlapBefore.get(key) ?? 0) + words(r.text));
+  });
+  const mappingBefore = new Map();
+  for (const id of new Set(assigned.map((p) => p.speaker).filter((s) => s != null))) {
+    const [, best] = ["I", "S"].map((t) => [overlapBefore.get(`${id}|${t}`) ?? 0, t]).sort((x, y) => y[0] - x[0])[0];
+    mappingBefore.set(id, best);
+  }
   tally("smoothing", (r, i) => {
-    const before = mapping.get(assigned[i].speaker) ?? "null", after = label(i);
+    const before = mappingBefore.get(assigned[i].speaker) ?? "null", after = label(i);
     if (before === after) return "unchanged";
     return after === truth[i] ? "fixed by smoothing" : before === truth[i] ? "broken by smoothing" : "changed, still wrong";
   });
