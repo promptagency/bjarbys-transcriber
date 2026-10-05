@@ -11,8 +11,9 @@
 # overlaps at speaker changes, and backchannels ("ja", "mm") spoken *over* the
 # other person's turn — the case real recordings get wrong most.
 #
-# Timestamps are exact, unlike Whisper's, and the voices are synthetic: use it to
-# check that a change helps beyond the one real fixture, not as the yardstick.
+# Timestamps are exact, unlike Whisper's, and the voices are synthetic; in the app
+# Whisper merges or drops many of these backchannels. Use it to check that a change
+# helps beyond the one real fixture, not as the yardstick.
 set -euo pipefail
 
 MINUTES="${1:-12}"

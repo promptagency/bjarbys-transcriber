@@ -145,5 +145,9 @@ leaves confident picks alone.
   lines instead of 4).
 - On the interview, lines of 1.5–3 s went from 6 to 7 wrong (the rule doesn't touch them; the change is in
   how the neighbouring short line is now attributed).
+- **The interview figure is the realistic one.** The synthetic fixture feeds the eval its exact utterances; in
+  the app, Whisper merges or drops most backchannels spoken over someone else (a 2-minute synthetic dialogue
+  with 34 utterances came out as 13 lines), so many never become lines of their own. The interview fixture's
+  lines come from Whisper, so its +0.9 points is what to expect.
 - Trade-off: fewer lines are flagged unsure (interview: 36 instead of 44), and 8 of the remaining 21 errors are
   flagged (before: 12 of 22).
