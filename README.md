@@ -113,7 +113,7 @@ podcasts work for any host that happens to send CORS headers.
 | Group | Models | Notes |
 |---|---|---|
 | **Swedish — KB-Whisper** | tiny · base · small · medium · large | Best Swedish accuracy. `large`/`medium` are big — use WebGPU. |
-| **Multilingual — Whisper** | tiny · base · small · large-v3-turbo | ~100 languages. Turbo is the fast flagship (WebGPU). |
+| **Multilingual — Whisper** | tiny · base · small · large-v3-turbo | ~100 languages, detected automatically from the first 30 s (shown as "Detected language"). Turbo is the fast flagship (WebGPU). |
 | **English — Whisper** | tiny · base · small (`.en`) | Slightly better on English. |
 
 Quantization: **Balanced (GPU)** is the default on **WebGPU** — a 16-bit encoder

@@ -52,6 +52,11 @@ Each job keeps its original media (`getMedia()` → `job.media`; decoding happen
 (`src/components/TranscriptReview.tsx`) can play single lines, and keeps `originalResult` so edited lines can be
 reverted. Manual edits rewrite `job.result` (and rebuild its flat `text`), so every export sees them.
 
+**Language detection (`detectLanguage` in the worker).** Transformers.js does not detect language — with
+none given it forces English — so when the language is on auto-detect the worker scores Whisper's language
+tokens after `<|startoftranscript|>` on the first 30 s and transcribes with the winner (one language per file),
+stored as `result.language`. English-only models take neither language nor task.
+
 **Models (`src/lib/models.ts`, `resolveDtype` in the worker).** Whisper via Transformers.js, downloaded from
 the Hugging Face CDN and cached by the browser. Each model lists quantization tiers; `availableTiers()` hides
 combinations that break on a backend. The "Balanced (GPU)" tier (`q4f16` in settings) loads an **fp16 encoder +

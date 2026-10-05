@@ -22,6 +22,8 @@ export interface TranscriptChunk {
 export interface TranscriptResult {
   text: string;
   chunks: TranscriptChunk[];
+  /** Language code Whisper detected, when the user left the language on auto-detect. */
+  language?: string;
 }
 
 /**

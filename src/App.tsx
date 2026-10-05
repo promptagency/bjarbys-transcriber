@@ -592,7 +592,7 @@ export default function App() {
         return next;
       });
       updateJob(job.id, {
-        result: { text: chunks.map((c) => c.text).join(""), chunks },
+        result: { ...current.result, text: chunks.map((c) => c.text).join(""), chunks },
       });
     },
     [updateJob],
@@ -607,7 +607,7 @@ export default function App() {
       updateJob(job.id, {
         // With nothing left edited, restore Whisper's own text exactly.
         result: edited
-          ? { text: chunks.map((c) => c.text).join(""), chunks }
+          ? { ...current.result, text: chunks.map((c) => c.text).join(""), chunks }
           : current.originalResult,
       });
     },

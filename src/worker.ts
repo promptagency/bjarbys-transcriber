@@ -5,6 +5,7 @@ import {
   AutoModelForAudioFrameClassification,
   AutoProcessor,
   WhisperTextStreamer,
+  Tensor,
   type AutomaticSpeechRecognitionPipeline,
   type PreTrainedModel,
   type Processor,
@@ -16,7 +17,7 @@ import {
   planWindows,
   stitchWindows,
 } from "./lib/diarize";
-import type { Backend, Dtype } from "./lib/models";
+import { isEnglishOnly, type Backend, type Dtype } from "./lib/models";
 import type {
   FileProgress,
   FromWorker,
@@ -29,6 +30,8 @@ import type {
 env.allowLocalModels = false;
 
 let pipe: AutomaticSpeechRecognitionPipeline | null = null;
+/** Hub id of the loaded model — English-only models take no language or task. */
+let loadedModelId = "";
 let loadedKey = "";
 
 // How long audio is chunked (see the `transcribe` handler below). Whisper
@@ -218,6 +221,53 @@ async function build(
   });
 }
 
+// Transformers.js has no language detection: given no language, it forces
+// English, so "Auto-detect" used to mean "assume English" and Swedish came back
+// translated. Whisper itself detects language as its first decoded token, so
+// ask for that token once, on the first 30 s, and transcribe with the winner.
+// One language per file: speech that switches language mid-file is
+// transcribed as the language heard first.
+async function detectLanguage(
+  p: AutomaticSpeechRecognitionPipeline,
+  audio: Float32Array,
+  samplingRate: number,
+): Promise<string | null> {
+  try {
+    const model = p.model as unknown as {
+      generation_config?: {
+        lang_to_id?: Record<string, number>;
+        decoder_start_token_id?: number;
+      };
+      (inputs: Record<string, unknown>): Promise<{ logits: Tensor }>;
+    };
+    const config = model.generation_config;
+    if (!config?.lang_to_id || config.decoder_start_token_id == null) return null;
+    const { input_features } = await (
+      p.processor as unknown as (a: Float32Array) => Promise<{ input_features: Tensor }>
+    )(audio.subarray(0, CHUNK_LENGTH_S * samplingRate));
+    const { logits } = await model({
+      input_features,
+      decoder_input_ids: new Tensor(
+        "int64",
+        BigInt64Array.of(BigInt(config.decoder_start_token_id)),
+        [1, 1],
+      ),
+    });
+    const scores = logits.data as Float32Array;
+    let best: string | null = null;
+    let bestScore = -Infinity;
+    for (const [token, id] of Object.entries(config.lang_to_id)) {
+      if (scores[id] > bestScore) {
+        bestScore = scores[id];
+        best = token.slice(2, -2); // "<|sv|>" → "sv"
+      }
+    }
+    return best;
+  } catch {
+    return null; // fall back to Transformers.js's own default
+  }
+}
+
 async function ensurePipeline(
   modelId: string,
   dtype: Dtype,
@@ -240,6 +290,7 @@ async function ensurePipeline(
   try {
     pipe = await build(modelId, dtype, device);
     loadedKey = key;
+    loadedModelId = modelId;
     return pipe;
   } catch (err) {
     // If the 16-bit GPU variant fails to load, the 32-bit one may still work
@@ -250,6 +301,7 @@ async function ensurePipeline(
         try {
           pipe = await build(modelId, dtype, device, GPU_NO_F16);
           loadedKey = key;
+          loadedModelId = modelId;
           return pipe;
         } catch {
           /* fall through to the CPU */
@@ -267,6 +319,7 @@ async function ensurePipeline(
       });
       pipe = await build(modelId, fallbackDtype, to);
       loadedKey = keyOf(modelId, fallbackDtype, to);
+      loadedModelId = modelId;
       return pipe;
     }
     throw err;
@@ -302,6 +355,12 @@ self.addEventListener("message", async (event: MessageEvent<ToWorker>) => {
       const samplingRate =
         pipe.processor.feature_extractor?.config.sampling_rate ?? 16000;
       const durationSec = msg.audio.length / samplingRate;
+      const englishOnly = isEnglishOnly(loadedModelId);
+      const detected =
+        !msg.language && !englishOnly
+          ? await detectLanguage(pipe, msg.audio, samplingRate)
+          : null;
+      const language = msg.language ?? detected;
       const reportProgress = makeProgressReporter(msg.jobId, durationSec);
       const streamer = new WhisperTextStreamer(
         pipe.tokenizer as WhisperTokenizer,
@@ -313,14 +372,14 @@ self.addEventListener("message", async (event: MessageEvent<ToWorker>) => {
         stride_length_s: STRIDE_LENGTH_S,
         return_timestamps: true,
         streamer,
-        ...(msg.language
-          ? { language: msg.language, task: msg.task }
-          : {}),
+        // English-only models have neither a language nor a task token.
+        ...(englishOnly ? {} : { task: msg.task, ...(language ? { language } : {}) }),
       })) as { text: string; chunks?: TranscriptResult["chunks"] };
 
       const result: TranscriptResult = {
         text: output.text ?? "",
         chunks: output.chunks ?? [],
+        ...(detected ? { language: detected } : {}),
       };
       if (msg.retainAudio) retainedAudio = { jobId: msg.jobId, audio: msg.audio };
       post({ type: "result", jobId: msg.jobId, result });
