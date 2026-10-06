@@ -4,7 +4,7 @@ import type { Job } from "../lib/jobs";
 import type { TranscriptChunk } from "../lib/protocol";
 import { LOW_CONFIDENCE } from "../lib/diarize";
 import { speakerLabel, speakersIn } from "../lib/exporters";
-import { findPattern, matchRanges, replaceInChunks } from "../lib/replace";
+import { changingMatches, findPattern, matchRanges, replaceInChunks } from "../lib/replace";
 
 /** `text` with every match of `pattern` marked. React escapes the text itself. */
 function Highlighted({ text, pattern }: { text: string; pattern: RegExp | null }) {
@@ -134,6 +134,11 @@ export function TranscriptReview({
     pattern ? matchRanges(chunk.text, pattern).length : 0;
   const matchCount = pattern ? rows.reduce((n, { chunk }) => n + matchesIn(chunk), 0) : 0;
   const matchLines = pattern ? rows.filter(({ chunk }) => matchesIn(chunk) > 0).length : 0;
+  // Matches already reading as the replacement ("Anna" when replacing "anna")
+  // stay highlighted but there is nothing to change in them.
+  const toChange = pattern
+    ? rows.reduce((n, { chunk }) => n + changingMatches(chunk.text, pattern, replacement), 0)
+    : 0;
   // Each filter applies only while its control is visible: if every speaker is
   // removed by hand the unsure checkbox disappears, and a filter left on would
   // hide all lines for good.
@@ -334,13 +339,14 @@ export function TranscriptReview({
             </label>
             <span className="ml-auto">
               {pattern
-                ? `${matchCount} ${matchCount === 1 ? "match" : "matches"} in ${matchLines} ${matchLines === 1 ? "line" : "lines"}`
+                ? `${matchCount} ${matchCount === 1 ? "match" : "matches"} in ${matchLines} ${matchLines === 1 ? "line" : "lines"}` +
+                  (toChange < matchCount ? ` · ${matchCount - toChange} already as replaced` : "")
                 : ""}
             </span>
             <button
               type="button"
               onClick={replaceAll}
-              disabled={!pattern || matchCount === 0 || editing !== null}
+              disabled={!pattern || toChange === 0 || editing !== null}
               title={editing !== null ? "Finish editing the line first" : ""}
               className="rounded bg-sky-500 px-2.5 py-1 font-semibold text-white hover:bg-sky-600 disabled:opacity-40"
             >
