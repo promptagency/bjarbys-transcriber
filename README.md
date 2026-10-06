@@ -162,6 +162,14 @@ line by line:
   **click its text to edit it**. Enter or clicking elsewhere saves, Esc
   cancels; text is kept on one line so subtitle cues stay valid.
 - **Revert** undoes your changes to a line.
+- **Find & replace** fixes a name or term Whisper mishears the same way every
+  time, in one go: matches are highlighted and counted as you type, *Only
+  lines with matches* shows just those lines, and **Replace all** changes them
+  (each changed line can still be reverted on its own). **Undo** takes back
+  the whole replacement, leaving any line you changed since alone. Whole words
+  and ignore-case are on by default, å/ä/ö count as letters, and the text you
+  type is matched literally. An empty replacement deletes the word and tidies
+  up the punctuation around it ("Ja, eh, det" → "Ja, det").
 
 Corrections flow into Copy and every export; corrected chunks carry
 `"edited": true` in `.json`, and a speaker you set has `speaker_conf` 1 (0 for

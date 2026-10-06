@@ -613,6 +613,24 @@ export default function App() {
     },
     [updateJob],
   );
+  // Find & replace (and its undo): several lines in one update, so the
+  // transcript re-renders and is saved once rather than once per line.
+  const onReplaceChunks = useCallback(
+    (job: Job, changes: Map<number, TranscriptChunk>) => {
+      const current = jobsRef.current.find((j) => j.id === job.id);
+      if (!current?.result || changes.size === 0) return;
+      const chunks = current.result.chunks.map((c, i) => changes.get(i) ?? c);
+      const edited = chunks.some((c) => c.edited);
+      updateJob(job.id, {
+        // With nothing left edited (an undo), restore Whisper's own text exactly.
+        result:
+          edited || !current.originalResult
+            ? { ...current.result, text: chunks.map((c) => c.text).join(""), chunks }
+            : current.originalResult,
+      });
+    },
+    [updateJob],
+  );
   const onManualDownload = useCallback(
     (job: Job) => {
       if (job.result) {
@@ -811,6 +829,7 @@ export default function App() {
           onRenameSpeaker={onRenameSpeaker}
           onEditChunk={onEditChunk}
           onRevertChunk={onRevertChunk}
+          onReplaceChunks={onReplaceChunks}
           onRemove={onRemove}
           onClearCompleted={onClearCompleted}
           keepTranscripts={settings.keepTranscripts}
