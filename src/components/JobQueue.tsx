@@ -88,6 +88,7 @@ export function JobQueue({
   onRenameSpeaker,
   onEditChunk,
   onRevertChunk,
+  onReplaceChunks,
   keepTranscripts,
   askKeepTranscripts,
   onChooseKeepTranscripts,
@@ -99,6 +100,7 @@ export function JobQueue({
   onRenameSpeaker: (job: Job, speaker: number, name: string) => void;
   onEditChunk: (job: Job, index: number, patch: Partial<TranscriptChunk>) => void;
   onRevertChunk: (job: Job, index: number) => void;
+  onReplaceChunks: (job: Job, changes: Map<number, TranscriptChunk>) => void;
   /** The user opted in to keeping finished transcripts across reloads. */
   keepTranscripts: boolean;
   /** Show the one-time question about keeping transcripts. */
@@ -303,6 +305,7 @@ export function JobQueue({
                     job={job}
                     onEdit={onEditChunk}
                     onRevert={onRevertChunk}
+                    onReplace={onReplaceChunks}
                   />
                 </div>
               )}

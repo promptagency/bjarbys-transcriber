@@ -56,7 +56,8 @@ whole sentences at the seams and 0–1 s dropped words (docs/benchmark.md) — r
 `job.willDiarize` is fixed when the job starts, so toggling the setting mid-job can't skew progress.
 Each job keeps its original media (`getMedia()` → `job.media`; decoding happens in `runJob`) so the review view
 (`src/components/TranscriptReview.tsx`) can play single lines, and keeps `originalResult` so edited lines can be
-reverted. Manual edits rewrite `job.result` (and rebuild its flat `text`), so every export sees them.
+reverted. Manual edits rewrite `job.result` (and rebuild its flat `text`), so every export sees them; find & replace
+(`src/lib/replace.ts`) changes many lines in one `onReplaceChunks` update, which its single-level Undo also uses.
 
 **Language detection (`detectLanguage` in the worker).** Transformers.js does not detect language — with
 none given it forces English — so when the language is on auto-detect the worker scores Whisper's language
