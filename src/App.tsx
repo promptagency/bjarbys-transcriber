@@ -420,7 +420,11 @@ export default function App() {
             retainAudio: wantsDiarize,
           },
           (p) => updateJob(job.id, { stageProgress: p }),
+          (text) => updateJob(job.id, { liveText: text }),
         );
+        // The merged transcript replaces the approximate preview while
+        // speakers are separated.
+        updateJob(job.id, { liveText: result.text.trim() });
 
         let finalResult = result;
         let warning: string | null = null;
@@ -450,6 +454,7 @@ export default function App() {
           result: finalResult,
           originalResult: finalResult,
           warning,
+          liveText: undefined,
         });
         if (settings.autoDownload)
           downloadJob(
@@ -462,6 +467,7 @@ export default function App() {
         updateJob(job.id, {
           status: "error",
           error: String((e as Error)?.message ?? e),
+          liveText: undefined,
         });
       }
     },

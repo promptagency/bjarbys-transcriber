@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Check,
   ChevronDown,
@@ -78,6 +78,35 @@ function StatusCell({ job }: { job: Job }) {
         </Badge>
       );
   }
+}
+
+/**
+ * The transcript as it is being written. Follows the newest text, unless the
+ * reader has scrolled up to read something earlier.
+ */
+function LivePreview({ text }: { text: string }) {
+  const box = useRef<HTMLDivElement | null>(null);
+  const follow = useRef(true);
+  useEffect(() => {
+    if (follow.current && box.current) box.current.scrollTop = box.current.scrollHeight;
+  }, [text]);
+  return (
+    <div className="border-t border-[var(--color-border)] px-3 pb-3 pt-2">
+      <p className="mb-1 text-[11px] uppercase tracking-wide text-slate-500">
+        Live preview · the finished transcript may differ slightly
+      </p>
+      <div
+        ref={box}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          follow.current = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
+        }}
+        className="max-h-40 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed text-slate-300 scroll-thin"
+      >
+        {text}
+      </div>
+    </div>
+  );
 }
 
 export function JobQueue({
@@ -280,6 +309,9 @@ export function JobQueue({
                   )}
                 </div>
               </div>
+
+              {(job.status === "transcribing" || job.status === "diarizing") &&
+                job.liveText && <LivePreview text={job.liveText} />}
 
               {open && job.result && (
                 <div className="border-t border-[var(--color-border)] p-3">

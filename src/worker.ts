@@ -171,6 +171,92 @@ function makeProgressReporter(
   };
 }
 
+// Live preview: the text so far, sent while a long file is still transcribing.
+// Finished windows are merged exactly as the final result will be — the same
+// Transformers.js _decode_asr over each window's tokens, with the same strides —
+// so that part already reads as the finished transcript. Only the window being
+// transcribed is provisional: its streamed text is appended, minus a phrase that
+// repeats the end of the merged text (the windows overlap). generate() ends the
+// streamer once per window, which is how windows are counted.
+const PREVIEW_INTERVAL_MS = 250;
+
+type AsrMerge = (
+  chunks: { tokens: bigint[]; stride: [number, number, number] }[],
+  options: { time_precision: number; return_timestamps: boolean; force_full_sequences: boolean },
+) => [string, unknown];
+
+const previewWords = (text: string) =>
+  text.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/).filter(Boolean);
+
+/** `next` without leading words that repeat the end of `before` (up to 12). */
+function dropRepeatedStart(before: string, next: string): string {
+  const tail = previewWords(before).slice(-12);
+  const head = next.trim().split(/\s+/);
+  const headWords = head.map((w) => previewWords(w).join(""));
+  for (let n = Math.min(tail.length, headWords.length); n > 0; n--) {
+    if (tail.slice(-n).join(" ") === headWords.slice(0, n).join(" ")) return head.slice(n).join(" ");
+  }
+  return next.trim();
+}
+
+function makeLivePreview(
+  p: AutomaticSpeechRecognitionPipeline,
+  jobId: string,
+  totalSamples: number,
+  samplingRate: number,
+  strideS: number,
+) {
+  const merge = (p.tokenizer as unknown as { _decode_asr: AsrMerge })._decode_asr.bind(p.tokenizer);
+  const extractor = p.processor.feature_extractor?.config as { chunk_length?: number } | undefined;
+  const maxSource = (p.model.config as { max_source_positions?: number }).max_source_positions;
+  const timePrecision = (extractor?.chunk_length ?? 30) / (maxSource ?? 1500);
+  const windowSamples = CHUNK_LENGTH_S * samplingRate;
+  const jumpSamples = windowSamples - 2 * strideS * samplingRate;
+
+  const windows: { tokens: bigint[]; stride: [number, number, number] }[] = [];
+  let tokens: bigint[] = [];
+  let streamed = "";
+  let merged = "";
+  let lastPost = 0;
+
+  const send = (force: boolean) => {
+    const now = Date.now();
+    if (!force && now - lastPost < PREVIEW_INTERVAL_MS) return;
+    lastPost = now;
+    const tail = merged ? dropRepeatedStart(merged, streamed) : streamed.trim();
+    post({ type: "transcribe-partial", jobId, text: tail ? `${merged} ${tail}`.trim() : merged });
+  };
+
+  return {
+    tokens(ids: bigint[]) {
+      tokens.push(...ids);
+    },
+    text(piece: string) {
+      streamed += piece;
+      send(false);
+    },
+    windowEnd() {
+      const index = windows.length;
+      const start = index * jumpSamples;
+      const isLast = start + windowSamples >= totalSamples;
+      const length = Math.min(windowSamples, totalSamples - start) / samplingRate;
+      windows.push({ tokens, stride: [length, index === 0 ? 0 : strideS, isLast ? 0 : strideS] });
+      try {
+        merged = merge(windows, {
+          time_precision: timePrecision,
+          return_timestamps: true,
+          force_full_sequences: false,
+        })[0].trim();
+      } catch {
+        merged = `${merged} ${dropRepeatedStart(merged, streamed)}`.trim();
+      }
+      tokens = [];
+      streamed = "";
+      send(true);
+    },
+  };
+}
+
 // Cast away transformers.js's huge pipeline() overload union (TS2590) by
 // pinning the exact signature we use.
 const createPipeline = pipeline as unknown as (
@@ -379,10 +465,14 @@ self.addEventListener("message", async (event: MessageEvent<ToWorker>) => {
       const language = msg.language ?? detected;
       const strideS = msg.strideS ?? STRIDE_LENGTH_S;
       const reportProgress = makeProgressReporter(msg.jobId, durationSec, strideS);
-      const streamer = new WhisperTextStreamer(
-        pipe.tokenizer as WhisperTokenizer,
-        { on_chunk_start: reportProgress, on_chunk_end: reportProgress },
-      );
+      const preview = makeLivePreview(pipe, msg.jobId, msg.audio.length, samplingRate, strideS);
+      const streamer = new WhisperTextStreamer(pipe.tokenizer as WhisperTokenizer, {
+        on_chunk_start: reportProgress,
+        on_chunk_end: reportProgress,
+        callback_function: preview.text,
+        token_callback_function: preview.tokens,
+        on_finalize: preview.windowEnd,
+      });
 
       const output = (await pipe(msg.audio, {
         chunk_length_s: CHUNK_LENGTH_S,

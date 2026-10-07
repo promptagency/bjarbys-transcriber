@@ -98,6 +98,8 @@ export type FromWorker =
     }
   | { type: "transcribe-start"; jobId: string }
   | { type: "transcribe-progress"; jobId: string; progress: number }
+  /** The text so far, while a file is still transcribing (approximate at window seams). */
+  | { type: "transcribe-partial"; jobId: string; text: string }
   | { type: "result"; jobId: string; result: TranscriptResult }
   | { type: "diarize-progress"; jobId: string; progress: number }
   | { type: "diarize-result"; jobId: string; activity: SpeakerActivity[] }
