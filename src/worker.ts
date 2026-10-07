@@ -172,16 +172,24 @@ function makeProgressReporter(
 }
 
 // Live preview: the text so far, sent while a long file is still transcribing.
-// Finished windows are merged exactly as the final result will be — the same
-// Transformers.js _decode_asr over each window's tokens, with the same strides —
-// so that part already reads as the finished transcript. Only the window being
-// transcribed is provisional: its streamed text is appended, minus a phrase that
-// repeats the end of the merged text (the windows overlap). generate() ends the
-// streamer once per window, which is how windows are counted.
+// Finished windows are merged the way the final result is — Transformers.js's
+// _decode_asr over each window's token sequence, with the same strides — so
+// that part reads as the finished transcript. The sequences come from the
+// pipeline's own model.generate() call for each 30 s window (wrapped while a
+// file is transcribed): with timestamps, Whisper's generate() runs an internal
+// seek loop that may decode a window in several passes, so the streamer's
+// per-pass ends are not windows. The window being transcribed is provisional:
+// its streamed text is appended, minus a phrase repeating the merged text's end.
+// To stay cheap on long files, only the most recent windows are re-merged and
+// only the end of the text is sent; the full transcript arrives when done.
 const PREVIEW_INTERVAL_MS = 250;
+/** Windows re-merged after each one finishes (≈ 16 minutes of audio). */
+const PREVIEW_MERGE_WINDOWS = 40;
+/** The preview shows the end of the transcript, this many characters at most. */
+const PREVIEW_MAX_CHARS = 20_000;
 
 type AsrMerge = (
-  chunks: { tokens: bigint[]; stride: [number, number, number] }[],
+  chunks: { tokens: number[]; stride: [number, number, number] }[],
   options: { time_precision: number; return_timestamps: boolean; force_full_sequences: boolean },
 ) => [string, unknown];
 
@@ -199,6 +207,13 @@ function dropRepeatedStart(before: string, next: string): string {
   return next.trim();
 }
 
+/** The last `max` characters of `text`, starting at a word. */
+function tailOf(text: string, max: number): string {
+  if (text.length <= max) return text;
+  const cut = text.slice(-max);
+  return `…${cut.slice(cut.indexOf(" ") + 1)}`;
+}
+
 function makeLivePreview(
   p: AutomaticSpeechRecognitionPipeline,
   jobId: string,
@@ -213,8 +228,7 @@ function makeLivePreview(
   const windowSamples = CHUNK_LENGTH_S * samplingRate;
   const jumpSamples = windowSamples - 2 * strideS * samplingRate;
 
-  const windows: { tokens: bigint[]; stride: [number, number, number] }[] = [];
-  let tokens: bigint[] = [];
+  const windows: { tokens: number[]; stride: [number, number, number] }[] = [];
   let streamed = "";
   let merged = "";
   let lastPost = 0;
@@ -224,25 +238,25 @@ function makeLivePreview(
     if (!force && now - lastPost < PREVIEW_INTERVAL_MS) return;
     lastPost = now;
     const tail = merged ? dropRepeatedStart(merged, streamed) : streamed.trim();
-    post({ type: "transcribe-partial", jobId, text: tail ? `${merged} ${tail}`.trim() : merged });
+    const text = tail ? `${merged} ${tail}`.trim() : merged;
+    post({ type: "transcribe-partial", jobId, text: tailOf(text, PREVIEW_MAX_CHARS) });
   };
 
   return {
-    tokens(ids: bigint[]) {
-      tokens.push(...ids);
-    },
+    /** Streamed text of the window in progress. */
     text(piece: string) {
       streamed += piece;
       send(false);
     },
-    windowEnd() {
+    /** One pipeline window is done; `tokens` is the sequence its generate() returned. */
+    window(tokens: number[]) {
       const index = windows.length;
       const start = index * jumpSamples;
       const isLast = start + windowSamples >= totalSamples;
-      const length = Math.min(windowSamples, totalSamples - start) / samplingRate;
+      const length = Math.max(0, Math.min(windowSamples, totalSamples - start)) / samplingRate;
       windows.push({ tokens, stride: [length, index === 0 ? 0 : strideS, isLast ? 0 : strideS] });
       try {
-        merged = merge(windows, {
+        merged = merge(windows.slice(-PREVIEW_MERGE_WINDOWS), {
           time_precision: timePrecision,
           return_timestamps: true,
           force_full_sequences: false,
@@ -250,7 +264,6 @@ function makeLivePreview(
       } catch {
         merged = `${merged} ${dropRepeatedStart(merged, streamed)}`.trim();
       }
-      tokens = [];
       streamed = "";
       send(true);
     },
@@ -470,19 +483,38 @@ self.addEventListener("message", async (event: MessageEvent<ToWorker>) => {
         on_chunk_start: reportProgress,
         on_chunk_end: reportProgress,
         callback_function: preview.text,
-        token_callback_function: preview.tokens,
-        on_finalize: preview.windowEnd,
       });
+      // The pipeline calls model.generate() once per window; its result is the
+      // exact sequence the final merge uses (see makeLivePreview).
+      // Shadowed on the instance for this file only, and removed afterwards
+      // even on failure, so the next job doesn't wrap a wrapper.
+      const model = pipe.model as unknown as { generate: (args: unknown) => Promise<unknown> };
+      const generate = model.generate;
+      const ownGenerate = Object.prototype.hasOwnProperty.call(model, "generate");
+      model.generate = async (args: unknown) => {
+        const out = (await generate.call(model, args)) as { tolist(): unknown[][] };
+        try {
+          preview.window((out.tolist()[0] as (number | bigint)[]).map(Number));
+        } catch {
+          /* the preview is a nicety — never fail the transcription over it */
+        }
+        return out;
+      };
 
-      const output = (await pipe(msg.audio, {
-        chunk_length_s: CHUNK_LENGTH_S,
-        stride_length_s: strideS,
-        return_timestamps: true,
-        streamer,
-        // English-only models have neither a language nor a task token.
-        ...(englishOnly ? {} : { task: msg.task, ...(language ? { language } : {}) }),
-      })) as { text: string; chunks?: TranscriptResult["chunks"] };
-
+      let output: { text: string; chunks?: TranscriptResult["chunks"] };
+      try {
+        output = (await pipe(msg.audio, {
+          chunk_length_s: CHUNK_LENGTH_S,
+          stride_length_s: strideS,
+          return_timestamps: true,
+          streamer,
+          // English-only models have neither a language nor a task token.
+          ...(englishOnly ? {} : { task: msg.task, ...(language ? { language } : {}) }),
+        })) as { text: string; chunks?: TranscriptResult["chunks"] };
+      } finally {
+        if (ownGenerate) model.generate = generate;
+        else delete (model as { generate?: unknown }).generate;
+      }
       const result: TranscriptResult = {
         text: output.text ?? "",
         chunks: output.chunks ?? [],
