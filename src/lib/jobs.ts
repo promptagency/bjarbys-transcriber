@@ -49,6 +49,11 @@ export interface Job {
   originalResult: TranscriptResult | null;
   /** Brought back from storage after a reload — its media is gone. */
   restored: boolean;
+  /**
+   * The text so far while transcribing (then the merged text while speakers are
+   * separated). Display only — never saved, and cleared when the job ends.
+   */
+  liveText?: string;
 }
 
 export interface JobInput {

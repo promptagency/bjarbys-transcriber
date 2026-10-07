@@ -17,6 +17,9 @@ If you find it useful, consider
   from the **microphone**, or search a **podcast** by name and pick episodes.
   Everything feeds a single queue that transcribes sequentially and (optionally)
   **auto-downloads** each transcript.
+- 👀 **Read along as it transcribes** — the running job shows the transcript
+  growing in a live preview, so you can start reading a long recording long
+  before it's finished.
 - 🇸🇪 **Swedish that actually works** — choose **KB-Whisper** (KBLab / National
   Library of Sweden) tiny → large, alongside standard multilingual and
   English-only Whisper models. The multilingual models **detect the language**
@@ -339,7 +342,11 @@ sentences at the seams (see `docs/benchmark.md`). See `src/lib/models.ts` for th
 
 Progress comes from a `WhisperTextStreamer`: its chunk callbacks report
 timestamps within Whisper's current 30 s window, and the worker reconstructs a
-whole-file position from them.
+whole-file position from them. The same streamer feeds the **live preview**:
+after each window the worker merges the finished windows' tokens with
+Transformers.js's own `_decode_asr` — exactly how the final result is merged —
+and appends the window in progress as provisional text. On a 5-minute test the
+last preview was identical to the finished transcript.
 
 With speaker separation on, the worker runs the pyannote model over the same
 PCM and decodes its powerset output into per-speaker activity spans — silence

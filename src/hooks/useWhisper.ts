@@ -44,6 +44,8 @@ interface Pending<T> {
   resolve: (value: T) => void;
   reject: (err: Error) => void;
   onProgress?: (progress: number) => void;
+  /** Transcription only: the text so far. */
+  onPartial?: (text: string) => void;
 }
 
 export function useWhisper() {
@@ -143,6 +145,9 @@ export function useWhisper() {
       case "transcribe-progress":
         jobs.current.get(msg.jobId)?.onProgress?.(msg.progress);
         break;
+      case "transcribe-partial":
+        jobs.current.get(msg.jobId)?.onPartial?.(msg.text);
+        break;
       case "diarize-progress":
         diarizeJobs.current.get(msg.jobId)?.onProgress?.(msg.progress);
         break;
@@ -201,11 +206,12 @@ export function useWhisper() {
         retainAudio?: boolean;
       },
       onProgress?: (progress: number) => void,
+      onPartial?: (text: string) => void,
     ) => {
       const worker = workerRef.current;
       if (!worker) return Promise.reject(new Error("Worker not ready"));
       return new Promise<TranscriptResult>((resolve, reject) => {
-        jobs.current.set(jobId, { resolve, reject, onProgress });
+        jobs.current.set(jobId, { resolve, reject, onProgress, onPartial });
         worker.postMessage(
           {
             type: "transcribe",

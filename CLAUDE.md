@@ -54,7 +54,11 @@ next `diarize` message instead of the page sending a second copy (~230 MB per ho
 Whisper hears 30 s windows overlapping by 2.5 s per side (`STRIDE_LENGTH_S`): the library default of 5 s repeated
 whole sentences at the seams and 0–1 s dropped words (docs/benchmark.md) — re-run the benchmark before changing it.
 `job.willDiarize` is fixed when the job starts, so toggling the setting mid-job can't skew progress.
-Each job keeps its original media (`getMedia()` → `job.media`; decoding happens in `runJob`) so the review view
+While transcribing, the worker posts `transcribe-partial` (finished windows merged with `_decode_asr`, as the
+final result is, plus the window in progress) into `job.liveText`, shown by `LivePreview` in `JobQueue` and
+never saved. Window token sequences come from wrapping `pipe.model.generate` for the duration of one file —
+the streamer's `on_finalize` is *not* a window boundary, since Whisper's seek loop may decode a window in
+several passes. Only the last 40 windows are re-merged and the last 20k characters sent, so long files stay cheap. Each job keeps its original media (`getMedia()` → `job.media`; decoding happens in `runJob`) so the review view
 (`src/components/TranscriptReview.tsx`) can play single lines, and keeps `originalResult` so edited lines can be
 reverted. Manual edits rewrite `job.result` (and rebuild its flat `text`), so every export sees them; find & replace
 (`src/lib/replace.ts`) changes many lines in one `onReplaceChunks` update, which its single-level Undo also uses.
