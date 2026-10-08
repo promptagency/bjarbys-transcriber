@@ -213,7 +213,6 @@ const sv = {
     drop: "Släpp ljud eller video här",
     dropping: "Släpp dem! 🎉",
     browse: "eller klicka för att välja — lägg till så många du vill",
-    formats: "transkriberas en i taget, 100 % på din enhet.",
   },
   recorder: {
     placeholder: "Din röst syns här när du pratar",
@@ -562,7 +561,6 @@ const en: Strings = {
     drop: "Drop audio or video here",
     dropping: "Drop them! 🎉",
     browse: "or click to browse — pile on as many as you like",
-    formats: "transcribed one after another, 100% on your device.",
   },
   recorder: {
     placeholder: "Your voice will appear here as you speak",

@@ -75,7 +75,7 @@ export function Dropzone({
         <p className="mt-1.5 text-base text-neutral-400">{t.dropzone.browse}</p>
       </div>
       <p className="max-w-md text-xs text-neutral-500">
-        MP3 · WAV · M4A · OGG · FLAC · MP4 · MOV · WebM — {t.dropzone.formats}
+        MP3 · WAV · M4A · OGG · FLAC · MP4 · MOV · WebM
       </p>
     </div>
   );
