@@ -6,6 +6,10 @@ Private, **in-browser** audio &amp; video transcription that also tells you
 a WASM/CPU fallback). **Nothing is uploaded** and **nothing needs to be
 installed** — just open the page.
 
+**Use it now: [vemsavad.promptagency.se](https://vemsavad.promptagency.se)** — open
+it in Chrome or Edge and drop in a file. Click *Install* in the address bar to
+get it as an app with its own window, which also opens without a network.
+
 Vem sa vad? is built on [Bjarbys Transcriber](https://github.com/fltman/bjarbys-transcriber)
 by Anders Bjarby, and adds speaker separation and a few other features on top.
 If you find it useful, consider
@@ -88,6 +92,28 @@ npm run dev      # open http://localhost:5173
   without HTTPS.
 
 To serve it for others instead, see the next section.
+
+## Hosting on Cloudflare Pages
+
+The public site runs on [Cloudflare Pages](https://pages.cloudflare.com/),
+built from `main` on every merge (feature branches get preview addresses).
+Settings live in `wrangler.toml`: build `npm run build`, output `dist/`.
+
+- **`public/_headers`** sends cross-origin isolation (multithreaded CPU path)
+  and a strict **Content-Security-Policy**: the page may only connect to itself,
+  Hugging Face (models), jsDelivr (the ONNX runtime) and Apple's podcast
+  search. The browser enforces it, so "nothing is uploaded" can be checked, not
+  just trusted. Change it deliberately.
+- **`functions/proxy.php.ts`** answers `./proxy.php?url=` like `proxy.php`
+  does, but narrower for a public site: only requests from the app's own pages,
+  only feeds and media back (never web pages), no local or private hosts.
+- **`public/manifest.webmanifest` + `public/sw.js`** make it installable and
+  let it open offline after one visit (the service worker caches the app's own
+  files; models are cached by Transformers.js).
+- Check the hosted setup locally with `npm run build && npx wrangler pages dev dist`.
+- The custom domain is a CNAME at the domain's DNS provider pointing to the
+  project's `pages.dev` address, added in the Pages dashboard *first* —
+  creating the CNAME before that gives a 522 error.
 
 ## Build & deploy to a LAMP server
 

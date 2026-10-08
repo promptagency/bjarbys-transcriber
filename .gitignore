@@ -15,3 +15,6 @@ public/test-audio/
 
 # Benchmark recordings (scripts/make-bench-audio.sh)
 bench-audio/
+
+# Cloudflare wrangler local state
+.wrangler/
