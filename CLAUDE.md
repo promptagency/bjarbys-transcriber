@@ -88,9 +88,15 @@ which goes to the speaker whose speech is most contained in it (backchannels ove
 surroundings and renumbers speakers by first appearance. Hard limits: 3 speakers at once, 240 min per file.
 The README documents why word-level timestamps were measured and rejected — don't reintroduce them.
 
+**Visit counting (`src/lib/analytics.ts`).** `countVisit()` in `main.tsx` POSTs one page view to Prompt
+Agency's Plausible (`plausible.app.promptagency.se`, allowed in the CSP's `connect-src`) — our own code, not
+Plausible's script, so no outside code runs on the page. Only on `vemsavad.promptagency.se`; skipped for
+GPC/Do Not Track and automated browsers; only `utm_*` query parameters are kept. Never send audio, text, file
+names or in-app actions, and keep the FAQ's "Räknar ni besök?" in step with any change.
+
 **FAQ (`src/components/Faq.tsx`, text in i18n's `faq`).** A badge beside "100 % på din enhet" opens a native
 `<dialog>`. Its answers make factual promises — what leaves the computer (the page via Cloudflare, models from
-Hugging Face, the runtime from jsDelivr, podcasts via the proxy), what's stored, the 95.6% speaker figure, the
+Hugging Face, the runtime from jsDelivr, podcasts via the proxy, the visit count), what's stored, the 95.6% speaker figure, the
 limits — so update it whenever those change.
 
 **Phones (`src/lib/device.ts`, `PhoneNotice`).** `main.tsx` shows phones a "use a computer" page instead of

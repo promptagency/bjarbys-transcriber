@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import { PhoneNotice } from "./components/PhoneNotice";
 import { continuedOnPhone, isPhone, rememberContinueOnPhone } from "./lib/device";
+import { countVisit } from "./lib/analytics";
 import "./index.css";
 
 /** Phones see a "use a computer" page first; the app (and its worker) only starts past it. */
@@ -26,6 +27,9 @@ createRoot(document.getElementById("root")!).render(
     <Root />
   </StrictMode>,
 );
+
+// One anonymous page view, on the public site only (see src/lib/analytics.ts).
+countVisit();
 
 // Installable app + opening offline (see public/sw.js). Production builds only:
 // in `npm run dev` a service worker would serve stale modules.
