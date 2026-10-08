@@ -61,6 +61,13 @@ export function Faq() {
                   {item.a.map((paragraph, j) => (
                     <p key={j}>{paragraph}</p>
                   ))}
+                  {item.list && (
+                    <ul className="list-disc space-y-1.5 pl-5 marker:text-violet-300">
+                      {item.list.map((point, j) => (
+                        <li key={j}>{point}</li>
+                      ))}
+                    </ul>
+                  )}
                   {item.link && (
                     <a
                       href={item.link.href}
