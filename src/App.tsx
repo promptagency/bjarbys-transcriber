@@ -691,8 +691,7 @@ export default function App() {
           <Logo className="sm:w-[462px]" />
         </h1>
         <p className="mx-auto max-w-md text-base text-slate-400">
-          {t.header.tagline}{" "}
-          <span className="whitespace-nowrap">{t.header.nothingUploaded}</span>
+          {t.header.tagline}
         </p>
       </header>
 

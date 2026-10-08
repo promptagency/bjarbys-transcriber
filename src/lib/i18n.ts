@@ -23,8 +23,7 @@ const sv = {
   },
   uiLanguage: { label: "Språk", sv: "Svenska", en: "English" },
   header: {
-    tagline: "Lokal transkribering i din webbläsare.",
-    nothingUploaded: "Inget laddas upp",
+    tagline: "Lokal och privat transkribering direkt i webbläsaren.",
     onDevice: "100 % på din enhet",
   },
   phone: {
@@ -275,8 +274,7 @@ const en: Strings = {
   },
   uiLanguage: { label: "Language", sv: "Svenska", en: "English" },
   header: {
-    tagline: "Local transcription in your browser.",
-    nothingUploaded: "Nothing is uploaded",
+    tagline: "Local and private transcription, right in your browser.",
     onDevice: "100% on your device",
   },
   phone: {
