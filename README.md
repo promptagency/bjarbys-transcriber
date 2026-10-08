@@ -142,13 +142,20 @@ A ready-to-use **`.htaccess`** and the podcast **`proxy.php`** are included in
 ### Podcasts &amp; `proxy.php`
 
 Searching uses Apple's iTunes API (CORS-enabled, direct). Most podcast hosts,
-however, block cross-origin reads of their RSS/audio, so the app first tries a
-**direct fetch** and falls back to a **same-origin proxy** — `proxy.php` — which
-your own server fetches through. This keeps it private to your server (no
-third-party CORS proxy). `proxy.php` needs PHP with cURL and includes basic
-SSRF protection; harden it (e.g. a host allow-list) before public exposure. If
-you don't deploy `proxy.php`, file and microphone transcription still work, and
-podcasts work for any host that happens to send CORS headers.
+however, block cross-origin reads of their RSS/audio, so the app fetches feeds
+and episodes through a **same-origin proxy** — `proxy.php` — which your own
+server fetches through, and falls back to a direct fetch where no proxy runs.
+This keeps it private to your server (no third-party CORS proxy).
+
+`proxy.php` needs PHP with cURL and follows the same rules as the hosted site's
+proxy: only requests from the app's own pages, no private or reserved
+addresses, and only podcast content — it checks the first bytes and passes an
+RSS/Atom feed or a recognised audio/video file, refusing anything else, so it
+can't be used to fetch arbitrary files through your server. What passes gets
+an inert content type and headers that stop it from running as a page.
+
+If you don't deploy `proxy.php`, file and microphone transcription still work,
+and podcasts work for any host that happens to send CORS headers.
 
 ## Models
 
