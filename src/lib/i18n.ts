@@ -17,7 +17,7 @@ const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
 const sv = {
   locale: "sv-SE",
   meta: {
-    title: "Vem sa vad? — privat transkribering i webbläsaren",
+    title: "Vem sa vad? — lokal transkribering i webbläsaren",
     description:
       "Lokal transkribering i din webbläsare, med talaruppdelning. Inget laddas upp.",
   },
@@ -269,7 +269,7 @@ export type Strings = typeof sv;
 const en: Strings = {
   locale: "en-GB",
   meta: {
-    title: "Vem sa vad? — private, in-browser transcription",
+    title: "Vem sa vad? — local transcription in your browser",
     description:
       "Local transcription in your browser, with speaker separation. Nothing is uploaded.",
   },
