@@ -864,7 +864,15 @@ export default function App() {
       <footer className="mt-12 border-t border-[var(--color-border)] pt-6 text-center text-xs text-slate-500">
         <p>
           <strong className="font-semibold text-slate-300">Vem sa vad?</strong> {t.footer.by}{" "}
-          <span className="font-medium text-slate-300">Micke Quick</span>,{" "}
+          <a
+            href="https://mickequick.se"
+            className="font-medium text-slate-300 underline-offset-2 hover:underline"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Micke Quick
+          </a>
+          ,{" "}
           <a
             href="https://promptagency.se"
             className="font-medium text-slate-300 underline-offset-2 hover:underline"
