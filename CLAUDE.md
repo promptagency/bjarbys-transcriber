@@ -76,7 +76,10 @@ encoder at 4 bits: it measured fine on Swedish but dropped speech after a langua
 needs transformers.js 4.x (3.x produced garbage). 8-bit decoders are CPU-only (~10× slower on WebGPU).
 Measurements: `docs/webgpu-quantization.md`. Transformers.js pins *development* builds of `onnxruntime-web`;
 `package.json` `overrides` forces the latest stable release instead — when upgrading Transformers.js, move
-the override to the stable ONNX Runtime closest to what it pins, and re-test GPU, CPU and speaker separation. A failed WebGPU load falls back to WASM with a CPU-safe dtype.
+the override to the stable ONNX Runtime closest to what it pins, and re-test GPU, CPU and speaker separation. A load is tried twice with the requested dtype before any fallback (fp32+q4 on the GPU, then WASM with a
+CPU-safe dtype): first-attempt failures were seen only intermittently and never reproduced under
+instrumentation. First downloads can be slow because Hugging Face's CDN serves cold files slowly (verified);
+after 10 s without progress the loading panel says the server is slow.
 
 **Speaker separation (`src/lib/diarize.ts`).** pyannote segmentation-3.0 (ONNX, ~1.5 MB, loaded lazily on
 WASM) emits a *powerset* over 3 local speakers — `decodeActivity` turns it into per-speaker spans where

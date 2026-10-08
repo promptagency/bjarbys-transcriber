@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Cpu, Loader2, Zap } from "lucide-react";
 import { type Job, jobProgress } from "../lib/jobs";
 import type { ModelState } from "../hooks/useWhisper";
@@ -110,6 +111,9 @@ export function ProgressRing({
  * The "now processing" hero. Shows model-download progress while loading, then
  * a live equalizer + queue progress while jobs run.
  */
+/** How long the download may stand still before the panel says the server is slow. */
+const SLOW_SERVER_MS = 10_000;
+
 export function ProcessingHero({
   state,
   activeJob,
@@ -123,6 +127,19 @@ export function ProcessingHero({
 }) {
   const t = useT();
   const loading = state.status === "loading";
+  const downloading = loading && state.overall < 1;
+
+  // Hugging Face's CDN can take a long while to start sending a file it hasn't
+  // served recently, and the bar then stands still. After 10 s without
+  // progress, say so — it looks frozen otherwise. Any progress resets it.
+  const [slowServer, setSlowServer] = useState(false);
+  useEffect(() => {
+    setSlowServer(false);
+    if (!downloading) return;
+    const timer = window.setTimeout(() => setSlowServer(true), SLOW_SERVER_MS);
+    return () => window.clearTimeout(timer);
+  }, [downloading, state.overall]);
+
   const hasWork = loading || !!activeJob;
   if (!hasWork) return null;
 
@@ -152,6 +169,11 @@ export function ProcessingHero({
               <p className="mt-1 truncate text-sm text-neutral-400">
                 {t.processing.cachedAfter(Math.round(state.overall * 100))}
               </p>
+              {slowServer && downloading && (
+                <p role="status" className="mt-1 text-sm text-amber-200/90">
+                  {t.processing.slowServer}
+                </p>
+              )}
               <div className="mt-3 flex items-center gap-2 text-xs text-neutral-500">
                 {state.device === "webgpu" ? (
                   <Zap className="size-3.5 text-brand-300" />

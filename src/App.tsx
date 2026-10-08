@@ -943,8 +943,7 @@ export default function App() {
             rel="noreferrer"
           >
             pyannote
-          </a>{" "}
-          · {t.footer.cached}
+          </a>
         </p>
       </footer>
     </div>

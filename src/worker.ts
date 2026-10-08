@@ -403,50 +403,60 @@ async function ensurePipeline(
     loadedKey = "";
   }
 
-  try {
-    const dtypeArg = await resolveDtype(dtype, device);
-    pipe = await build(modelId, dtype, device, dtypeArg);
-    loadedKey = key;
-    loadedModelId = modelId;
-    // Loaded as first asked: other quantizations of this model, and older ONNX
-    // runtimes, are now dead weight on disk. (Not after a fallback below — the
-    // preferred files may well load next time.) Best effort, in the background.
-    void pruneAfterLoad(modelId, dtypeArg, env.backends.onnx?.versions?.web)
-      .then(() => post({ type: "storage-changed" }))
-      .catch(() => {});
-    return pipe;
-  } catch (err) {
-    // If the 16-bit GPU variant fails to load, the 32-bit one may still work
-    // on the GPU — far faster than dropping to the CPU.
-    if (device === "webgpu" && dtype !== "fp32") {
-      const tried = await resolveDtype(dtype, device);
-      if (tried !== GPU_NO_F16) {
-        try {
-          pipe = await build(modelId, dtype, device, GPU_NO_F16);
-          loadedKey = key;
-          loadedModelId = modelId;
-          return pipe;
-        } catch {
-          /* fall through to the CPU */
-        }
+  // Try the requested dtype twice before falling back. A failed first attempt
+  // has been seen only intermittently (never reproduced under instrumentation;
+  // most likely transient), and falling back costs a larger download and a
+  // slower model — a second try is cheap by comparison.
+  const dtypeArg = await resolveDtype(dtype, device);
+  let firstError: unknown = null;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      pipe = await build(modelId, dtype, device, dtypeArg);
+      loadedKey = key;
+      loadedModelId = modelId;
+      // Loaded as first asked: other quantizations of this model, and older ONNX
+      // runtimes, are now dead weight on disk. (Not after a fallback below — the
+      // preferred files may well load next time.) Best effort, in the background.
+      void pruneAfterLoad(modelId, dtypeArg, env.backends.onnx?.versions?.web)
+        .then(() => post({ type: "storage-changed" }))
+        .catch(() => {});
+      return pipe;
+    } catch (err) {
+      firstError ??= err;
+      if (attempt === 1) await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
+
+  const err = firstError;
+  // If the 16-bit GPU variant fails to load, the 32-bit one may still work
+  // on the GPU — far faster than dropping to the CPU.
+  if (device === "webgpu" && dtype !== "fp32") {
+    if (dtypeArg !== GPU_NO_F16) {
+      try {
+        pipe = await build(modelId, dtype, device, GPU_NO_F16);
+        loadedKey = key;
+        loadedModelId = modelId;
+        return pipe;
+      } catch {
+        /* fall through to the CPU */
       }
     }
-    if (device === "webgpu") {
-      const to: Backend = "wasm";
-      const fallbackDtype = wasmDtypeFor(dtype);
-      post({
-        type: "device-fallback",
-        from: "webgpu",
-        to,
-        reason: String((err as Error)?.message ?? err),
-      });
-      pipe = await build(modelId, fallbackDtype, to);
-      loadedKey = keyOf(modelId, fallbackDtype, to);
-      loadedModelId = modelId;
-      return pipe;
-    }
-    throw err;
   }
+  if (device === "webgpu") {
+    const to: Backend = "wasm";
+    const fallbackDtype = wasmDtypeFor(dtype);
+    post({
+      type: "device-fallback",
+      from: "webgpu",
+      to,
+      reason: String((err as Error)?.message ?? err),
+    });
+    pipe = await build(modelId, fallbackDtype, to);
+    loadedKey = keyOf(modelId, fallbackDtype, to);
+    loadedModelId = modelId;
+    return pipe;
+  }
+  throw err;
 }
 
 self.addEventListener("message", async (event: MessageEvent<ToWorker>) => {

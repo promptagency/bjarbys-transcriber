@@ -220,7 +220,6 @@ const sv = {
     basedOn: "Bygger på",
     byAuthor: "av",
     poweredBy: "Drivs av",
-    cached: "modellerna laddas ned en gång och sparas i webbläsaren.",
   },
   dropzone: {
     drop: "Släpp ljud eller video här",
@@ -268,6 +267,8 @@ const sv = {
     ringSpeakers: "talare",
     downloadingModel: "Laddar ned modellen",
     cachedAfter: (pct: number) => `${pct} % · sparas i webbläsaren efter första gången`,
+    slowServer:
+      "Servern är långsam just nu – nedladdningen fortsätter. Första gången en modell hämtas kan det ta en stund.",
     preparing: (device: string) => `Förbereder körning på ${device}`,
     queueProgress: "Förlopp i kön",
     done: (done: number, total: number) => `${done} av ${total} klara`,
@@ -581,7 +582,6 @@ const en: Strings = {
     basedOn: "Based on",
     byAuthor: "by",
     poweredBy: "Powered by",
-    cached: "models download once and cache in your browser.",
   },
   dropzone: {
     drop: "Drop audio or video here",
@@ -629,6 +629,8 @@ const en: Strings = {
     ringSpeakers: "speakers",
     downloadingModel: "Downloading model",
     cachedAfter: (pct) => `${pct}% · cached in your browser after the first time`,
+    slowServer:
+      "The server is slow right now – the download continues. The first download of a model can take a while.",
     preparing: (device) => `Preparing ${device} runtime`,
     queueProgress: "Queue progress",
     done: (done, total) => `${done} / ${total} done`,
