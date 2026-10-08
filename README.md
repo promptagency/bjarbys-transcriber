@@ -98,6 +98,8 @@ To serve it for others instead, see the next section.
 The public site runs on [Cloudflare Pages](https://pages.cloudflare.com/),
 built from `main` on every merge (feature branches get preview addresses).
 Settings live in `wrangler.toml`: build `npm run build`, output `dist/`.
+Pages rejects files over 25 MiB; the build leaves out the ONNX Runtime `.wasm`
+Vite would otherwise copy in, since the runtime is loaded from jsDelivr.
 
 - **`public/_headers`** sends cross-origin isolation (multithreaded CPU path)
   and a strict **Content-Security-Policy**: the page may only connect to itself,

@@ -109,6 +109,8 @@ strict CSP — any new outside host the app talks to must be added there or it i
 through the proxy first. `functions/proxy.php.ts` is the Pages version of `proxy.php` (same-origin callers,
 feeds/media only). `public/sw.js` precaches the app on install for offline use; it only touches same-origin
 files and is registered in production builds only. Check locally with `npx wrangler pages dev dist`.
+Pages rejects files over 25 MiB, so `vite.config.ts` drops the unused ONNX Runtime `.wasm` copy Vite would
+emit (Transformers.js loads the runtime from jsDelivr, which the CSP allows).
 Self-hosting on Apache still works: `public/.htaccess` forces HTTPS and adds an SPA fallback.
 
 **Persistence (`src/lib/storage.ts`).** Keeping transcripts is **opt-in** (`settings.keepTranscripts`, off by
