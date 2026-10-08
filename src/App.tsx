@@ -704,7 +704,7 @@ export default function App() {
           disabled={state.status === "loading"}
         />
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-2 rounded-full bg-mint-500/10 px-3 py-1.5 text-xs font-medium text-mint-300 ring-1 ring-inset ring-mint-400/20">
+          <span className="inline-flex items-center gap-2 rounded-full bg-mint-300 px-3 py-1.5 text-xs font-semibold text-ink">
             <ShieldCheck className="size-4" />
             {t.header.onDevice}
           </span>

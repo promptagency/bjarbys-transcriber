@@ -152,7 +152,7 @@ Turning keeping off (or loading with it off) deletes every stored transcript. Se
 
 **Colours (`src/index.css` `@theme`).** Matched to the logo and Prompt Agency's brand: neutral near-black and
 greys (`neutral-*`, no blue-tinted `slate`), **sienna** (`brand-*`, #C85A3E) for actions, focus and progress,
-**mint** (`mint-*`) for the privacy badge and "done/ready", **lavender** (`lavender-*`) for the FAQ badge. Red
+**mint** (`mint-*`) for "done/ready" and, solid with `ink` text like the logo's bubbles, the privacy badge; **lavender** (`lavender-*`), solid, for the FAQ badge. Red
 for errors and amber for unsure lines stay. Use these tokens rather than Tailwind's sky/cyan/emerald/violet.
 
 ## Repository conventions

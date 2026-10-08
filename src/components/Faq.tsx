@@ -17,7 +17,7 @@ export function Faq() {
         type="button"
         onClick={() => dialog.current?.showModal()}
         aria-haspopup="dialog"
-        className="inline-flex items-center gap-2 rounded-full bg-lavender-500/10 px-3 py-1.5 text-xs font-medium text-lavender-300 ring-1 ring-inset ring-lavender-400/20 transition hover:bg-lavender-500/20 hover:text-lavender-200"
+        className="inline-flex items-center gap-2 rounded-full bg-lavender-300 px-3 py-1.5 text-xs font-semibold text-ink transition hover:bg-lavender-200"
       >
         <CircleHelp className="size-4" />
         {t.faq.badge}
