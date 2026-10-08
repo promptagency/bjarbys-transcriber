@@ -762,6 +762,19 @@ export default function App() {
         )}
       </div>
 
+      {/* Optional: pre-load the model when idle — right under the drop area, so the
+          settings panel can open directly beneath its own button. */}
+      {!loadedForModel && state.status !== "loading" && (
+        <button
+          type="button"
+          onClick={handleLoad}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/40 px-4 py-2 text-sm text-neutral-300 transition hover:border-brand-400/30 hover:text-white"
+        >
+          <Download className="size-4" />
+          {t.model.preDownload(modelName(model.name, t), formatSize(tierSizeMB(currentTier, gpuF16)))}
+        </button>
+      )}
+
       {/* Model status + settings toggle */}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-sm text-neutral-400">
@@ -803,18 +816,6 @@ export default function App() {
           />
         </button>
       </div>
-
-      {/* Optional: pre-load button when idle */}
-      {!loadedForModel && state.status !== "loading" && (
-        <button
-          type="button"
-          onClick={handleLoad}
-          className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/40 px-4 py-2 text-sm text-neutral-300 transition hover:border-brand-400/30 hover:text-white"
-        >
-          <Download className="size-4" />
-          {t.model.preDownload(modelName(model.name, t), formatSize(tierSizeMB(currentTier, gpuF16)))}
-        </button>
-      )}
 
       {/* Advanced settings drawer */}
       {showSettings && (
