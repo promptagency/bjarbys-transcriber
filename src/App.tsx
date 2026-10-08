@@ -8,7 +8,6 @@ import {
 } from "./lib/i18n";
 import {
   ChevronDown,
-  Cpu,
   Download,
   FileAudio,
   Mic,
@@ -16,7 +15,6 @@ import {
   ShieldCheck,
   Sliders,
   Sparkles,
-  Zap,
 } from "lucide-react";
 import { WHISPER_SAMPLE_RATE, decodeToPCM } from "./lib/audio";
 import {
@@ -27,10 +25,8 @@ import {
 } from "./lib/diarize";
 import {
   type Backend,
-  FAMILY_META,
   availableTiers,
   defaultDtype,
-  familyOf,
   findModel,
   formatSize,
   isEnglishOnly,
@@ -198,7 +194,6 @@ export default function App() {
     }
   }, [settings.modelId, settings.dtype, resolvedDevice, patchSettings]);
 
-  const family = familyOf(settings.modelId);
   const setSpokenLanguage = useCallback(
     (code: string | null) => setSettings((s) => ({ ...s, ...forSpokenLanguage(s, code) })),
     [],
@@ -762,6 +757,14 @@ export default function App() {
         )}
       </div>
 
+      {/* A failed model load stops the queue, so say so here, not only inside Settings.
+          The download button below doubles as "try again". */}
+      {state.status === "error" && state.error && (
+        <p role="alert" className="mt-3 text-sm text-red-300">
+          {t.model.failed(state.error)}
+        </p>
+      )}
+
       {/* Optional: pre-load the model when idle — right under the drop area, so the
           settings panel can open directly beneath its own button. */}
       {!loadedForModel && state.status !== "loading" && (
@@ -775,29 +778,9 @@ export default function App() {
         </button>
       )}
 
-      {/* Model status + settings toggle */}
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-sm text-neutral-400">
-          <span className="text-base">{FAMILY_META[family].emoji}</span>
-          <span className="font-medium text-neutral-200">{modelName(model.name, t)}</span>
-          <span className="text-neutral-600">·</span>
-          {state.status === "loading" ? (
-            <span className="text-brand-300">
-              {t.model.loading(Math.round(state.overall * 100))}
-            </span>
-          ) : loadedForModel ? (
-            <span className="inline-flex items-center gap-1 text-mint-300">
-              {state.device === "webgpu" ? (
-                <Zap className="size-3.5" />
-              ) : (
-                <Cpu className="size-3.5" />
-              )}
-              {t.model.ready}
-            </span>
-          ) : (
-            <span>{t.model.loadsOnFirstFile(formatSize(tierSizeMB(currentTier, gpuF16)))}</span>
-          )}
-        </div>
+      {/* Settings toggle (the model's name, size and progress show in the
+          download button and the loading panel) */}
+      <div className="mt-4 flex justify-end">
         <button
           type="button"
           onClick={() => setShowSettings((s) => !s)}
@@ -839,9 +822,6 @@ export default function App() {
             >
               <Download className="size-4" /> {t.settings.applyReload}
             </button>
-          )}
-          {state.status === "error" && state.error && (
-            <p className="mt-3 text-sm text-red-300">{state.error}</p>
           )}
         </Card>
       )}

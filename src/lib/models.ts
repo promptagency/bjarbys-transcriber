@@ -222,13 +222,6 @@ export function findModel(id: string): ModelOption | undefined {
 // ── Simple top-level "what language?" grouping ──────────────────────────────
 export type Family = "swedish" | "multilingual" | "english";
 
-// Names and hints are interface text (i18n's `family`).
-export const FAMILY_META: Record<Family, { emoji: string }> = {
-  swedish: { emoji: "🇸🇪" },
-  multilingual: { emoji: "🌍" },
-  english: { emoji: "🇬🇧" },
-};
-
 export const FAMILY_ORDER: Family[] = ["swedish", "multilingual", "english"];
 
 export const FAMILY_DEFAULT_MODEL: Record<Family, string> = {

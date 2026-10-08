@@ -130,10 +130,8 @@ const sv = {
     podcast: "Sök upp en podd och transkribera de avsnitt du väljer.",
   },
   model: {
-    loading: (pct: number) => `laddar ${pct} %`,
-    ready: "redo",
-    loadsOnFirstFile: (size: string) => `${size} · laddas vid första filen`,
     preDownload: (name: string, size: string) => `Ladda ned ${name} i förväg (${size})`,
+    failed: (detail: string) => `Modellen kunde inte laddas: ${detail}`,
   },
   settings: {
     toggle: "Inställningar",
@@ -479,10 +477,8 @@ const en: Strings = {
     podcast: "Find a podcast and transcribe the episodes you pick.",
   },
   model: {
-    loading: (pct) => `loading ${pct}%`,
-    ready: "ready",
-    loadsOnFirstFile: (size) => `${size} · loads on first file`,
     preDownload: (name, size) => `Pre-download ${name} (${size})`,
+    failed: (detail) => `The model couldn't be loaded: ${detail}`,
   },
   settings: {
     toggle: "Settings",
