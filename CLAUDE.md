@@ -110,7 +110,8 @@ English-only `bench.html`.
 
 **Exports (`src/lib/exporters.ts`, `src/lib/zip.ts`).** All formats are rendered from the one
 stored `TranscriptResult`; lines get a speaker prefix when chunks carry speakers — the user's name from
-`job.speakerNames` (per job, edited in `JobQueue`) or `Speaker N` — and JSON's `text` is built from `toTxt()`
+`job.speakerNames` (per job, edited in `JobQueue`) or `t.export.speaker(n)` ("Talare N" / "Speaker N", following
+the interface language) — and JSON's `text` is built from `toTxt()`
 so all formats agree. JSON keeps numeric `speaker` per chunk plus a `speakers` id→name map. The document
 formats (`txt`, the default, and `md`) go through `toDocument()`; Copy uses `toTxt()`, one fragment per line
 (no longer a download format). Old saved settings: `doc` maps to `txt`, and a saved `lines` drops out. Documents: chunks merge into paragraphs per speaker

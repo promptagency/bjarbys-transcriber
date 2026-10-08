@@ -708,7 +708,10 @@ export type Message = {
 
 export function formatMessage(t: Strings, message: Message | string): string {
   if (typeof message === "string") return message;
-  const format = t.msg[message.key] as (params?: unknown) => string;
+  // A transcript saved by an older version may carry a key that no longer
+  // exists; show the key rather than fail to render the whole queue.
+  const format = t.msg[message.key] as ((params?: unknown) => string) | undefined;
+  if (typeof format !== "function") return String(message.key);
   return format("params" in message ? message.params : undefined);
 }
 

@@ -718,28 +718,31 @@ export default function App() {
           const Icon = tab.icon;
           const active = activeTab === tab.id;
           return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setTab(tab.id)}
-              aria-describedby={`tab-hint-${tab.id}`}
-              className={`group relative flex items-center justify-center gap-2 rounded-xl px-3 py-3 text-sm font-semibold transition ${
-                active
-                  ? "bg-sky-500 text-white shadow-lg shadow-sky-500/20"
-                  : "bg-[var(--color-surface)]/60 text-slate-300 ring-1 ring-inset ring-[var(--color-border)] hover:bg-white/[0.04]"
-              }`}
-            >
-              <Icon className="size-4" />
-              {t.tabs[tab.id]}
+            // The hint is a sibling of the button, not inside it, so it isn't read
+            // as part of the tab's name — only once, as its description.
+            <div key={tab.id} className="group relative">
+              <button
+                type="button"
+                onClick={() => setTab(tab.id)}
+                aria-describedby={`tab-hint-${tab.id}`}
+                className={`flex w-full items-center justify-center gap-2 rounded-xl px-3 py-3 text-sm font-semibold transition ${
+                  active
+                    ? "bg-sky-500 text-white shadow-lg shadow-sky-500/20"
+                    : "bg-[var(--color-surface)]/60 text-slate-300 ring-1 ring-inset ring-[var(--color-border)] hover:bg-white/[0.04]"
+                }`}
+              >
+                <Icon className="size-4" />
+                {t.tabs[tab.id]}
+              </button>
               {/* A short hint above the tab, after a brief hover or on keyboard focus. */}
               <span
                 id={`tab-hint-${tab.id}`}
                 role="tooltip"
-                className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-max max-w-[15rem] -translate-x-1/2 rounded-lg bg-slate-100 px-2.5 py-1.5 text-center text-xs font-medium text-slate-900 opacity-0 shadow-lg shadow-black/40 transition-opacity group-hover:opacity-100 group-hover:delay-300 group-focus-visible:opacity-100"
+                className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-max max-w-[15rem] -translate-x-1/2 rounded-lg bg-slate-100 px-2.5 py-1.5 text-center text-xs font-medium text-slate-900 opacity-0 shadow-lg shadow-black/40 transition-opacity group-hover:opacity-100 group-hover:delay-300 group-has-[:focus-visible]:opacity-100"
               >
                 {t.tabHints[tab.id]}
               </span>
-            </button>
+            </div>
           );
         })}
       </div>

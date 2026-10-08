@@ -188,12 +188,13 @@ Ticking **Separate speakers** additionally loads
 — an ONNX build of [pyannote/segmentation-3.0](https://huggingface.co/pyannote/segmentation-3.0),
 about 1.5 MB, MIT. It runs on WASM alongside Whisper and needs no extra
 dependency. Each chunk in the `.json` export then carries `speaker` and
-`speaker_conf`, and the other formats prefix each line with `Speaker N:`.
+`speaker_conf`, and the other formats prefix each line with `Talare N:` (or
+`Speaker N:` with the interface in English).
 
 Open a finished transcript to **name the speakers**: one field per detected
 speaker, applied immediately to the transcript, Copy and downloads. Names are
-per transcript, since "Speaker 1" is a different person in every recording.
-In the documents, `.srt`/`.vtt` and Lines the name replaces `Speaker N`; in `.json` the chunks
+per transcript, since "Talare 1" is a different person in every recording.
+In the documents, `.srt`/`.vtt` and Copy the name replaces `Talare N`; in `.json` the chunks
 keep their numeric `speaker` and a top-level `speakers` object maps each
 number to its name. An automatic download happens before you've named
 anyone, so download again after naming.
