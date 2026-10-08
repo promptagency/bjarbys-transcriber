@@ -146,7 +146,7 @@ const sv = {
       diarize:
         "Tar reda på vem som pratar när och märker raderna Talare 1, Talare 2 osv. Tar lite extra tid. Du kan namnge talarna efteråt.",
       keep:
-        "Klara transkriptioner finns kvar om du laddar om sidan eller kommer tillbaka senare, tills du tar bort dem. De sparas bara i den här webbläsaren, aldrig på någon server, men alla som använder webbläsaren kan öppna dem: låt det vara av på en delad dator. Stänger du av det raderas de sparade kopiorna.",
+        "Genomförda transkriptioner finns kvar om du laddar om sidan eller kommer tillbaka senare, tills du tar bort dem. De sparas bara i den här webbläsaren, aldrig på någon server, men alla som använder webbläsaren kan öppna dem: låt det vara av på en delad dator. Stänger du av det raderas de sparade kopiorna.",
     },
     heading: "Finjustera",
     applyReload: "Använd och ladda om modellen",
@@ -255,8 +255,8 @@ const sv = {
   },
   queue: {
     title: (n: number) => `Kö · ${n}`,
-    deleteFinished: "Ta bort alla klara",
-    deleteFinishedTitle: "Tar bort alla klara transkriptioner från listan och från webbläsaren",
+    deleteFinished: "Ta bort alla genomförda",
+    deleteFinishedTitle: "Tar bort alla genomförda transkriptioner från listan och från webbläsaren",
     askTitle: "Spara genomförda transkriptioner om du laddar om sidan?",
     askBefore: "Säger du ja sparas de i den här webbläsaren (aldrig uppladdade) och ",
     askStay: "ligger kvar tills du tar bort dem",
@@ -266,10 +266,10 @@ const sv = {
     noThanks: "Nej tack",
     restored: (n: number) =>
       `Återställde ${n} ${plural(n, "transkription", "transkriptioner")} från ditt förra besök.`,
-    keptBefore: "Klara transkriptioner ",
+    keptBefore: "Genomförda transkriptioner ",
     keptStay: "sparas i den här webbläsaren och ligger kvar tills du tar bort dem",
     keptAfter: " — med ✕ på var och en, eller ",
-    keptDeleteAll: "Ta bort alla klara",
+    keptDeleteAll: "Ta bort alla genomförda",
     keptEnd: ". På en delad dator: ta bort dem när du är klar.",
     status: {
       queued: "I kö",
