@@ -21,7 +21,7 @@ export function ProgressBar({
       className={`h-2 w-full overflow-hidden rounded-full bg-[var(--color-surface-2)] ${className}`}
     >
       <div
-        className="h-full rounded-full bg-gradient-to-r from-[var(--color-brand)] to-[var(--color-brand-2)] transition-[width] duration-200"
+        className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-300 transition-[width] duration-200"
         style={{ width: `${pct}%` }}
       />
     </div>
@@ -47,9 +47,9 @@ export function Badge({
   tone?: "neutral" | "brand" | "green" | "amber" | "red";
 }) {
   const tones: Record<string, string> = {
-    neutral: "bg-white/5 text-slate-300 ring-white/10",
-    brand: "bg-sky-500/15 text-sky-300 ring-sky-400/30",
-    green: "bg-emerald-500/15 text-emerald-300 ring-emerald-400/30",
+    neutral: "bg-white/5 text-neutral-300 ring-white/10",
+    brand: "bg-brand-500/15 text-brand-300 ring-brand-400/30",
+    green: "bg-mint-500/15 text-mint-300 ring-mint-400/30",
     amber: "bg-amber-500/15 text-amber-300 ring-amber-400/30",
     red: "bg-red-500/15 text-red-300 ring-red-400/30",
   };
@@ -69,7 +69,7 @@ export function Select({
 }: SelectHTMLAttributes<HTMLSelectElement> & { children: ReactNode }) {
   return (
     <select
-      className={`w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-sky-400/60 focus:ring-2 focus:ring-sky-400/20 ${className}`}
+      className={`w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm text-neutral-100 outline-none transition focus:border-brand-400/60 focus:ring-2 focus:ring-brand-400/20 ${className}`}
       {...props}
     >
       {children}
@@ -91,14 +91,14 @@ export function InfoTip({ text }: { text: string }) {
         aria-label={t.settings.moreInfo}
         aria-describedby={id}
         onClick={(e) => e.preventDefault()}
-        className="rounded-full p-0.5 text-slate-500 transition hover:text-sky-300 focus-visible:text-sky-300 focus-visible:outline-none"
+        className="rounded-full p-0.5 text-neutral-500 transition hover:text-brand-300 focus-visible:text-brand-300 focus-visible:outline-none"
       >
         <Info className="size-3.5" />
       </button>
       <span
         id={id}
         role="tooltip"
-        className="pointer-events-none absolute bottom-full left-0 z-20 mb-1.5 w-max max-w-[17rem] -translate-x-2 rounded-lg bg-slate-100 px-2.5 py-1.5 whitespace-pre-line text-left text-xs font-medium leading-relaxed text-slate-900 opacity-0 shadow-lg shadow-black/40 transition-opacity group-hover/tip:opacity-100 group-hover/tip:delay-200 group-focus-within/tip:opacity-100"
+        className="pointer-events-none absolute bottom-full left-0 z-20 mb-1.5 w-max max-w-[17rem] -translate-x-2 rounded-lg bg-neutral-100 px-2.5 py-1.5 whitespace-pre-line text-left text-xs font-medium leading-relaxed text-neutral-900 opacity-0 shadow-lg shadow-black/40 transition-opacity group-hover/tip:opacity-100 group-hover/tip:delay-200 group-focus-within/tip:opacity-100"
       >
         {text}
       </span>
@@ -128,13 +128,13 @@ export function Field({
         <span className="inline-flex items-center gap-1">
           <label
             htmlFor={id}
-            className="text-xs font-semibold uppercase tracking-wide text-slate-400"
+            className="text-xs font-semibold uppercase tracking-wide text-neutral-400"
           >
             {label}
           </label>
           {tip && <InfoTip text={tip} />}
         </span>
-        {hint && <span className="text-xs text-slate-500">{hint}</span>}
+        {hint && <span className="text-xs text-neutral-500">{hint}</span>}
       </div>
       {cloneElement(children, { id })}
     </div>

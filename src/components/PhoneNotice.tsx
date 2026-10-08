@@ -49,14 +49,14 @@ export function PhoneNotice({ onContinue }: { onContinue: () => void }) {
       </h1>
 
       <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/80 p-6 text-center">
-        <Laptop className="mx-auto mb-4 size-10 text-sky-300" />
-        <h2 className="text-xl font-bold text-slate-100">{t.phone.title}</h2>
-        <p className="mt-3 text-sm leading-relaxed text-slate-400">{t.phone.why}</p>
-        <p className="mt-3 text-sm leading-relaxed text-slate-400">{t.phone.how}</p>
+        <Laptop className="mx-auto mb-4 size-10 text-brand-300" />
+        <h2 className="text-xl font-bold text-neutral-100">{t.phone.title}</h2>
+        <p className="mt-3 text-sm leading-relaxed text-neutral-400">{t.phone.why}</p>
+        <p className="mt-3 text-sm leading-relaxed text-neutral-400">{t.phone.how}</p>
         <button
           type="button"
           onClick={share}
-          className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-sky-500 px-4 py-3 text-sm font-semibold text-white hover:bg-sky-600"
+          className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-brand-500 px-4 py-3 text-sm font-semibold text-white hover:bg-brand-600"
         >
           {copied ? <Check className="size-4" /> : <Share2 className="size-4" />}
           {copied ? t.phone.copied : t.phone.share}
@@ -66,7 +66,7 @@ export function PhoneNotice({ onContinue }: { onContinue: () => void }) {
       <button
         type="button"
         onClick={onContinue}
-        className="mx-auto mt-6 text-xs text-slate-500 underline underline-offset-2 hover:text-slate-300"
+        className="mx-auto mt-6 text-xs text-neutral-500 underline underline-offset-2 hover:text-neutral-300"
       >
         {t.phone.continue}
       </button>

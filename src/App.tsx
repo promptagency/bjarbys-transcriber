@@ -691,7 +691,7 @@ export default function App() {
         <h1 className="mb-4 flex justify-center">
           <Logo className="sm:w-[462px]" />
         </h1>
-        <p className="mx-auto max-w-md text-base text-slate-400">
+        <p className="mx-auto max-w-md text-base text-neutral-400">
           {t.header.tagline}
         </p>
       </header>
@@ -704,7 +704,7 @@ export default function App() {
           disabled={state.status === "loading"}
         />
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
+          <span className="inline-flex items-center gap-2 rounded-full bg-mint-500/10 px-3 py-1.5 text-xs font-medium text-mint-300 ring-1 ring-inset ring-mint-400/20">
             <ShieldCheck className="size-4" />
             {t.header.onDevice}
           </span>
@@ -727,8 +727,8 @@ export default function App() {
                 aria-describedby={`tab-hint-${tab.id}`}
                 className={`flex w-full items-center justify-center gap-2 rounded-xl px-3 py-3 text-sm font-semibold transition ${
                   active
-                    ? "bg-sky-500 text-white shadow-lg shadow-sky-500/20"
-                    : "bg-[var(--color-surface)]/60 text-slate-300 ring-1 ring-inset ring-[var(--color-border)] hover:bg-white/[0.04]"
+                    ? "bg-brand-500 text-white shadow-lg shadow-brand-500/20"
+                    : "bg-[var(--color-surface)]/60 text-neutral-300 ring-1 ring-inset ring-[var(--color-border)] hover:bg-white/[0.04]"
                 }`}
               >
                 <Icon className="size-4" />
@@ -738,7 +738,7 @@ export default function App() {
               <span
                 id={`tab-hint-${tab.id}`}
                 role="tooltip"
-                className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-max max-w-[15rem] -translate-x-1/2 rounded-lg bg-slate-100 px-2.5 py-1.5 text-center text-xs font-medium text-slate-900 opacity-0 shadow-lg shadow-black/40 transition-opacity group-hover:opacity-100 group-hover:delay-300 group-has-[:focus-visible]:opacity-100"
+                className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-max max-w-[15rem] -translate-x-1/2 rounded-lg bg-neutral-100 px-2.5 py-1.5 text-center text-xs font-medium text-neutral-900 opacity-0 shadow-lg shadow-black/40 transition-opacity group-hover:opacity-100 group-hover:delay-300 group-has-[:focus-visible]:opacity-100"
               >
                 {t.tabHints[tab.id]}
               </span>
@@ -764,16 +764,16 @@ export default function App() {
 
       {/* Model status + settings toggle */}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-sm text-slate-400">
+        <div className="flex items-center gap-2 text-sm text-neutral-400">
           <span className="text-base">{FAMILY_META[family].emoji}</span>
-          <span className="font-medium text-slate-200">{modelName(model.name, t)}</span>
-          <span className="text-slate-600">·</span>
+          <span className="font-medium text-neutral-200">{modelName(model.name, t)}</span>
+          <span className="text-neutral-600">·</span>
           {state.status === "loading" ? (
-            <span className="text-sky-300">
+            <span className="text-brand-300">
               {t.model.loading(Math.round(state.overall * 100))}
             </span>
           ) : loadedForModel ? (
-            <span className="inline-flex items-center gap-1 text-emerald-300">
+            <span className="inline-flex items-center gap-1 text-mint-300">
               {state.device === "webgpu" ? (
                 <Zap className="size-3.5" />
               ) : (
@@ -788,7 +788,7 @@ export default function App() {
         <button
           type="button"
           onClick={() => setShowSettings((s) => !s)}
-          className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-slate-400 transition hover:bg-white/5 hover:text-slate-200"
+          className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-neutral-400 transition hover:bg-white/5 hover:text-neutral-200"
         >
           <Sliders className="size-4" />
           {t.settings.toggle}
@@ -803,7 +803,7 @@ export default function App() {
         <button
           type="button"
           onClick={handleLoad}
-          className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/40 px-4 py-2 text-sm text-slate-300 transition hover:border-sky-400/30 hover:text-white"
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/40 px-4 py-2 text-sm text-neutral-300 transition hover:border-brand-400/30 hover:text-white"
         >
           <Download className="size-4" />
           {t.model.preDownload(modelName(model.name, t), formatSize(tierSizeMB(currentTier, gpuF16)))}
@@ -813,8 +813,8 @@ export default function App() {
       {/* Advanced settings drawer */}
       {showSettings && (
         <Card className="mt-3 p-5">
-          <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-300">
-            <Sparkles className="size-4 text-sky-300" /> {t.settings.heading}
+          <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-neutral-300">
+            <Sparkles className="size-4 text-brand-300" /> {t.settings.heading}
           </div>
           <AdvancedSettings
             settings={settings}
@@ -828,7 +828,7 @@ export default function App() {
             <button
               type="button"
               onClick={handleLoad}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-600"
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600"
             >
               <Download className="size-4" /> {t.settings.applyReload}
             </button>
@@ -875,12 +875,12 @@ export default function App() {
         />
       </div>
 
-      <footer className="mt-12 border-t border-[var(--color-border)] pt-6 text-center text-xs text-slate-500">
+      <footer className="mt-12 border-t border-[var(--color-border)] pt-6 text-center text-xs text-neutral-500">
         <p>
-          <strong className="font-semibold text-slate-300">Vem sa vad?</strong> {t.footer.by}{" "}
+          <strong className="font-semibold text-neutral-300">Vem sa vad?</strong> {t.footer.by}{" "}
           <a
             href="https://mickequick.se"
-            className="font-medium text-slate-300 underline-offset-2 hover:underline"
+            className="font-medium text-neutral-300 underline-offset-2 hover:underline"
             target="_blank"
             rel="noreferrer"
           >
@@ -889,7 +889,7 @@ export default function App() {
           ,{" "}
           <a
             href="https://promptagency.se"
-            className="font-medium text-slate-300 underline-offset-2 hover:underline"
+            className="font-medium text-neutral-300 underline-offset-2 hover:underline"
             target="_blank"
             rel="noreferrer"
           >
@@ -898,7 +898,7 @@ export default function App() {
           ·{" "}
           <a
             href="https://github.com/promptagency/vem-sa-vad"
-            className="text-slate-400 underline-offset-2 hover:underline"
+            className="text-neutral-400 underline-offset-2 hover:underline"
             target="_blank"
             rel="noreferrer"
           >
@@ -909,19 +909,19 @@ export default function App() {
           {t.footer.basedOn}{" "}
           <a
             href="https://github.com/fltman/bjarbys-transcriber"
-            className="text-slate-400 underline-offset-2 hover:underline"
+            className="text-neutral-400 underline-offset-2 hover:underline"
             target="_blank"
             rel="noreferrer"
           >
             Bjarbys Transcriber
           </a>{" "}
-          {t.footer.byAuthor} <span className="font-medium text-slate-300">Anders Bjarby</span>
+          {t.footer.byAuthor} <span className="font-medium text-neutral-300">Anders Bjarby</span>
         </p>
         <p className="mt-2">
           {t.footer.poweredBy}{" "}
           <a
             href="https://github.com/huggingface/transformers.js"
-            className="text-slate-400 underline-offset-2 hover:underline"
+            className="text-neutral-400 underline-offset-2 hover:underline"
             target="_blank"
             rel="noreferrer"
           >
@@ -930,7 +930,7 @@ export default function App() {
           ·{" "}
           <a
             href="https://huggingface.co/KBLab"
-            className="text-slate-400 underline-offset-2 hover:underline"
+            className="text-neutral-400 underline-offset-2 hover:underline"
             target="_blank"
             rel="noreferrer"
           >
@@ -939,7 +939,7 @@ export default function App() {
           ·{" "}
           <a
             href="https://huggingface.co/pyannote/segmentation-3.0"
-            className="text-slate-400 underline-offset-2 hover:underline"
+            className="text-neutral-400 underline-offset-2 hover:underline"
             target="_blank"
             rel="noreferrer"
           >

@@ -150,6 +150,11 @@ also flushes on `visibilitychange`/`pagehide`. Writes resolve on transaction com
 silent except for an on-page note. Queued/running jobs aren't saved — without their files they can't resume.
 Turning keeping off (or loading with it off) deletes every stored transcript. Settings are always saved.
 
+**Colours (`src/index.css` `@theme`).** Matched to the logo and Prompt Agency's brand: neutral near-black and
+greys (`neutral-*`, no blue-tinted `slate`), **sienna** (`brand-*`, #C85A3E) for actions, focus and progress,
+**mint** (`mint-*`) for the privacy badge and "done/ready", **lavender** (`lavender-*`) for the FAQ badge. Red
+for errors and amber for unsure lines stay. Use these tokens rather than Tailwind's sky/cyan/emerald/violet.
+
 ## Repository conventions
 
 - `origin` = `promptagency/vem-sa-vad` (the fork). **Every feature is developed on its own branch**
