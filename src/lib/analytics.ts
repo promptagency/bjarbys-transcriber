@@ -1,0 +1,84 @@
+// Anonymous visit counting with Prompt Agency's own Plausible (self-hosted on
+// Hetzner in Finland). One page view per page load, sent from here rather than
+// by Plausible's script, so no outside code runs on the page and it's plain
+// what is sent: the page address (with only utm_* tags kept), the referring
+// page (origin and path only), and the site's name. Plausible works out country, browser and device
+// type from the request itself, stores no IP address and sets no cookies.
+// Audio, text, file names and what you do in the app are never sent.
+//
+// The CSP's connect-src must allow PLAUSIBLE (public/_headers), and the FAQ
+// describes this — keep both in step with any change here.
+
+const PLAUSIBLE = "https://plausible.app.promptagency.se";
+/** The site's name in Plausible, and the only address that is counted. */
+const SITE = "vemsavad.promptagency.se";
+
+const IGNORE_KEY = "plausible_ignore";
+
+/**
+ * Leave this browser out of the count — for the site's own people. Opening the
+ * site once with ?plausible_ignore=true switches it on (=false switches it
+ * off); it is remembered in this browser, in the same localStorage flag that
+ * Plausible's own script uses (so `localStorage.plausible_ignore = "true"` in
+ * the console works too).
+ */
+function ignoredBrowser(): boolean {
+  try {
+    const choice = new URL(location.href).searchParams.get(IGNORE_KEY);
+    if (choice === "true") localStorage.setItem(IGNORE_KEY, "true");
+    else if (choice === "false") localStorage.removeItem(IGNORE_KEY);
+    return localStorage.getItem(IGNORE_KEY) === "true";
+  } catch {
+    return false; // storage blocked: count as usual
+  }
+}
+
+/** The visitor has asked not to be tracked (Global Privacy Control or Do Not Track). */
+function optedOut(): boolean {
+  const nav = navigator as Navigator & { globalPrivacyControl?: boolean };
+  return nav.globalPrivacyControl === true || nav.doNotTrack === "1";
+}
+
+/** This page's address with every query parameter dropped except utm_* (link sources). */
+function pageAddress(): string {
+  const url = new URL(location.href);
+  const kept = new URLSearchParams();
+  for (const [key, value] of url.searchParams) {
+    if (key.startsWith("utm_")) kept.append(key, value);
+  }
+  const query = kept.toString();
+  return `${url.origin}${url.pathname}${query ? `?${query}` : ""}`;
+}
+
+/**
+ * The page the visitor came from, without its query string or fragment. The
+ * referring site decides how much of its address the browser passes on, and
+ * some pass everything (a search term, a token); only origin and path are sent.
+ */
+function referrerPage(): string | null {
+  try {
+    const url = new URL(document.referrer);
+    return `${url.origin}${url.pathname}`;
+  } catch {
+    return null; // no referrer, or not a URL
+  }
+}
+
+/**
+ * Count this page load. Only on the public site — never on previews, localhost
+ * or someone else's copy of the app — and never for automated browsers.
+ */
+export function countVisit(): void {
+  // First, so ?plausible_ignore=… is remembered even when another rule already skips this visit.
+  const ignored = ignoredBrowser();
+  if (location.hostname !== SITE || ignored || optedOut() || navigator.webdriver) return;
+  void fetch(`${PLAUSIBLE}/api/event`, {
+    method: "POST",
+    // text/plain keeps it a simple request (no CORS preflight).
+    headers: { "Content-Type": "text/plain" },
+    keepalive: true,
+    body: JSON.stringify({ n: "pageview", u: pageAddress(), d: SITE, r: referrerPage() }),
+  }).catch(() => {
+    /* offline, blocked by an ad blocker, or the server is down — never matters */
+  });
+}

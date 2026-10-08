@@ -107,9 +107,17 @@ Vite would otherwise copy in, since the runtime is loaded from jsDelivr.
 
 - **`public/_headers`** sends cross-origin isolation (multithreaded CPU path)
   and a strict **Content-Security-Policy**: the page may only connect to itself,
-  Hugging Face (models), jsDelivr (the ONNX runtime) and Apple's podcast
-  search. The browser enforces it, so "nothing is uploaded" can be checked, not
-  just trusted. Change it deliberately.
+  Hugging Face (models), jsDelivr (the ONNX runtime), Apple's podcast
+  search and Prompt Agency's Plausible. The browser enforces it, so "nothing is
+  uploaded" can be checked, not just trusted. Change it deliberately.
+- **Visit counting** (`src/lib/analytics.ts`): one anonymous page view per load
+  to Prompt Agency's self-hosted Plausible (Hetzner, Finland), sent by our own
+  few lines rather than Plausible's script — page address with only `utm_*`
+  kept, the referring page's origin and path, site name; no cookies, nothing stored. Only on
+  `vemsavad.promptagency.se` (never previews, localhost or your own copy), and
+  not when the browser sends Global Privacy Control or Do Not Track. To leave
+  your own browser out, open the site once with `?plausible_ignore=true`
+  (`=false` undoes it).
 - **`functions/proxy.php.ts`** answers `./proxy.php?url=` like `proxy.php`
   does, but only for podcast content: it checks the *bytes*, not the label —
   an RSS/Atom feed or a recognised audio/video container (MP3, AAC, MP4/M4A,

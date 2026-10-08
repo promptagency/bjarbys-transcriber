@@ -44,16 +44,24 @@ const sv = {
         a: [
           "Nej. Adressen talar bara om varifrån själva appen hämtas: sidan, programkoden och ikonerna. Prompt Agency har byggt Vem sa vad? och står för driften, och därför ligger den under promptagency.se.",
           "När sidan har laddats sker allt arbete i din webbläsare, på din egen dator. Ljudet och den färdiga texten skickas aldrig någonstans. Det finns ingen server som tar emot dem, och ingenting sparas hos Prompt Agency eller någon annan.",
-          "Det som hämtas över nätet är sidan (via Cloudflare, som levererar den), transkriberingsmodellen (från Hugging Face, första gången) och poddavsnitt om du använder poddfliken. Avsnitten hämtas via sidans egen server, eftersom poddar sällan tillåter direkt hämtning, men det är offentligt ljud och det transkriberas ändå på din dator. Som för alla webbplatser ser de här tjänsterna vanliga anslutningsuppgifter, till exempel din IP-adress, men aldrig dina filer eller din text.",
+          "Det som hämtas över nätet är sidan (via Cloudflare, som levererar den), transkriberingsmodellen (från Hugging Face, första gången) och poddavsnitt om du använder poddfliken. Det enda som skickas är en anonym besöksräkning (se ”Räknar ni besök?”). Avsnitten hämtas via sidans egen server, eftersom poddar sällan tillåter direkt hämtning, men det är offentligt ljud och det transkriberas ändå på din dator. Som för alla webbplatser ser de här tjänsterna vanliga anslutningsuppgifter, till exempel din IP-adress, men aldrig dina filer eller din text.",
         ],
       },
       {
         q: "Hur kan jag själv kontrollera att inget laddas upp?",
         a: [
           "Det enklaste testet: transkribera en fil en gång, så att modellen hämtas. Stäng sedan av wifi och nätverk och transkribera igen. Det fungerar lika bra, och utan nätverk kan ingenting skickas.",
-          "Sidan har dessutom en säkerhetsregel (Content Security Policy) som hindrar webbläsaren från att kontakta andra adresser än sidan själv, Hugging Face (modellerna), jsDelivr (beräkningsmotorn) och Apples poddsökning. Källkoden är öppen, så vem som helst kan granska den.",
+          "Sidan har dessutom en säkerhetsregel (Content Security Policy) som hindrar webbläsaren från att kontakta andra adresser än sidan själv, Hugging Face (modellerna), jsDelivr (beräkningsmotorn), Apples poddsökning och Prompt Agencys statistikserver. Källkoden är öppen, så vem som helst kan granska den.",
         ],
         link: { href: "https://github.com/promptagency/vem-sa-vad", label: "Källkoden på GitHub" },
+      },
+      {
+        q: "Räknar ni besök?",
+        a: [
+          "Ja, anonymt, för att se hur många som använder tjänsten och var de hittar den. När sidan öppnas skickas ett enda meddelande till Prompt Agencys egen statistikserver (Plausible, på en server i Finland inom EU). Det innehåller sidans adress, vilken webbsida du kom ifrån (utan sökord eller andra tillägg i länken) och sidans namn. Servern räknar fram land, webbläsare och typ av enhet ur anslutningen.",
+          "Inga cookies sätts och ingenting sparas på din dator. Statistiken sparar inte IP-adressen: den används bara, tillsammans med en nyckel som byts ut varje dygn, för att räkna unika besökare, och kan inte kopplas till dig dagen efter. Ljud, text, filnamn och vad du gör i appen skickas aldrig.",
+          "Har du slagit på ”Global Privacy Control” eller ”Do Not Track” i webbläsaren räknas du inte alls. Den som blockerar annonser och spårare räknas oftast inte heller, och det är helt i sin ordning.",
+        ],
       },
       {
         q: "Vilka begränsningar har tjänsten?",
@@ -75,7 +83,7 @@ const sv = {
         q: "Vad sparas på min dator?",
         a: [
           "Dina inställningar, till exempel språk och filformat, sparas i webbläsaren. Modellerna sparas också där (100 MB–2 GB beroende på modell), så att de bara behöver hämtas en gång.",
-          "Färdiga transkriptioner sparas bara om du själv har valt det, och ligger då kvar i webbläsaren tills du tar bort dem. Ljudfilerna sparas aldrig. Sidan använder inga cookies och ingen spårning.",
+          "Genomförda transkriptioner sparas bara om du själv har valt det, och ligger då kvar i webbläsaren tills du tar bort dem. Ljudfilerna sparas aldrig. Sidan använder inga cookies, och besöksräkningen sparar ingenting på din dator.",
         ],
       },
       {
@@ -386,16 +394,24 @@ const en: Strings = {
         a: [
           "No. The address only says where the app itself is loaded from: the page, its code and its icons. Prompt Agency built Vem sa vad? and runs it, which is why it lives under promptagency.se.",
           "Once the page has loaded, all the work happens in your browser, on your own computer. The audio and the finished text are never sent anywhere. There is no server that receives them, and nothing is stored by Prompt Agency or anyone else.",
-          "What does travel over the network is the page (via Cloudflare, which delivers it), the transcription model (from Hugging Face, the first time) and podcast episodes if you use the Podcast tab. Episodes are fetched through the site’s own server, because podcast hosts rarely allow direct downloads, but that is public audio and it is still transcribed on your computer. As with any website, these services see ordinary connection details such as your IP address, but never your files or your text.",
+          "What is fetched over the network is the page (via Cloudflare, which delivers it), the transcription model (from Hugging Face, the first time) and podcast episodes if you use the Podcast tab. The only thing sent is an anonymous visit count (see “Do you count visits?”). Episodes are fetched through the site’s own server, because podcast hosts rarely allow direct downloads, but that is public audio and it is still transcribed on your computer. As with any website, these services see ordinary connection details such as your IP address, but never your files or your text.",
         ],
       },
       {
         q: "How can I check for myself that nothing is uploaded?",
         a: [
           "The simplest test: transcribe a file once, so the model is downloaded. Then turn off Wi-Fi and the network and transcribe again. It works just as well, and with no network nothing can be sent.",
-          "The page also carries a security rule (a Content Security Policy) that stops the browser from contacting any address other than the page itself, Hugging Face (the models), jsDelivr (the compute engine) and Apple’s podcast search. The source code is open, so anyone can review it.",
+          "The page also carries a security rule (a Content Security Policy) that stops the browser from contacting any address other than the page itself, Hugging Face (the models), jsDelivr (the compute engine), Apple’s podcast search and Prompt Agency’s statistics server. The source code is open, so anyone can review it.",
         ],
         link: { href: "https://github.com/promptagency/vem-sa-vad", label: "Source code on GitHub" },
+      },
+      {
+        q: "Do you count visits?",
+        a: [
+          "Yes, anonymously, to see how many people use the service and where they find it. When the page opens, a single message is sent to Prompt Agency’s own statistics server (Plausible, on a server in Finland, in the EU). It contains the page address, the web page you came from (without search terms or other additions to the link), and the site’s name. The server works out country, browser and device type from the connection.",
+          "No cookies are set and nothing is stored on your computer. The statistics don’t store the IP address: it is only used, together with a key that changes every day, to count unique visitors, and cannot be linked to you the next day. Audio, text, file names and what you do in the app are never sent.",
+          "If you have turned on “Global Privacy Control” or “Do Not Track” in your browser, you are not counted at all. Ad and tracker blockers usually stop the count too, and that’s perfectly fine.",
+        ],
       },
       {
         q: "What are the limitations?",
@@ -417,7 +433,7 @@ const en: Strings = {
         q: "What is stored on my computer?",
         a: [
           "Your settings, such as language and file formats, are stored in the browser. So are the models (100 MB–2 GB depending on the model), so they only need to be downloaded once.",
-          "Finished transcripts are only kept if you choose to, and then stay in the browser until you delete them. Audio files are never stored. The site uses no cookies and no tracking.",
+          "Finished transcripts are only kept if you choose to, and then stay in the browser until you delete them. Audio files are never stored. The site uses no cookies, and the visit count stores nothing on your computer.",
         ],
       },
       {
