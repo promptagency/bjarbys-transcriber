@@ -113,7 +113,7 @@ Vite would otherwise copy in, since the runtime is loaded from jsDelivr.
 - **Visit counting** (`src/lib/analytics.ts`): one anonymous page view per load
   to Prompt Agency's self-hosted Plausible (Hetzner, Finland), sent by our own
   few lines rather than Plausible's script — page address with only `utm_*`
-  kept, referrer, site name; no cookies, nothing stored. Only on
+  kept, the referring page's origin and path, site name; no cookies, nothing stored. Only on
   `vemsavad.promptagency.se` (never previews, localhost or your own copy), and
   not when the browser sends Global Privacy Control or Do Not Track. To leave
   your own browser out, open the site once with `?plausible_ignore=true`

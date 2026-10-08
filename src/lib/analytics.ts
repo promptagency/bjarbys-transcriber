@@ -2,7 +2,7 @@
 // Hetzner in Finland). One page view per page load, sent from here rather than
 // by Plausible's script, so no outside code runs on the page and it's plain
 // what is sent: the page address (with only utm_* tags kept), the referring
-// page, and the site's name. Plausible works out country, browser and device
+// page (origin and path only), and the site's name. Plausible works out country, browser and device
 // type from the request itself, stores no IP address and sets no cookies.
 // Audio, text, file names and what you do in the app are never sent.
 //
@@ -51,17 +51,33 @@ function pageAddress(): string {
 }
 
 /**
+ * The page the visitor came from, without its query string or fragment. The
+ * referring site decides how much of its address the browser passes on, and
+ * some pass everything (a search term, a token); only origin and path are sent.
+ */
+function referrerPage(): string | null {
+  try {
+    const url = new URL(document.referrer);
+    return `${url.origin}${url.pathname}`;
+  } catch {
+    return null; // no referrer, or not a URL
+  }
+}
+
+/**
  * Count this page load. Only on the public site — never on previews, localhost
  * or someone else's copy of the app — and never for automated browsers.
  */
 export function countVisit(): void {
-  if (location.hostname !== SITE || optedOut() || navigator.webdriver || ignoredBrowser()) return;
+  // First, so ?plausible_ignore=… is remembered even when another rule already skips this visit.
+  const ignored = ignoredBrowser();
+  if (location.hostname !== SITE || ignored || optedOut() || navigator.webdriver) return;
   void fetch(`${PLAUSIBLE}/api/event`, {
     method: "POST",
     // text/plain keeps it a simple request (no CORS preflight).
     headers: { "Content-Type": "text/plain" },
     keepalive: true,
-    body: JSON.stringify({ n: "pageview", u: pageAddress(), d: SITE, r: document.referrer || null }),
+    body: JSON.stringify({ n: "pageview", u: pageAddress(), d: SITE, r: referrerPage() }),
   }).catch(() => {
     /* offline, blocked by an ad blocker, or the server is down — never matters */
   });
