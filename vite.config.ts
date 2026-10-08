@@ -27,6 +27,7 @@ function devPodcastProxy(): PluginOption {
             const ct = upstream.headers.get('content-type')
             if (ct) res.setHeader('Content-Type', ct)
             res.setHeader('Access-Control-Allow-Origin', '*')
+            res.setHeader('X-Vem-Sa-Vad-Proxy', '1')
             const buf = Buffer.from(await upstream.arrayBuffer())
             res.end(buf)
           })
@@ -39,11 +40,28 @@ function devPodcastProxy(): PluginOption {
   }
 }
 
+// onnxruntime-web references its WebAssembly binary with `new URL(…, import.meta.url)`,
+// so Vite copies a ~26 MB .wasm into dist/. It is only a fallback for when no
+// `wasmPaths` is set — and Transformers.js always sets it, loading the runtime
+// from jsDelivr (and caching it). The copy is never fetched, and it is over
+// Cloudflare Pages' 25 MiB per-file limit, so it is left out of the build.
+function dropUnusedOrtWasm(): PluginOption {
+  return {
+    name: 'drop-unused-ort-wasm',
+    apply: 'build',
+    generateBundle(_options, bundle) {
+      for (const name of Object.keys(bundle)) {
+        if (/(^|\/)ort-wasm[\w.-]*\.wasm$/.test(name)) delete bundle[name]
+      }
+    },
+  }
+}
+
 // Relative base ('./') so the static build can be dropped into ANY folder on the
 // Apache/LAMP web root (root or a subfolder) without rewriting asset URLs.
 export default defineConfig({
   base: './',
-  plugins: [react(), tailwindcss(), devPodcastProxy()],
+  plugins: [react(), tailwindcss(), devPodcastProxy(), dropUnusedOrtWasm()],
   worker: {
     format: 'es',
   },

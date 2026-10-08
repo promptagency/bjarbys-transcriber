@@ -103,9 +103,15 @@ silently block bursts of downloads.
 fetched directly and fall back to the same-origin `public/proxy.php` (PHP + cURL, basic SSRF guard). In dev,
 the `devPodcastProxy` plugin in `vite.config.ts` serves `/proxy.php` (`apply: 'serve'`, so not in preview).
 
-**Deployment.** `dist/` is static files for Apache; `public/.htaccess` forces HTTPS (needed for mic and
-WebGPU) and adds an SPA fallback. The dev server sends COOP/COEP (multithreaded WASM); production doesn't
-need them.
+**Deployment.** Public site: Cloudflare Pages (`wrangler.toml`), deployed from `main`, custom domain
+`vemsavad.promptagency.se` (CNAME at Loopia → the `pages.dev` address). `public/_headers` sets COOP/COEP and a
+strict CSP — any new outside host the app talks to must be added there or it is blocked; podcasts therefore go
+through the proxy first. `functions/proxy.php.ts` is the Pages version of `proxy.php` (same-origin callers,
+feeds/media only). `public/sw.js` precaches the app on install for offline use; it only touches same-origin
+files and is registered in production builds only. Check locally with `npx wrangler pages dev dist`.
+Pages rejects files over 25 MiB, so `vite.config.ts` drops the unused ONNX Runtime `.wasm` copy Vite would
+emit (Transformers.js loads the runtime from jsDelivr, which the CSP allows).
+Self-hosting on Apache still works: `public/.htaccess` forces HTTPS and adds an SPA fallback.
 
 **Persistence (`src/lib/storage.ts`).** Keeping transcripts is **opt-in** (`settings.keepTranscripts`, off by
 default; a one-time card in `JobQueue` asks when the first job finishes, tracked by `keepTranscriptsAsked`).

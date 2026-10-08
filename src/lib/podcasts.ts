@@ -23,6 +23,9 @@ export interface Episode {
   mime: string | null;
 }
 
+/** Response header set by proxy.php, its Cloudflare and dev-server stand-ins. */
+const PROXY_MARKER = "X-Vem-Sa-Vad-Proxy";
+
 /** Default same-origin proxy endpoint (shipped as proxy.php). */
 export const DEFAULT_PROXY = "./proxy.php?url=";
 
@@ -30,45 +33,47 @@ export function proxied(url: string, proxyBase: string): string {
   return `${proxyBase}${encodeURIComponent(url)}`;
 }
 
-/** Fetch a URL directly; on CORS/network failure, retry through the proxy. */
+/**
+ * Fetch a feed or episode through the same-origin proxy, falling back to a
+ * direct fetch where no proxy is installed (a plain static host). Proxy first,
+ * so the hosted site's Content-Security-Policy can allow the page to connect
+ * only to its own origin and a few known services — not to every host.
+ */
 async function fetchMaybeProxied(
   url: string,
   proxyBase: string,
   init?: RequestInit,
 ): Promise<Response> {
+  let proxyProblem = "";
+  try {
+    const res = await fetch(proxied(url, proxyBase), init);
+    // Only a response marked by one of our proxies counts. Without a proxy, a
+    // static host answers with the app's own page, or with proxy.php's source
+    // where PHP isn't running — neither is the feed or the episode.
+    if (res.ok && res.headers.get(PROXY_MARKER) === "1") return res;
+    proxyProblem = res.ok ? "no proxy is running here" : `the proxy answered HTTP ${res.status}`;
+  } catch (err) {
+    proxyProblem = `the proxy couldn't be reached (${String((err as Error)?.message ?? err)})`;
+  }
   try {
     const res = await fetch(url, init);
     if (res.ok) return res;
     throw new Error(`HTTP ${res.status}`);
   } catch {
-    const res = await fetch(proxied(url, proxyBase), init);
-    if (!res.ok) {
-      throw new Error(
-        `Couldn't fetch this resource (HTTP ${res.status}). Podcast feeds/episodes need the proxy — make sure proxy.php is installed and PHP (with cURL) is enabled on your server.`,
-      );
-    }
-    // If the "proxy" handed back the app's own HTML, proxy.php isn't running
-    // (e.g. the SPA fallback served index.html). Fail with a clear message
-    // instead of letting the audio decoder choke on HTML.
-    const ct = res.headers.get("content-type") ?? "";
-    if (ct.includes("text/html")) {
-      throw new Error(
-        "The podcast proxy isn't running: proxy.php returned a web page instead of media. Deploy proxy.php to your server (PHP + cURL), or run the dev server which proxies automatically.",
-      );
-    }
-    return res;
+    throw new Error(
+      `Couldn't fetch this podcast resource: ${proxyProblem}, and the host doesn't allow direct access. Run \`npm run dev\`, or deploy proxy.php (PHP + cURL) next to the app.`,
+    );
   }
 }
 
-export async function searchPodcasts(
-  term: string,
-  proxyBase: string,
-  limit = 24,
-): Promise<Podcast[]> {
+export async function searchPodcasts(term: string, limit = 24): Promise<Podcast[]> {
   const url = `https://itunes.apple.com/search?media=podcast&limit=${limit}&term=${encodeURIComponent(
     term,
   )}`;
-  const res = await fetchMaybeProxied(url, proxyBase);
+  // Apple's search allows cross-origin requests (and the CSP allows it), so it
+  // goes direct. Not through the proxy: that only passes feeds and media.
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Podcast search failed (HTTP ${res.status}).`);
   const data = (await res.json()) as {
     results: Array<{
       collectionId: number;

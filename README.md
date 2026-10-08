@@ -6,6 +6,10 @@ Private, **in-browser** audio &amp; video transcription that also tells you
 a WASM/CPU fallback). **Nothing is uploaded** and **nothing needs to be
 installed** — just open the page.
 
+**Use it now: [vemsavad.promptagency.se](https://vemsavad.promptagency.se)** — open
+it in Chrome or Edge and drop in a file. Click *Install* in the address bar to
+get it as an app with its own window, which also opens without a network.
+
 Vem sa vad? is built on [Bjarbys Transcriber](https://github.com/fltman/bjarbys-transcriber)
 by Anders Bjarby, and adds speaker separation and a few other features on top.
 If you find it useful, consider
@@ -89,6 +93,35 @@ npm run dev      # open http://localhost:5173
 
 To serve it for others instead, see the next section.
 
+## Hosting on Cloudflare Pages
+
+The public site runs on [Cloudflare Pages](https://pages.cloudflare.com/),
+built from `main` on every merge (feature branches get preview addresses).
+Settings live in `wrangler.toml`: build `npm run build`, output `dist/`.
+Pages rejects files over 25 MiB; the build leaves out the ONNX Runtime `.wasm`
+Vite would otherwise copy in, since the runtime is loaded from jsDelivr.
+
+- **`public/_headers`** sends cross-origin isolation (multithreaded CPU path)
+  and a strict **Content-Security-Policy**: the page may only connect to itself,
+  Hugging Face (models), jsDelivr (the ONNX runtime) and Apple's podcast
+  search. The browser enforces it, so "nothing is uploaded" can be checked, not
+  just trusted. Change it deliberately.
+- **`functions/proxy.php.ts`** answers `./proxy.php?url=` like `proxy.php`
+  does, but only for podcast content: it checks the *bytes*, not the label —
+  an RSS/Atom feed or a recognised audio/video container (MP3, AAC, MP4/M4A,
+  Ogg/Opus, WebM, WAV, FLAC, AIFF) — and refuses everything else, so it can't
+  be used to fetch arbitrary files through the domain. What passes gets an
+  inert content type and headers that stop it from ever running as a page.
+  Requests from other sites' pages are refused, and every redirect is
+  re-checked against local or private hosts.
+- **`public/manifest.webmanifest` + `public/sw.js`** make it installable and
+  let it open offline after one visit (the service worker caches the app's own
+  files; models are cached by Transformers.js).
+- Check the hosted setup locally with `npm run build && npx wrangler pages dev dist`.
+- The custom domain is a CNAME at the domain's DNS provider pointing to the
+  project's `pages.dev` address, added in the Pages dashboard *first* —
+  creating the CNAME before that gives a 522 error.
+
 ## Build & deploy to a LAMP server
 
 ```bash
@@ -112,13 +145,21 @@ A ready-to-use **`.htaccess`** and the podcast **`proxy.php`** are included in
 ### Podcasts &amp; `proxy.php`
 
 Searching uses Apple's iTunes API (CORS-enabled, direct). Most podcast hosts,
-however, block cross-origin reads of their RSS/audio, so the app first tries a
-**direct fetch** and falls back to a **same-origin proxy** — `proxy.php` — which
-your own server fetches through. This keeps it private to your server (no
-third-party CORS proxy). `proxy.php` needs PHP with cURL and includes basic
-SSRF protection; harden it (e.g. a host allow-list) before public exposure. If
-you don't deploy `proxy.php`, file and microphone transcription still work, and
-podcasts work for any host that happens to send CORS headers.
+however, block cross-origin reads of their RSS/audio, so the app fetches feeds
+and episodes through a **same-origin proxy** — `proxy.php` — which your own
+server fetches through, and falls back to a direct fetch where no proxy runs.
+This keeps it private to your server (no third-party CORS proxy).
+
+`proxy.php` needs PHP with cURL and follows the same rules as the hosted site's
+proxy: requests from other sites' pages are refused, no private or reserved
+addresses (re-checked on every redirect, with the connection pinned to the
+checked address), and only podcast content — it checks the first bytes and passes an
+RSS/Atom feed or a recognised audio/video file, refusing anything else, so it
+can't be used to fetch arbitrary files through your server. What passes gets
+an inert content type and headers that stop it from running as a page.
+
+If you don't deploy `proxy.php`, file and microphone transcription still work,
+and podcasts work for any host that happens to send CORS headers.
 
 ## Models
 

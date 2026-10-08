@@ -41,7 +41,7 @@ export function PodcastPanel({
     setError(null);
     setPodcast(null);
     try {
-      setResults(await searchPodcasts(query.trim(), proxyBase));
+      setResults(await searchPodcasts(query.trim()));
     } catch (err) {
       setError(`Search failed: ${(err as Error).message}`);
     } finally {

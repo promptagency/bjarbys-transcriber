@@ -1,0 +1,6 @@
+# Cloudflare Pages configuration for the hosted site (vemsavad.promptagency.se).
+# Build command `npm run build`, output `dist/`; `functions/` holds the podcast proxy.
+# Local check of the hosted setup: `npm run build && npx wrangler pages dev dist`.
+name = "vem-sa-vad"
+pages_build_output_dir = "./dist"
+compatibility_date = "2026-10-08"
