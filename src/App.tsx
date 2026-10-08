@@ -735,7 +735,7 @@ export default function App() {
               <span
                 id={`tab-hint-${tab.id}`}
                 role="tooltip"
-                className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-max max-w-[15rem] -translate-x-1/2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-1.5 text-center text-xs font-normal text-slate-200 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-hover:delay-300 group-focus-visible:opacity-100"
+                className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-max max-w-[15rem] -translate-x-1/2 rounded-lg bg-slate-100 px-2.5 py-1.5 text-center text-xs font-medium text-slate-900 opacity-0 shadow-lg shadow-black/40 transition-opacity group-hover:opacity-100 group-hover:delay-300 group-focus-visible:opacity-100"
               >
                 {t.tabHints[tab.id]}
               </span>
