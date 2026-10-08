@@ -67,7 +67,8 @@ export function ModelStorage({
   const total = groups?.reduce((sum, g) => sum + g.bytes, 0) ?? 0;
 
   return (
-    <div className="sm:col-span-2">
+    // A divider above sets storage apart from the transcription settings.
+    <div className="border-t border-[var(--color-border)] pt-4 sm:col-span-2">
       <div className="mb-1.5 flex items-baseline justify-between">
         <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-neutral-400">
           {t.storage.title}
