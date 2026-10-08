@@ -107,8 +107,10 @@ export function AdvancedSettings({
       {/*
         Not a <Field>, because that renders a single <label> — wrapping a group
         of checkboxes in one label would misassociate every click.
+        Two rows tall on wide screens, so "Kör på" and "Uppgift" stack beside it
+        instead of leaving a gap under "Kör på".
       */}
-      <div>
+      <div className="sm:row-span-2">
         <div className="mb-1.5 flex items-baseline justify-between">
           <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-neutral-400">
             {t.settings.formats}
