@@ -44,14 +44,14 @@ const sv = {
         a: [
           "Nej. Adressen talar bara om varifrån själva appen hämtas: sidan, programkoden och ikonerna. Prompt Agency har byggt Vem sa vad? och står för driften, och därför ligger den under promptagency.se.",
           "När sidan har laddats sker allt arbete i din webbläsare, på din egen dator. Ljudet och den färdiga texten skickas aldrig någonstans. Det finns ingen server som tar emot dem, och ingenting sparas hos Prompt Agency eller någon annan.",
-          "Det som hämtas över nätet är sidan (via Cloudflare, som levererar den), transkriberingsmodellen (från Hugging Face, första gången) och poddavsnitt om du använder poddfliken. Det enda som skickas är en anonym besöksräkning (se ”Räknar ni besök?”). Avsnitten hämtas via sidans egen server, eftersom poddar sällan tillåter direkt hämtning, men det är offentligt ljud och det transkriberas ändå på din dator. Som för alla webbplatser ser de här tjänsterna vanliga anslutningsuppgifter, till exempel din IP-adress, men aldrig dina filer eller din text.",
+          "Det som hämtas över nätet är sidan (via Cloudflare, som levererar den) och, första gången, transkriberingsmodellen (från Hugging Face) och beräkningsmotorn (från jsDelivr). Det som skickas är en anonym besöksräkning (se ”Räknar ni besök?”). Använder du poddfliken skickas också ditt sökord till Apples poddkatalog, som även levererar omslagsbilderna, och poddens flöde och avsnitt hämtas via sidans egen server, eftersom poddar sällan tillåter direkt hämtning. Det är offentligt ljud, och det transkriberas ändå på din dator. Som för alla webbplatser ser de här tjänsterna vanliga anslutningsuppgifter, till exempel din IP-adress, men aldrig dina filer eller din text.",
         ],
       },
       {
         q: "Hur kan jag själv kontrollera att inget laddas upp?",
         a: [
           "Det enklaste testet: transkribera en fil en gång, så att modellen hämtas. Stäng sedan av wifi och nätverk och transkribera igen. Det fungerar lika bra, och utan nätverk kan ingenting skickas.",
-          "Sidan har dessutom en säkerhetsregel (Content Security Policy) som hindrar webbläsaren från att kontakta andra adresser än sidan själv, Hugging Face (modellerna), jsDelivr (beräkningsmotorn), Apples poddsökning och Prompt Agencys statistikserver. Källkoden är öppen, så vem som helst kan granska den.",
+          "Sidan har dessutom en säkerhetsregel (Content Security Policy) som hindrar webbläsaren från att kontakta andra adresser än sidan själv, Hugging Face (modellerna), jsDelivr (beräkningsmotorn), Apple (poddsökningen och omslagsbilderna) och Prompt Agencys statistikserver. Källkoden är öppen, så vem som helst kan granska den.",
         ],
         link: { href: "https://github.com/promptagency/vem-sa-vad", label: "Källkoden på GitHub" },
       },
@@ -394,14 +394,14 @@ const en: Strings = {
         a: [
           "No. The address only says where the app itself is loaded from: the page, its code and its icons. Prompt Agency built Vem sa vad? and runs it, which is why it lives under promptagency.se.",
           "Once the page has loaded, all the work happens in your browser, on your own computer. The audio and the finished text are never sent anywhere. There is no server that receives them, and nothing is stored by Prompt Agency or anyone else.",
-          "What is fetched over the network is the page (via Cloudflare, which delivers it), the transcription model (from Hugging Face, the first time) and podcast episodes if you use the Podcast tab. The only thing sent is an anonymous visit count (see “Do you count visits?”). Episodes are fetched through the site’s own server, because podcast hosts rarely allow direct downloads, but that is public audio and it is still transcribed on your computer. As with any website, these services see ordinary connection details such as your IP address, but never your files or your text.",
+          "What is fetched over the network is the page (via Cloudflare, which delivers it) and, the first time, the transcription model (from Hugging Face) and the compute engine (from jsDelivr). What is sent is an anonymous visit count (see “Do you count visits?”). If you use the Podcast tab, your search term is also sent to Apple’s podcast directory, which also supplies the cover images, and the podcast’s feed and episodes are fetched through the site’s own server, because podcast hosts rarely allow direct downloads. That is public audio, and it is still transcribed on your computer. As with any website, these services see ordinary connection details such as your IP address, but never your files or your text.",
         ],
       },
       {
         q: "How can I check for myself that nothing is uploaded?",
         a: [
           "The simplest test: transcribe a file once, so the model is downloaded. Then turn off Wi-Fi and the network and transcribe again. It works just as well, and with no network nothing can be sent.",
-          "The page also carries a security rule (a Content Security Policy) that stops the browser from contacting any address other than the page itself, Hugging Face (the models), jsDelivr (the compute engine), Apple’s podcast search and Prompt Agency’s statistics server. The source code is open, so anyone can review it.",
+          "The page also carries a security rule (a Content Security Policy) that stops the browser from contacting any address other than the page itself, Hugging Face (the models), jsDelivr (the compute engine), Apple (podcast search and cover images) and Prompt Agency’s statistics server. The source code is open, so anyone can review it.",
         ],
         link: { href: "https://github.com/promptagency/vem-sa-vad", label: "Source code on GitHub" },
       },

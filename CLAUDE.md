@@ -97,7 +97,8 @@ names or in-app actions, and keep the FAQ's "Räknar ni besök?" in step with an
 
 **FAQ (`src/components/Faq.tsx`, text in i18n's `faq`).** A badge beside "100 % på din enhet" opens a native
 `<dialog>`. Its answers make factual promises — what leaves the computer (the page via Cloudflare, models from
-Hugging Face, the runtime from jsDelivr, podcasts via the proxy, the visit count), what's stored, the 95.6% speaker figure, the
+Hugging Face, the runtime from jsDelivr, podcast search terms and cover art to/from Apple, feeds and episodes via
+the proxy, the visit count), what's stored, the 95.6% speaker figure, the
 limits — so update it whenever those change.
 
 **Phones (`src/lib/device.ts`, `PhoneNotice`).** `main.tsx` shows phones a "use a computer" page instead of
