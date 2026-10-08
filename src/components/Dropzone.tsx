@@ -1,5 +1,4 @@
 import { useRef, useState } from "react";
-import { FileAudio, Upload } from "lucide-react";
 import { ACCEPTED_EXTS } from "../lib/audio";
 import { useT } from "../lib/i18n";
 
@@ -43,7 +42,7 @@ export function Dropzone({
         if ((e.key === "Enter" || e.key === " ") && !disabled)
           inputRef.current?.click();
       }}
-      className={`group flex cursor-pointer flex-col items-center justify-center gap-4 rounded-3xl border-2 border-dashed px-6 py-[30px] text-center transition sm:py-[43px] ${
+      className={`group flex cursor-pointer flex-col items-center justify-center gap-4 rounded-3xl border-2 border-dashed px-6 py-[86px] text-center transition sm:py-[99px] ${
         hover
           ? "scale-[1.01] border-brand-400/70 bg-brand-400/[0.06]"
           : // The same surface as the Spela in and Podd panels (Card).
@@ -61,13 +60,6 @@ export function Dropzone({
           e.target.value = "";
         }}
       />
-      <div className="flex size-20 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500/20 to-brand-400/10 text-brand-300 ring-1 ring-brand-400/20 transition group-hover:scale-110 group-hover:rotate-3">
-        {hover ? (
-          <Upload className="size-9" />
-        ) : (
-          <FileAudio className="size-9" />
-        )}
-      </div>
       <div>
         <p className="text-2xl font-bold text-neutral-100">
           {hover ? t.dropzone.dropping : t.dropzone.drop}
