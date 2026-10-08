@@ -29,8 +29,6 @@ import {
 } from "./lib/diarize";
 import {
   type Backend,
-  type Family,
-  FAMILY_DEFAULT_MODEL,
   FAMILY_META,
   availableTiers,
   defaultDtype,
@@ -41,7 +39,12 @@ import {
   tierFor,
   tierSizeMB,
 } from "./lib/models";
-import { type Settings, restoreSettings } from "./lib/settings";
+import {
+  type Settings,
+  forSpokenLanguage,
+  restoreSettings,
+  spokenLanguage,
+} from "./lib/settings";
 import {
   deleteAllTranscripts,
   deleteTranscript,
@@ -77,7 +80,7 @@ import {
 import { createZip } from "./lib/zip";
 import type { TranscriptChunk, TranscriptResult } from "./lib/protocol";
 import { useWhisper } from "./hooks/useWhisper";
-import { LanguageChooser } from "./components/LanguageChooser";
+import { RecordingLanguage } from "./components/RecordingLanguage";
 import { AdvancedSettings } from "./components/AdvancedSettings";
 import { Dropzone } from "./components/Dropzone";
 import { Recorder } from "./components/Recorder";
@@ -195,14 +198,9 @@ export default function App() {
   }, [settings.modelId, settings.dtype, resolvedDevice, patchSettings]);
 
   const family = familyOf(settings.modelId);
-  const setFamily = useCallback(
-    (f: Family) => {
-      patchSettings({
-        modelId: FAMILY_DEFAULT_MODEL[f],
-        language: f === "swedish" ? "sv" : null,
-      });
-    },
-    [patchSettings],
+  const setSpokenLanguage = useCallback(
+    (code: string | null) => setSettings((s) => ({ ...s, ...forSpokenLanguage(s, code) })),
+    [],
   );
 
   const model = findModel(settings.modelId)!;
@@ -709,18 +707,15 @@ export default function App() {
         </div>
       </header>
 
-      {/* Step 1 — language */}
-      <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
-        {t.whichLanguage}
-      </p>
-      <LanguageChooser
-        value={family}
-        onChange={setFamily}
+      {/* The recording's language — it also picks the model */}
+      <RecordingLanguage
+        value={spokenLanguage(settings)}
+        onChange={setSpokenLanguage}
         disabled={state.status === "loading"}
       />
 
-      {/* Step 2 — source tabs */}
-      <div className="mt-6 grid grid-cols-3 gap-2">
+      {/* Source tabs */}
+      <div className="mt-4 grid grid-cols-3 gap-2">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const active = activeTab === tab.id;

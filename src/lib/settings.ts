@@ -1,4 +1,4 @@
-import { type Dtype, findModel } from "./models";
+import { type Dtype, type Family, FAMILY_DEFAULT_MODEL, familyOf, findModel } from "./models";
 import { EXPORT_FORMATS, type ExportFormat } from "./exporters";
 import { DEFAULT_LANG, LANGS, type Lang } from "./i18n";
 
@@ -49,6 +49,41 @@ export const LANGUAGES: { code: string | null; label: string }[] = [
   { code: "pt", label: "Portuguese" },
 ];
 
+/**
+ * The language the recording control shows: "sv" and "en" for the Swedish and
+ * English-only models, otherwise the chosen language, or null for auto-detect.
+ */
+export function spokenLanguage(s: Pick<Settings, "modelId" | "language">): string | null {
+  const family = familyOf(s.modelId);
+  if (family === "swedish") return "sv";
+  if (family === "english") return "en";
+  return s.language;
+}
+
+/**
+ * Settings for a newly chosen recording language. The model follows: KB-Whisper
+ * for Swedish, the English-only model for English, multilingual Whisper for
+ * anything else or auto-detect — keeping the user's own model when it already fits.
+ */
+export function forSpokenLanguage(
+  s: Pick<Settings, "modelId">,
+  code: string | null,
+): Pick<Settings, "modelId" | "language"> {
+  const family: Family = code === "sv" ? "swedish" : code === "en" ? "english" : "multilingual";
+  return {
+    modelId: familyOf(s.modelId) === family ? s.modelId : FAMILY_DEFAULT_MODEL[family],
+    language: code,
+  };
+}
+
+/** Settings for a model picked by hand: KB-Whisper always transcribes Swedish. */
+export function forModel(modelId: string): Partial<Settings> {
+  const family = familyOf(modelId);
+  if (family === "swedish") return { modelId, language: "sv" };
+  if (family === "english") return { modelId, language: "en" };
+  return { modelId };
+}
+
 export const DEFAULT_SETTINGS: Settings = {
   modelId: "KBLab/kb-whisper-base",
   dtype: "q8",
@@ -87,7 +122,7 @@ export function restoreSettings(raw: Record<string, unknown> | null): Settings {
         .map((f) => (f === "doc" ? "txt" : legacy && f === "txt" ? "lines" : f))
         .filter((f): f is ExportFormat => EXPORT_FORMATS.some((e) => e.value === f))
     : [];
-  return {
+  const restored: Settings = {
     modelId: pick(raw.modelId, (v): v is string => isString(v) && !!findModel(v), d.modelId),
     dtype: pick(raw.dtype, (v): v is Dtype => isString(v), d.dtype),
     deviceMode: pick(
@@ -117,4 +152,6 @@ export function restoreSettings(raw: Record<string, unknown> | null): Settings {
       d.uiLanguage,
     ),
   };
+  // Older saves could pair KB-Whisper with another language.
+  return { ...restored, ...forModel(restored.modelId) };
 }

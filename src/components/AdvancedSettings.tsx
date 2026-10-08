@@ -15,9 +15,9 @@ import { EXPORT_FORMATS, type ExportFormat } from "../lib/exporters";
 const isDocument = (f: ExportFormat) => f === "txt" || f === "md";
 // Two formats end in .txt, so these show their name rather than just the extension.
 const showLabel = (f: ExportFormat) => isDocument(f) || f === "lines";
-import { type DeviceMode, LANGUAGES, type Settings } from "../lib/settings";
+import { type DeviceMode, type Settings, forModel } from "../lib/settings";
 import { Field, Select } from "./ui";
-import { languageName, modelName, useT } from "../lib/i18n";
+import { modelName, useT } from "../lib/i18n";
 
 export function AdvancedSettings({
   settings,
@@ -47,7 +47,7 @@ export function AdvancedSettings({
         <Select
           value={settings.modelId}
           disabled={disabled}
-          onChange={(e) => onChange({ modelId: e.target.value })}
+          onChange={(e) => onChange(forModel(e.target.value))}
         >
           {MODEL_GROUPS.map((group) => (
             <optgroup key={group} label={t.settings.group[group]}>
@@ -156,23 +156,10 @@ export function AdvancedSettings({
         )}
       </div>
 
-      <Field label={t.settings.language} hint={englishOnly ? t.settings.englishOnlyModel : ""}>
-        <Select
-          value={settings.language ?? ""}
-          disabled={disabled || englishOnly}
-          onChange={(e) =>
-            onChange({ language: e.target.value === "" ? null : e.target.value })
-          }
-        >
-          {LANGUAGES.map((l) => (
-            <option key={l.code ?? ""} value={l.code ?? ""}>
-              {l.code ? languageName(l.code, t) : t.settings.autoDetect}
-            </option>
-          ))}
-        </Select>
-      </Field>
-
-      <Field label={t.settings.task} hint={t.settings.taskHint}>
+      <Field
+        label={t.settings.task}
+        hint={englishOnly ? t.settings.englishOnlyModel : t.settings.taskHint}
+      >
         <Select
           value={settings.task}
           disabled={disabled || englishOnly}

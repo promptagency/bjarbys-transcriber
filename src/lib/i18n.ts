@@ -4,7 +4,7 @@
 //
 // Developer-facing text (the benchmark page, logs, code comments) stays English.
 import { createContext, useContext } from "react";
-import type { Dtype, Family, ModelGroup } from "./models";
+import type { Dtype, ModelGroup } from "./models";
 import type { ExportFormat } from "./exporters";
 import type { JobStatus } from "./jobs";
 
@@ -27,12 +27,8 @@ const sv = {
     nothingUploaded: "Inget laddas upp ✨",
     onDevice: "100 % på din enhet",
   },
-  whichLanguage: "Vilket språk talas?",
-  family: {
-    swedish: { label: "Svenska", hint: "KB-Whisper" },
-    multilingual: { label: "Alla språk", hint: "~100 språk" },
-    english: { label: "Engelska", hint: "snabbast för engelska" },
-  } satisfies Record<Family, { label: string; hint: string }>,
+  spokenLanguage: "Språk i inspelningen",
+  otherLanguages: "Andra språk",
   tabs: { files: "Filer", mic: "Spela in", podcast: "Podd" },
   model: {
     loading: (pct: number) => `laddar ${pct} %`,
@@ -82,7 +78,6 @@ const sv = {
       lines: "Rader (.txt)",
     } satisfies Record<ExportFormat, string>,
     timestamps: "Tidsstämplar i dokument ([00:09] före varje stycke)",
-    language: "Språk",
     englishOnlyModel: "modell för bara engelska",
     /** Replaces "(English)" in the names of the English-only models. */
     englishSuffix: "(engelska)",
@@ -276,12 +271,8 @@ const en: Strings = {
     nothingUploaded: "Nothing is uploaded ✨",
     onDevice: "100% on your device",
   },
-  whichLanguage: "What language is it in?",
-  family: {
-    swedish: { label: "Swedish", hint: "KB-Whisper" },
-    multilingual: { label: "Any language", hint: "~100 languages" },
-    english: { label: "English", hint: "fastest for English" },
-  },
+  spokenLanguage: "Language spoken",
+  otherLanguages: "Other languages",
   tabs: { files: "Files", mic: "Record", podcast: "Podcast" },
   model: {
     loading: (pct) => `loading ${pct}%`,
@@ -331,7 +322,6 @@ const en: Strings = {
       lines: "Lines (.txt)",
     },
     timestamps: "Timestamps in documents ([00:09] before each paragraph)",
-    language: "Language",
     englishOnlyModel: "English-only model",
     englishSuffix: "(English)",
     autoDetect: "Auto-detect",
