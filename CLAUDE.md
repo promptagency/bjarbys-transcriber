@@ -95,8 +95,9 @@ The README documents why word-level timestamps were measured and rejected — do
 and the ONNX runtime in Cache Storage (`transformers-cache`), keyed by their Hugging Face / jsDelivr URLs, each
 with a `content-length`. Settings › Lagring lists them per model with sizes and removes one or all (locked while
 a model loads or a job runs; never touches settings or IndexedDB). After a load that used the dtype first asked
-for, the worker prunes the model's other quantizations and other ONNX runtime versions (`pruneAfterLoad`), then
-posts `storage-changed`; after a fallback it prunes nothing, so the preferred files can load next time.
+for, the worker prunes the model's other quantizations — keeping both the loaded set and the other backend's
+default (GPU fp16/q4f16 and fp32/q4, or CPU q8), since "Auto" can switch backends — and other ONNX runtime
+versions (`pruneAfterLoad`), then posts `storage-changed`; after a fallback it prunes nothing.
 
 **Visit counting (`src/lib/analytics.ts`).** `countVisit()` in `main.tsx` POSTs one page view to Prompt
 Agency's Plausible (`plausible.app.promptagency.se`, allowed in the CSP's `connect-src`) — our own code, not

@@ -417,7 +417,12 @@ async function ensurePipeline(
       // Loaded as first asked: other quantizations of this model, and older ONNX
       // runtimes, are now dead weight on disk. (Not after a fallback below — the
       // preferred files may well load next time.) Best effort, in the background.
-      void pruneAfterLoad(modelId, dtypeArg, env.backends.onnx?.versions?.web)
+      // The other backend's files are kept too ("Auto" can switch between them).
+      const keep: DtypeArg[] =
+        device === "webgpu"
+          ? [dtypeArg, "q8"]
+          : [dtypeArg, { encoder_model: "fp16", decoder_model_merged: "q4f16" }, GPU_NO_F16];
+      void pruneAfterLoad(modelId, keep, env.backends.onnx?.versions?.web)
         .then(() => post({ type: "storage-changed" }))
         .catch(() => {});
       return pipe;

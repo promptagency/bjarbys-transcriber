@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { HardDrive, Trash2 } from "lucide-react";
 import { findModel, formatSize } from "../lib/models";
 import { modelName, type Strings, useT } from "../lib/i18n";
@@ -46,16 +46,29 @@ export function ModelStorage({
   const [groups, setGroups] = useState<StoredGroup[] | null | undefined>(undefined);
   const [confirmAll, setConfirmAll] = useState(false);
   const [working, setWorking] = useState(false);
+  const [failed, setFailed] = useState(false);
 
-  const refresh = useCallback(async () => setGroups(await listStored()), []);
+  // Refreshes can overlap (a load finishing, the worker's cleanup, a job
+  // ending) and each one is a series of slow cache reads; only the newest may
+  // update the list, so an older one finishing late can't bring back files
+  // that are gone.
+  const latest = useRef(0);
+  const refresh = useCallback(async () => {
+    const request = ++latest.current;
+    const next = await listStored();
+    if (request === latest.current) setGroups(next);
+  }, []);
   useEffect(() => {
     void refresh();
   }, [refresh, refreshKey]);
 
   async function remove(action: () => Promise<void>) {
     setWorking(true);
+    setFailed(false);
     try {
       await action();
+    } catch {
+      setFailed(true); // storage blocked or full: say so, the list shows what's left
     } finally {
       setConfirmAll(false);
       setWorking(false);
@@ -102,7 +115,7 @@ export function ModelStorage({
                   <button
                     type="button"
                     disabled={locked}
-                    title={busy ? t.storage.busy : undefined}
+                    aria-label={t.storage.removeOne(groupName(group, t))}
                     onClick={() => remove(() => deleteStored(group.id))}
                     className="flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-xs text-neutral-400 hover:bg-white/5 hover:text-red-300 disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-neutral-400"
                   >
@@ -112,11 +125,20 @@ export function ModelStorage({
                 </li>
               ))}
             </ul>
-            <div className="mt-1.5 flex justify-end gap-2 border-t border-[var(--color-border)] pt-2">
+            <div className="mt-1.5 flex items-center justify-end gap-2 border-t border-[var(--color-border)] pt-2">
+              {/* Visible text, not a tooltip on a disabled button (which can't take focus). */}
+              {busy && <p className="mr-auto text-xs text-neutral-500">{t.storage.busy}</p>}
+              {failed && (
+                <p role="alert" className="mr-auto text-xs text-red-300">
+                  {t.storage.failed}
+                </p>
+              )}
               {confirmAll ? (
                 <>
                   <button
                     type="button"
+                    // Focus moves here when the question appears, instead of being lost.
+                    autoFocus
                     onClick={() => setConfirmAll(false)}
                     className="rounded px-2 py-1 text-xs text-neutral-300 hover:bg-white/5"
                   >
@@ -135,7 +157,6 @@ export function ModelStorage({
                 <button
                   type="button"
                   disabled={locked}
-                  title={busy ? t.storage.busy : undefined}
                   onClick={() => setConfirmAll(true)}
                   className="flex items-center gap-1 rounded px-2 py-1 text-xs text-neutral-400 hover:bg-white/5 hover:text-red-300 disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-neutral-400"
                 >

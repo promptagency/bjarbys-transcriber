@@ -82,7 +82,7 @@ const sv = {
       {
         q: "Vad sparas på min dator?",
         a: [
-          "Dina inställningar, till exempel språk och filformat, sparas i webbläsaren. Modellerna sparas också där (100 MB–2 GB beroende på modell), så att de bara behöver hämtas en gång. Under Inställningar › Lagring ser du hur mycket plats de tar och kan ta bort dem, och när du byter kvalitet på en modell städas den gamla versionen bort automatiskt.",
+          "Dina inställningar, till exempel språk och filformat, sparas i webbläsaren. Modellerna sparas också där (100 MB–2 GB beroende på modell), så att de bara behöver hämtas en gång. Under Inställningar › Lagring ser du hur mycket plats de tar och kan ta bort dem. När en modell har laddats städas andra versioner av den bort automatiskt, men versionerna för grafikkort och processor sparas båda.",
           "Genomförda transkriptioner sparas bara om du själv har valt det, och ligger då kvar i webbläsaren tills du tar bort dem. Ljudfilerna sparas aldrig. Sidan använder inga cookies, och besöksräkningen sparar ingenting på din dator.",
         ],
       },
@@ -205,10 +205,12 @@ const sv = {
     speakers: "Talaruppdelning",
     runtime: "Beräkningsmotor",
     remove: "Ta bort",
+    removeOne: (name: string) => `Ta bort ${name}`,
     removeAll: "Ta bort alla",
     confirmAll: "Ja, ta bort alla",
     cancel: "Avbryt",
     busy: "Går inte medan en modell laddas eller en transkribering pågår.",
+    failed: "Det gick inte att ta bort allt – webbläsaren nekade. Listan visar vad som finns kvar.",
     empty: "Inga modeller är nedladdade ännu.",
     unavailable: "Webbläsaren låter inte sidan läsa sin lagring här.",
   },
@@ -445,7 +447,7 @@ const en: Strings = {
       {
         q: "What is stored on my computer?",
         a: [
-          "Your settings, such as language and file formats, are stored in the browser. So are the models (100 MB–2 GB depending on the model), so they only need to be downloaded once. Under Settings › Storage you can see how much space they take and remove them, and when you change a model’s quality the old version is cleaned up automatically.",
+          "Your settings, such as language and file formats, are stored in the browser. So are the models (100 MB–2 GB depending on the model), so they only need to be downloaded once. Under Settings › Storage you can see how much space they take and remove them. Once a model has loaded, other versions of it are cleaned up automatically, but the versions for the graphics card and the processor are both kept.",
           "Finished transcripts are only kept if you choose to, and then stay in the browser until you delete them. Audio files are never stored. The site uses no cookies, and the visit count stores nothing on your computer.",
         ],
       },
@@ -567,10 +569,12 @@ const en: Strings = {
     speakers: "Speaker separation",
     runtime: "Compute engine",
     remove: "Remove",
+    removeOne: (name) => `Remove ${name}`,
     removeAll: "Remove all",
     confirmAll: "Yes, remove all",
     cancel: "Cancel",
     busy: "Not possible while a model is loading or a transcription is running.",
+    failed: "Not everything could be removed – the browser refused. The list shows what’s left.",
     empty: "No models have been downloaded yet.",
     unavailable: "This browser doesn’t let the page read its storage here.",
   },
