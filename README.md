@@ -115,7 +115,9 @@ Vite would otherwise copy in, since the runtime is loaded from jsDelivr.
   few lines rather than Plausible's script — page address with only `utm_*`
   kept, referrer, site name; no cookies, nothing stored. Only on
   `vemsavad.promptagency.se` (never previews, localhost or your own copy), and
-  not when the browser sends Global Privacy Control or Do Not Track.
+  not when the browser sends Global Privacy Control or Do Not Track. To leave
+  your own browser out, open the site once with `?plausible_ignore=true`
+  (`=false` undoes it).
 - **`functions/proxy.php.ts`** answers `./proxy.php?url=` like `proxy.php`
   does, but only for podcast content: it checks the *bytes*, not the label —
   an RSS/Atom feed or a recognised audio/video container (MP3, AAC, MP4/M4A,

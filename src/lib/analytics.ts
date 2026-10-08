@@ -13,6 +13,26 @@ const PLAUSIBLE = "https://plausible.app.promptagency.se";
 /** The site's name in Plausible, and the only address that is counted. */
 const SITE = "vemsavad.promptagency.se";
 
+const IGNORE_KEY = "plausible_ignore";
+
+/**
+ * Leave this browser out of the count — for the site's own people. Opening the
+ * site once with ?plausible_ignore=true switches it on (=false switches it
+ * off); it is remembered in this browser, in the same localStorage flag that
+ * Plausible's own script uses (so `localStorage.plausible_ignore = "true"` in
+ * the console works too).
+ */
+function ignoredBrowser(): boolean {
+  try {
+    const choice = new URL(location.href).searchParams.get(IGNORE_KEY);
+    if (choice === "true") localStorage.setItem(IGNORE_KEY, "true");
+    else if (choice === "false") localStorage.removeItem(IGNORE_KEY);
+    return localStorage.getItem(IGNORE_KEY) === "true";
+  } catch {
+    return false; // storage blocked: count as usual
+  }
+}
+
 /** The visitor has asked not to be tracked (Global Privacy Control or Do Not Track). */
 function optedOut(): boolean {
   const nav = navigator as Navigator & { globalPrivacyControl?: boolean };
@@ -35,7 +55,7 @@ function pageAddress(): string {
  * or someone else's copy of the app — and never for automated browsers.
  */
 export function countVisit(): void {
-  if (location.hostname !== SITE || optedOut() || navigator.webdriver) return;
+  if (location.hostname !== SITE || optedOut() || navigator.webdriver || ignoredBrowser()) return;
   void fetch(`${PLAUSIBLE}/api/event`, {
     method: "POST",
     // text/plain keeps it a simple request (no CORS preflight).

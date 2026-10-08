@@ -91,7 +91,8 @@ The README documents why word-level timestamps were measured and rejected — do
 **Visit counting (`src/lib/analytics.ts`).** `countVisit()` in `main.tsx` POSTs one page view to Prompt
 Agency's Plausible (`plausible.app.promptagency.se`, allowed in the CSP's `connect-src`) — our own code, not
 Plausible's script, so no outside code runs on the page. Only on `vemsavad.promptagency.se`; skipped for
-GPC/Do Not Track and automated browsers; only `utm_*` query parameters are kept. Never send audio, text, file
+GPC/Do Not Track, automated browsers and browsers flagged with `?plausible_ignore=true` (localStorage, as in
+Plausible's own script); only `utm_*` query parameters are kept. Never send audio, text, file
 names or in-app actions, and keep the FAQ's "Räknar ni besök?" in step with any change.
 
 **FAQ (`src/components/Faq.tsx`, text in i18n's `faq`).** A badge beside "100 % på din enhet" opens a native
