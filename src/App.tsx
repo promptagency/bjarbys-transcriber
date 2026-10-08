@@ -80,6 +80,7 @@ import type { TranscriptChunk, TranscriptResult } from "./lib/protocol";
 import { useWhisper } from "./hooks/useWhisper";
 import { RecordingLanguage } from "./components/RecordingLanguage";
 import { LanguageSwitch } from "./components/LanguageSwitch";
+import { Logo } from "./components/Logo";
 import { AdvancedSettings } from "./components/AdvancedSettings";
 import { Dropzone } from "./components/Dropzone";
 import { Recorder } from "./components/Recorder";
@@ -686,14 +687,9 @@ export default function App() {
       />
       {/* Header */}
       <header className="mb-8 text-center">
-        <div className="mb-3 flex items-center justify-center gap-3">
-          <div className="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 to-cyan-400 text-white shadow-lg shadow-sky-500/20">
-            <FileAudio className="size-7" />
-          </div>
-          <h1 className="bg-gradient-to-r from-white to-slate-300 bg-clip-text text-3xl font-extrabold tracking-tight text-transparent sm:text-4xl">
-            Vem sa vad?
-          </h1>
-        </div>
+        <h1 className="mb-4 flex justify-center">
+          <Logo className="sm:h-16" />
+        </h1>
         <p className="mx-auto max-w-md text-base text-slate-400">
           {t.header.tagline}{" "}
           <span className="whitespace-nowrap">{t.header.nothingUploaded}</span>

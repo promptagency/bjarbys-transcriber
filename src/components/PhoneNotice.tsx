@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Check, FileAudio, Laptop, Share2 } from "lucide-react";
+import { Check, Laptop, Share2 } from "lucide-react";
 import { type Lang, STRINGS } from "../lib/i18n";
 import { restoreSettings } from "../lib/settings";
 import { loadSettingsRaw, saveSettings } from "../lib/storage";
 import { LanguageSwitch } from "./LanguageSwitch";
+import { Logo } from "./Logo";
 
 /**
  * Shown on phones instead of the app (see src/lib/device.ts): open it on a
@@ -43,14 +44,9 @@ export function PhoneNotice({ onContinue }: { onContinue: () => void }) {
   return (
     <div className="mx-auto flex min-h-svh max-w-md flex-col px-5 py-10">
       <LanguageSwitch value={lang} onChange={changeLanguage} />
-      <div className="mb-8 flex items-center justify-center gap-3">
-        <div className="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 to-cyan-400 text-white shadow-lg shadow-sky-500/20">
-          <FileAudio className="size-7" />
-        </div>
-        <h1 className="bg-gradient-to-r from-white to-slate-300 bg-clip-text text-3xl font-extrabold tracking-tight text-transparent">
-          Vem sa vad?
-        </h1>
-      </div>
+      <h1 className="mb-8 flex justify-center">
+        <Logo />
+      </h1>
 
       <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/80 p-6 text-center">
         <Laptop className="mx-auto mb-4 size-10 text-sky-300" />

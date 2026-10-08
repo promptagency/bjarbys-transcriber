@@ -118,7 +118,7 @@ Vite would otherwise copy in, since the runtime is loaded from jsDelivr.
   inert content type and headers that stop it from ever running as a page.
   Requests from other sites' pages are refused, and every redirect is
   re-checked against local or private hosts.
-- **`public/manifest.webmanifest` + `public/sw.js`** make it installable and
+- **`public/site.webmanifest` + `public/sw.js`** make it installable and
   let it open offline after one visit (the service worker caches the app's own
   files; models are cached by Transformers.js).
 - Check the hosted setup locally with `npm run build && npx wrangler pages dev dist`.
