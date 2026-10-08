@@ -66,23 +66,14 @@ async function fetchMaybeProxied(
   }
 }
 
-export async function searchPodcasts(
-  term: string,
-  proxyBase: string,
-  limit = 24,
-): Promise<Podcast[]> {
+export async function searchPodcasts(term: string, limit = 24): Promise<Podcast[]> {
   const url = `https://itunes.apple.com/search?media=podcast&limit=${limit}&term=${encodeURIComponent(
     term,
   )}`;
   // Apple's search allows cross-origin requests (and the CSP allows it), so it
-  // goes direct; the proxy is only a fallback.
-  let res: Response;
-  try {
-    res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  } catch {
-    res = await fetchMaybeProxied(url, proxyBase);
-  }
+  // goes direct. Not through the proxy: that only passes feeds and media.
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Podcast search failed (HTTP ${res.status}).`);
   const data = (await res.json()) as {
     results: Array<{
       collectionId: number;

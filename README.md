@@ -110,7 +110,8 @@ Settings live in `wrangler.toml`: build `npm run build`, output `dist/`.
   Ogg/Opus, WebM, WAV, FLAC, AIFF) — and refuses everything else, so it can't
   be used to fetch arbitrary files through the domain. What passes gets an
   inert content type and headers that stop it from ever running as a page.
-  Only requests from the app's own pages; no local or private hosts.
+  Requests from other sites' pages are refused, and every redirect is
+  re-checked against local or private hosts.
 - **`public/manifest.webmanifest` + `public/sw.js`** make it installable and
   let it open offline after one visit (the service worker caches the app's own
   files; models are cached by Transformers.js).
@@ -148,8 +149,9 @@ server fetches through, and falls back to a direct fetch where no proxy runs.
 This keeps it private to your server (no third-party CORS proxy).
 
 `proxy.php` needs PHP with cURL and follows the same rules as the hosted site's
-proxy: only requests from the app's own pages, no private or reserved
-addresses, and only podcast content — it checks the first bytes and passes an
+proxy: requests from other sites' pages are refused, no private or reserved
+addresses (re-checked on every redirect, with the connection pinned to the
+checked address), and only podcast content — it checks the first bytes and passes an
 RSS/Atom feed or a recognised audio/video file, refusing anything else, so it
 can't be used to fetch arbitrary files through your server. What passes gets
 an inert content type and headers that stop it from running as a page.
