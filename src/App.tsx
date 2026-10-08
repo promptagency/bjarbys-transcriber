@@ -686,7 +686,7 @@ export default function App() {
         onChange={(uiLanguage) => patchSettings({ uiLanguage })}
       />
       {/* Header */}
-      <header className="mb-8 text-center">
+      <header className="mb-16 text-center">
         <h1 className="mb-4 flex justify-center">
           <Logo className="sm:w-[462px]" />
         </h1>
