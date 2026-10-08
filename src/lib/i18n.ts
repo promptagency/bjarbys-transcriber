@@ -19,7 +19,7 @@ const sv = {
   meta: {
     title: "Vem sa vad? — privat transkribering i webbläsaren",
     description:
-      "Gör tal till text privat — Whisper körs helt i din webbläsare. Inget laddas upp.",
+      "Lokal transkribering i din webbläsare, med talaruppdelning. Inget laddas upp.",
   },
   uiLanguage: { label: "Språk", sv: "Svenska", en: "English" },
   header: {
@@ -271,7 +271,7 @@ const en: Strings = {
   meta: {
     title: "Vem sa vad? — private, in-browser transcription",
     description:
-      "Transcribe audio to text privately — Whisper runs entirely in your browser. Nothing is uploaded.",
+      "Local transcription in your browser, with speaker separation. Nothing is uploaded.",
   },
   uiLanguage: { label: "Language", sv: "Svenska", en: "English" },
   header: {

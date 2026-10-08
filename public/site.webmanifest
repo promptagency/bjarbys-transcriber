@@ -1,7 +1,7 @@
 {
   "name": "Vem sa vad?",
   "short_name": "Vem sa vad?",
-  "description": "Privat transkribering med talaruppdelning. Körs helt på din dator — inget laddas upp.",
+  "description": "Lokal transkribering i din webbläsare, med talaruppdelning. Inget laddas upp.",
   "lang": "sv",
   "start_url": "./",
   "scope": "./",
