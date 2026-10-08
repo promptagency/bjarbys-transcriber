@@ -771,7 +771,7 @@ export default function App() {
         <button
           type="button"
           onClick={handleLoad}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/40 px-4 py-2 text-sm text-neutral-300 transition hover:border-brand-400/30 hover:text-white"
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-brand-500/50 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-500/65"
         >
           <Download className="size-4" />
           {t.model.preDownload(modelName(model.name, t), formatSize(tierSizeMB(currentTier, gpuF16)))}
