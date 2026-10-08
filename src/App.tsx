@@ -521,9 +521,17 @@ export default function App() {
   }, [jobs, loadedForModel, drain]);
 
   // ── Model loading (manual + auto when work arrives) ───────────────────────
+  // Only a failed *load* is reported as one, and only for the model it was for:
+  // the worker's error state also covers a crash later on (e.g. out of memory
+  // on a long file), which the job itself reports.
+  const [loadFailure, setLoadFailure] = useState<{ key: string; message: string } | null>(null);
   const handleLoad = useCallback(() => {
-    loadedReqKey.current = `${settings.modelId}|${settings.dtype}|${resolvedDevice}`;
-    loadModel(settings.modelId, settings.dtype, resolvedDevice).catch(() => {});
+    const key = `${settings.modelId}|${settings.dtype}|${resolvedDevice}`;
+    loadedReqKey.current = key;
+    setLoadFailure(null);
+    loadModel(settings.modelId, settings.dtype, resolvedDevice).catch((e) =>
+      setLoadFailure({ key, message: String((e as Error)?.message ?? e) }),
+    );
   }, [loadModel, settings.modelId, settings.dtype, resolvedDevice]);
 
   useEffect(() => {
@@ -759,9 +767,9 @@ export default function App() {
 
       {/* A failed model load stops the queue, so say so here, not only inside Settings.
           The download button below doubles as "try again". */}
-      {state.status === "error" && state.error && (
+      {loadFailure && loadFailure.key === desiredKey && state.status !== "loading" && (
         <p role="alert" className="mt-3 text-sm text-red-300">
-          {t.model.failed(state.error)}
+          {t.model.failed(loadFailure.message)}
         </p>
       )}
 

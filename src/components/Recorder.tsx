@@ -54,6 +54,9 @@ export function Recorder({
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const rafRef = useRef<number | null>(null);
+  // The waveform's sienna gradient, read from the theme once per recording:
+  // canvas can't use CSS variables directly.
+  const colorsRef = useRef<[string, string]>(["#c85a3e", "#e59a7e"]);
 
   useEffect(() => {
     return () => stopEverything();
@@ -97,10 +100,8 @@ export function Recorder({
     const mid = cssH / 2;
 
     const grad = ctx.createLinearGradient(0, 0, cssW, 0);
-    // Canvas can't read CSS variables directly; take the theme's sienna.
-    const theme = getComputedStyle(document.documentElement);
-    grad.addColorStop(0, theme.getPropertyValue("--color-brand-500").trim() || "#c85a3e");
-    grad.addColorStop(1, theme.getPropertyValue("--color-brand-300").trim() || "#e59a7e");
+    grad.addColorStop(0, colorsRef.current[0]);
+    grad.addColorStop(1, colorsRef.current[1]);
     ctx.fillStyle = grad;
 
     for (let i = 0; i < bars; i++) {
@@ -122,6 +123,11 @@ export function Recorder({
 
   async function start() {
     setError(null);
+    const theme = getComputedStyle(document.documentElement);
+    colorsRef.current = [
+      theme.getPropertyValue("--color-brand-500").trim() || "#c85a3e",
+      theme.getPropertyValue("--color-brand-300").trim() || "#e59a7e",
+    ];
     if (!navigator.mediaDevices?.getUserMedia) {
       setError(() => (t: Strings) => t.recorder.insecure);
       return;
