@@ -688,7 +688,7 @@ export default function App() {
       {/* Header */}
       <header className="mb-8 text-center">
         <h1 className="mb-4 flex justify-center">
-          <Logo className="sm:h-32" />
+          <Logo className="sm:w-[462px]" />
         </h1>
         <p className="mx-auto max-w-md text-base text-slate-400">
           {t.header.tagline}{" "}
@@ -696,13 +696,13 @@ export default function App() {
         </p>
       </header>
 
-      {/* The recording's language — it also picks the model */}
-      <RecordingLanguage
-        value={spokenLanguage(settings)}
-        onChange={setSpokenLanguage}
-        disabled={state.status === "loading"}
-      />
-      <div className="mt-3 flex justify-center">
+      {/* The recording's language (it also picks the model), with the privacy badge beside it */}
+      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+        <RecordingLanguage
+          value={spokenLanguage(settings)}
+          onChange={setSpokenLanguage}
+          disabled={state.status === "loading"}
+        />
         <span className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
           <ShieldCheck className="size-4" />
           {t.header.onDevice}
