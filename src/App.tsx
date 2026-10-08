@@ -748,7 +748,7 @@ export default function App() {
       </div>
 
       {/* Source area */}
-      <div className="mt-4.5">
+      <div className="mt-[22.5px]">
         {activeTab === "files" && <Dropzone onFiles={onFiles} />}
         {activeTab === "mic" && (
           <Card className="p-4">
