@@ -190,7 +190,7 @@ const sv = {
     autoDownload: "Ladda ned varje transkription automatiskt när den är klar",
     diarize:
       "Dela upp på talare (experimentellt — märker varje rad ”Talare 1”, ”Talare 2” osv.)",
-    keep: "Spara klara transkriptioner i den här webbläsaren efter en omladdning",
+    keep: "Spara genomförda transkriptioner i den här webbläsaren efter en omladdning",
   },
   saveFailed:
     "Webbläsaren vägrade spara en transkription (ett privat fönster, eller lagringen är full eller blockerad), så den kan saknas efter en omladdning. Ladda ned det du vill behålla.",
@@ -257,7 +257,7 @@ const sv = {
     title: (n: number) => `Kö · ${n}`,
     deleteFinished: "Ta bort alla klara",
     deleteFinishedTitle: "Tar bort alla klara transkriptioner från listan och från webbläsaren",
-    askTitle: "Spara klara transkriptioner om du laddar om sidan?",
+    askTitle: "Spara genomförda transkriptioner om du laddar om sidan?",
     askBefore: "Säger du ja sparas de i den här webbläsaren (aldrig uppladdade) och ",
     askStay: "ligger kvar tills du tar bort dem",
     askAfter:
