@@ -48,14 +48,16 @@ export function Faq() {
             {t.faq.items.map((item, i) => (
               <details
                 key={i}
+                // One shared name makes it an accordion: opening one closes the others.
+                name="faq"
                 open={i === 0}
                 className="group rounded-xl border border-[var(--color-border)] bg-white/[0.02] open:bg-white/[0.04]"
               >
-                <summary className="flex cursor-pointer list-none items-start justify-between gap-3 px-4 py-3 text-sm font-semibold text-slate-100 [&::-webkit-details-marker]:hidden">
+                <summary className="flex cursor-pointer list-none items-start justify-between gap-3 px-4 py-3 text-sm font-semibold text-white [&::-webkit-details-marker]:hidden">
                   {item.q}
                   <ChevronDown className="mt-0.5 size-4 shrink-0 text-slate-400 transition group-open:rotate-180" />
                 </summary>
-                <div className="space-y-2 px-4 pb-4 text-sm leading-relaxed text-slate-400">
+                <div className="space-y-2 px-4 pb-4 text-sm leading-relaxed text-slate-200">
                   {item.a.map((paragraph, j) => (
                     <p key={j}>{paragraph}</p>
                   ))}
