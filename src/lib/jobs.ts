@@ -1,6 +1,7 @@
 import type { SpeakerNames } from "./exporters";
 import type { SavedTranscript } from "./storage";
 import type { TranscriptResult } from "./protocol";
+import type { Message } from "./i18n";
 
 export type JobSource = "file" | "mic" | "podcast";
 
@@ -21,9 +22,10 @@ export interface Job {
   /** 0..1 progress for the fetch/decode stage. */
   stageProgress: number;
   result: TranscriptResult | null;
-  error: string | null;
+  /** A Message where the app knows the problem, else the engine's own text. */
+  error: Message | string | null;
   /** Non-fatal issue with an otherwise-successful result (e.g. speaker separation failed or was skipped). */
-  warning: string | null;
+  warning: Message | string | null;
   /**
    * Whether this job includes a speaker-separation stage. Fixed when the job
    * starts (and cleared if the recording is too long), so toggling the

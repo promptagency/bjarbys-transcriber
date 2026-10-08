@@ -28,6 +28,10 @@ If you find it useful, consider
   Library of Sweden) tiny → large, alongside standard multilingual and
   English-only Whisper models. The multilingual models **detect the language**
   themselves and show which one they heard.
+- 🗣️ **In Swedish or English** — the interface is Swedish by default, with an
+  SV/EN switch in the corner. Downloads follow it too ("Talare 1" / "Speaker 1").
+- 💻 **Made for computers** — phones get a short page asking to open it on a
+  computer (with a share button to send yourself the link) and a way past it.
 - ⚡ **Fast** — on a 2021 MacBook Pro (M1 Pro), 25 minutes of Swedish
   transcribes in under 3 minutes with the default model, about 9× real time
   ([benchmark](#speed-and-accuracy); 7% word error on clean synthetic speech).
@@ -39,9 +43,9 @@ If you find it useful, consider
   speaker turn (a new one after a pause of 4 s or more), the speaker named
   once, a header with title, date, length and speakers, and optional `[mm:ss]`
   timestamps.
-- 📝 **More formats** — `.srt` and `.vtt` subtitles, `.json` (with
-  timestamps), and **Lines** (`.lines.txt`, one Whisper fragment per line, for
-  scripts). Tick as many as you like; the audio is only analysed once and every
+- 📝 **More formats** — `.srt` and `.vtt` subtitles and `.json` (with
+  timestamps); **Copy** gives the raw text, one Whisper fragment per line. Tick as
+  many as you like; the audio is only analysed once and every
   format is rendered from that same result. Several are saved as one `.zip`.
 - 🗣️ **Speaker separation** (optional, experimental) — labels each line
   `Speaker 1`, `Speaker 2`, … via
@@ -114,7 +118,7 @@ Vite would otherwise copy in, since the runtime is loaded from jsDelivr.
   inert content type and headers that stop it from ever running as a page.
   Requests from other sites' pages are refused, and every redirect is
   re-checked against local or private hosts.
-- **`public/manifest.webmanifest` + `public/sw.js`** make it installable and
+- **`public/site.webmanifest` + `public/sw.js`** make it installable and
   let it open offline after one visit (the service worker caches the app's own
   files; models are cached by Transformers.js).
 - Check the hosted setup locally with `npm run build && npx wrangler pages dev dist`.
@@ -184,12 +188,13 @@ Ticking **Separate speakers** additionally loads
 — an ONNX build of [pyannote/segmentation-3.0](https://huggingface.co/pyannote/segmentation-3.0),
 about 1.5 MB, MIT. It runs on WASM alongside Whisper and needs no extra
 dependency. Each chunk in the `.json` export then carries `speaker` and
-`speaker_conf`, and the other formats prefix each line with `Speaker N:`.
+`speaker_conf`, and the other formats prefix each line with `Talare N:` (or
+`Speaker N:` with the interface in English).
 
 Open a finished transcript to **name the speakers**: one field per detected
 speaker, applied immediately to the transcript, Copy and downloads. Names are
-per transcript, since "Speaker 1" is a different person in every recording.
-In the documents, `.srt`/`.vtt` and Lines the name replaces `Speaker N`; in `.json` the chunks
+per transcript, since "Talare 1" is a different person in every recording.
+In the documents, `.srt`/`.vtt` and Copy the name replaces `Talare N`; in `.json` the chunks
 keep their numeric `speaker` and a top-level `speakers` object maps each
 number to its name. An automatic download happens before you've named
 anyone, so download again after naming.

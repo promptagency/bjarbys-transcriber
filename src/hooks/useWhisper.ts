@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Backend, Dtype } from "../lib/models";
+import { MessageError } from "../lib/i18n";
 import type {
   FromWorker,
   SpeakerActivity,
@@ -78,9 +79,9 @@ export function useWhisper() {
       load.current = null;
       // A worker that dies (rather than throwing) never answers again, so any
       // transcription or diarization still waiting on it would hang the queue.
-      const crashed = new Error(
-        e.message || "The transcription worker stopped unexpectedly.",
-      );
+      const crashed = e.message
+        ? new Error(e.message)
+        : new MessageError({ key: "workerCrashed" });
       for (const pending of [...jobs.current.values(), ...diarizeJobs.current.values()]) {
         pending.reject(crashed);
       }

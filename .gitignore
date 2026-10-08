@@ -18,3 +18,9 @@ bench-audio/
 
 # Cloudflare wrangler local state
 .wrangler/
+
+# Brand asset pack (source files). The app's copies live in public/ and src/assets/.
+vem-sa-vad-logotyp/
+
+# Personal Claude Code settings
+.claude/settings.local.json

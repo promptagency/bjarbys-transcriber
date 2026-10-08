@@ -13,6 +13,7 @@
 import type { SpeakerNames } from "./exporters";
 import type { Job, JobSource } from "./jobs";
 import type { TranscriptResult } from "./protocol";
+import type { Message } from "./i18n";
 
 const DB_NAME = "vem-sa-vad";
 const DB_VERSION = 1;
@@ -28,7 +29,8 @@ export interface SavedTranscript {
   result: TranscriptResult;
   originalResult: TranscriptResult | null;
   speakerNames: SpeakerNames;
-  warning: string | null;
+  /** A Message; a plain string in transcripts saved before warnings followed the language. */
+  warning: Message | string | null;
   /** When it was first saved — restored transcripts keep their queue order. */
   savedAt: number;
 }

@@ -1,4 +1,12 @@
-import type { ReactNode, SelectHTMLAttributes } from "react";
+import {
+  type ReactElement,
+  type ReactNode,
+  type SelectHTMLAttributes,
+  cloneElement,
+  useId,
+} from "react";
+import { Info } from "lucide-react";
+import { useT } from "../lib/i18n";
 
 export function ProgressBar({
   value,
@@ -21,11 +29,12 @@ export function ProgressBar({
 }
 
 export function Spinner({ className = "" }: { className?: string }) {
+  const t = useT();
   return (
     <span
       className={`inline-block size-4 animate-spin rounded-full border-2 border-current border-t-transparent ${className}`}
       role="status"
-      aria-label="Loading"
+      aria-label={t.processing.working}
     />
   );
 }
@@ -68,25 +77,67 @@ export function Select({
   );
 }
 
+/**
+ * A small ⓘ that shows a short explanation on hover, focus or tap. A button,
+ * so inside a <label> clicking it doesn't toggle or open the control.
+ */
+export function InfoTip({ text }: { text: string }) {
+  const t = useT();
+  const id = useId();
+  return (
+    <span className="group/tip relative inline-flex align-middle normal-case tracking-normal">
+      <button
+        type="button"
+        aria-label={t.settings.moreInfo}
+        aria-describedby={id}
+        onClick={(e) => e.preventDefault()}
+        className="rounded-full p-0.5 text-slate-500 transition hover:text-sky-300 focus-visible:text-sky-300 focus-visible:outline-none"
+      >
+        <Info className="size-3.5" />
+      </button>
+      <span
+        id={id}
+        role="tooltip"
+        className="pointer-events-none absolute bottom-full left-0 z-20 mb-1.5 w-max max-w-[17rem] -translate-x-2 rounded-lg bg-slate-100 px-2.5 py-1.5 whitespace-pre-line text-left text-xs font-medium leading-relaxed text-slate-900 opacity-0 shadow-lg shadow-black/40 transition-opacity group-hover/tip:opacity-100 group-hover/tip:delay-200 group-focus-within/tip:opacity-100"
+      >
+        {text}
+      </span>
+    </span>
+  );
+}
+
 export function Field({
   label,
   hint,
+  tip,
   children,
 }: {
   label: string;
   hint?: string;
-  children: ReactNode;
+  /** A short explanation, shown from an ⓘ beside the label. */
+  tip?: string;
+  /** The one control the label names (it gets an id to point at). */
+  children: ReactElement<{ id?: string }>;
 }) {
+  // The label points at its control by id rather than wrapping it: a <label>
+  // names the first control inside it, which would be the ⓘ button.
+  const id = useId();
   return (
-    <label className="block">
+    <div>
       <div className="mb-1.5 flex items-baseline justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-          {label}
+        <span className="inline-flex items-center gap-1">
+          <label
+            htmlFor={id}
+            className="text-xs font-semibold uppercase tracking-wide text-slate-400"
+          >
+            {label}
+          </label>
+          {tip && <InfoTip text={tip} />}
         </span>
         {hint && <span className="text-xs text-slate-500">{hint}</span>}
       </div>
-      {children}
-    </label>
+      {cloneElement(children, { id })}
+    </div>
   );
 }
 

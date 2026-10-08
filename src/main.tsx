@@ -1,11 +1,29 @@
-import { StrictMode } from "react";
+import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
+import { PhoneNotice } from "./components/PhoneNotice";
+import { continuedOnPhone, isPhone, rememberContinueOnPhone } from "./lib/device";
 import "./index.css";
+
+/** Phones see a "use a computer" page first; the app (and its worker) only starts past it. */
+function Root() {
+  const [notice, setNotice] = useState(() => isPhone() && !continuedOnPhone());
+  if (notice) {
+    return (
+      <PhoneNotice
+        onContinue={() => {
+          rememberContinueOnPhone();
+          setNotice(false);
+        }}
+      />
+    );
+  }
+  return <App />;
+}
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <Root />
   </StrictMode>,
 );
 

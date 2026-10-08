@@ -4,6 +4,8 @@
 //    those through a same-origin proxy (proxy.php on your LAMP server). The
 //    transcription itself still happens locally in the browser.
 
+import { MessageError } from "./i18n";
+
 export interface Podcast {
   id: number;
   title: string;
@@ -44,25 +46,28 @@ async function fetchMaybeProxied(
   proxyBase: string,
   init?: RequestInit,
 ): Promise<Response> {
-  let proxyProblem = "";
+  let proxy: "none" | "status" | "unreachable" = "none";
+  let detail = "";
   try {
     const res = await fetch(proxied(url, proxyBase), init);
     // Only a response marked by one of our proxies counts. Without a proxy, a
     // static host answers with the app's own page, or with proxy.php's source
     // where PHP isn't running — neither is the feed or the episode.
     if (res.ok && res.headers.get(PROXY_MARKER) === "1") return res;
-    proxyProblem = res.ok ? "no proxy is running here" : `the proxy answered HTTP ${res.status}`;
+    if (!res.ok) {
+      proxy = "status";
+      detail = String(res.status);
+    }
   } catch (err) {
-    proxyProblem = `the proxy couldn't be reached (${String((err as Error)?.message ?? err)})`;
+    proxy = "unreachable";
+    detail = String((err as Error)?.message ?? err);
   }
   try {
     const res = await fetch(url, init);
     if (res.ok) return res;
     throw new Error(`HTTP ${res.status}`);
   } catch {
-    throw new Error(
-      `Couldn't fetch this podcast resource: ${proxyProblem}, and the host doesn't allow direct access. Run \`npm run dev\`, or deploy proxy.php (PHP + cURL) next to the app.`,
-    );
+    throw new MessageError({ key: "podcastFetch", params: { proxy, detail } });
   }
 }
 
@@ -73,7 +78,7 @@ export async function searchPodcasts(term: string, limit = 24): Promise<Podcast[
   // Apple's search allows cross-origin requests (and the CSP allows it), so it
   // goes direct. Not through the proxy: that only passes feeds and media.
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`Podcast search failed (HTTP ${res.status}).`);
+  if (!res.ok) throw new MessageError({ key: "searchHttp", params: { status: res.status } });
   const data = (await res.json()) as {
     results: Array<{
       collectionId: number;
@@ -133,7 +138,7 @@ export async function fetchEpisodes(
   const doc = new DOMParser().parseFromString(xmlText, "application/xml");
 
   if (doc.querySelector("parsererror")) {
-    throw new Error("This feed isn't valid RSS/XML.");
+    throw new MessageError({ key: "badFeed" });
   }
 
   const channel = doc.querySelector("channel");

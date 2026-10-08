@@ -2,6 +2,8 @@
 // Float32Array that Whisper expects. Video containers (mp4/mov/webm) work
 // because the Web Audio decoder extracts and decodes their audio track.
 
+import { MessageError } from "./i18n";
+
 export const WHISPER_SAMPLE_RATE = 16000;
 
 // Extensions we advertise as supported. The real test is whether the browser
@@ -49,9 +51,7 @@ export async function decodeToPCM(file: Blob): Promise<Float32Array> {
     // Pass a copy — decodeAudioData detaches the ArrayBuffer it receives.
     decoded = await ctx.decodeAudioData(buf.slice(0));
   } catch {
-    throw new Error(
-      "This file's audio couldn't be decoded by the browser. Try MP3, WAV, M4A, OGG, FLAC, or an MP4/MOV/WebM video.",
-    );
+    throw new MessageError({ key: "undecodable" });
   } finally {
     void ctx.close();
   }

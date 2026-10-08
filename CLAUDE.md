@@ -88,13 +88,33 @@ which goes to the speaker whose speech is most contained in it (backchannels ove
 surroundings and renumbers speakers by first appearance. Hard limits: 3 speakers at once, 240 min per file.
 The README documents why word-level timestamps were measured and rejected — don't reintroduce them.
 
+**FAQ (`src/components/Faq.tsx`, text in i18n's `faq`).** A badge beside "100 % på din enhet" opens a native
+`<dialog>`. Its answers make factual promises — what leaves the computer (the page via Cloudflare, models from
+Hugging Face, the runtime from jsDelivr, podcasts via the proxy), what's stored, the 95.6% speaker figure, the
+limits — so update it whenever those change.
+
+**Phones (`src/lib/device.ts`, `PhoneNotice`).** `main.tsx` shows phones a "use a computer" page instead of
+the app (the worker never starts); "continue anyway" is remembered for the session. Detection uses
+`userAgentData.mobile` or the UA's phone markers, never screen width, so tablets and narrow desktop windows get
+the app.
+
+**Interface language (`src/lib/i18n.ts`).** All UI text lives in one dictionary: Swedish (`sv`, the default
+and the master) and English (`en: Strings`, so a missing key fails the build); no i18n library. App picks
+`STRINGS[settings.uiLanguage]`, provides it via `I18nContext`, and components read it with `useT()`. New UI
+text goes into both languages, never inline. Text that is stored and shown later — job warnings/errors — is a
+`Message` (key + params, rendered by `formatMessage`), and libs throw `MessageError`, so it follows a language
+switch and survives in IndexedDB; plain strings (engine errors, older saves) still render as-is. Component
+state messages are kept as `(t) => string` for the same reason. Exports take `t.export` as `ExportLabels`
+("Talare 1"). English labels left in libs (`DTYPE_LABEL`, `LANGUAGES`, `EXPORT_FORMATS`) serve only the
+English-only `bench.html`.
+
 **Exports (`src/lib/exporters.ts`, `src/lib/zip.ts`).** All formats are rendered from the one
 stored `TranscriptResult`; lines get a speaker prefix when chunks carry speakers — the user's name from
-`job.speakerNames` (per job, edited in `JobQueue`) or `Speaker N` — and JSON's `text` is built from `toTxt()`
+`job.speakerNames` (per job, edited in `JobQueue`) or `t.export.speaker(n)` ("Talare N" / "Speaker N", following
+the interface language) — and JSON's `text` is built from `toTxt()`
 so all formats agree. JSON keeps numeric `speaker` per chunk plus a `speakers` id→name map. The document
-formats (`txt`, the default, and `md`) go through `toDocument()`; `lines` (→ `.lines.txt`) and Copy use
-`toTxt()`, one fragment per line. Old saved settings: `doc` maps to `txt`, and a `txt` saved next to `doc` maps to `lines`; a lone saved `txt`
-deliberately becomes the document. Documents: chunks merge into paragraphs per speaker
+formats (`txt`, the default, and `md`) go through `toDocument()`; Copy uses `toTxt()`, one fragment per line
+(no longer a download format). Old saved settings: `doc` maps to `txt`, and a saved `lines` drops out. Documents: chunks merge into paragraphs per speaker
 turn, split at gaps ≥ `PARAGRAPH_PAUSE_SECONDS`; Markdown text is escaped (including list-like paragraph
 starts), the header date is local, and the title/timestamp option come from `downloadJob`. Several formats are saved as one store-only ZIP because browsers
 silently block bursts of downloads.

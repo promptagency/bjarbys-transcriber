@@ -7,7 +7,7 @@
 // the cache. Everything else — the page itself above all — is fetched from the
 // network first, so a new release shows up on the next visit, and the cached
 // copy is only used offline.
-const CACHE = "vem-sa-vad-app-v1";
+const CACHE = "vem-sa-vad-app-v2";
 
 // Cache the app on install, so it opens offline after a single visit: the page,
 // the files it links to, and the files those reference in turn (the
@@ -28,10 +28,11 @@ async function precache() {
       const type = response.headers.get("Content-Type") ?? "";
       if (/html|javascript|css/.test(type)) {
         const text = await response.clone().text();
-        // Build output names end in an 8-character content hash ("worker-LB6Nh_sN.js");
-        // inside assets/ they are referenced without the folder. The runtime's
-        // .wasm is skipped: it is loaded from jsDelivr and cached by Transformers.js.
-        for (const match of text.matchAll(/([\w.-]+-[\w-]{8}\.(?:js|css))\b/g)) queue.push(`./assets/${match[1]}`);
+        // Build output names end in an 8-character content hash ("worker-LB6Nh_sN.js",
+        // the logo's .svg); inside assets/ they are referenced without the folder.
+        // The runtime's .wasm is skipped: it is loaded from jsDelivr and cached by
+        // Transformers.js.
+        for (const match of text.matchAll(/([\w.-]+-[\w-]{8}\.(?:js|css|svg))\b/g)) queue.push(`./assets/${match[1]}`);
       }
       await cache.put(url, response);
     } catch {

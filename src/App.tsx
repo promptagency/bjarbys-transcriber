@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  I18nContext,
+  type Message,
+  STRINGS,
+  messageOf,
+  modelName,
+} from "./lib/i18n";
+import {
   ChevronDown,
   Cpu,
   Download,
@@ -20,8 +27,6 @@ import {
 } from "./lib/diarize";
 import {
   type Backend,
-  type Family,
-  FAMILY_DEFAULT_MODEL,
   FAMILY_META,
   availableTiers,
   defaultDtype,
@@ -32,7 +37,12 @@ import {
   tierFor,
   tierSizeMB,
 } from "./lib/models";
-import { type Settings, restoreSettings } from "./lib/settings";
+import {
+  type Settings,
+  forSpokenLanguage,
+  restoreSettings,
+  spokenLanguage,
+} from "./lib/settings";
 import {
   deleteAllTranscripts,
   deleteTranscript,
@@ -68,7 +78,10 @@ import {
 import { createZip } from "./lib/zip";
 import type { TranscriptChunk, TranscriptResult } from "./lib/protocol";
 import { useWhisper } from "./hooks/useWhisper";
-import { LanguageChooser } from "./components/LanguageChooser";
+import { RecordingLanguage } from "./components/RecordingLanguage";
+import { LanguageSwitch } from "./components/LanguageSwitch";
+import { Logo } from "./components/Logo";
+import { Faq } from "./components/Faq";
 import { AdvancedSettings } from "./components/AdvancedSettings";
 import { Dropzone } from "./components/Dropzone";
 import { Recorder } from "./components/Recorder";
@@ -79,10 +92,10 @@ import { Card } from "./components/ui";
 
 type Tab = "files" | "mic" | "podcast";
 
-const TABS: { id: Tab; label: string; icon: typeof FileAudio }[] = [
-  { id: "files", label: "Files", icon: FileAudio },
-  { id: "mic", label: "Record", icon: Mic },
-  { id: "podcast", label: "Podcast", icon: Podcast },
+const TABS: { id: Tab; icon: typeof FileAudio }[] = [
+  { id: "files", icon: FileAudio },
+  { id: "mic", icon: Mic },
+  { id: "podcast", icon: Podcast },
 ];
 
 export default function App() {
@@ -117,7 +130,16 @@ export default function App() {
   );
   const proxyBase = DEFAULT_PROXY;
 
-  const [tab, setTab] = useState<Tab>("files");
+  // Interface language. The page's own language, title and description follow
+  // it, so screen readers, translation prompts and the tab title agree.
+  const t = STRINGS[settings.uiLanguage];
+  useEffect(() => {
+    document.documentElement.lang = settings.uiLanguage;
+    document.title = t.meta.title;
+    document.querySelector('meta[name="description"]')?.setAttribute("content", t.meta.description);
+  }, [settings.uiLanguage, t]);
+
+  const [activeTab, setTab] = useState<Tab>("files");
   const [showSettings, setShowSettings] = useState(false);
   const [webgpuAvailable, setWebgpuAvailable] = useState(false);
   const [gpuF16, setGpuF16] = useState(true);
@@ -177,14 +199,9 @@ export default function App() {
   }, [settings.modelId, settings.dtype, resolvedDevice, patchSettings]);
 
   const family = familyOf(settings.modelId);
-  const setFamily = useCallback(
-    (f: Family) => {
-      patchSettings({
-        modelId: FAMILY_DEFAULT_MODEL[f],
-        language: f === "swedish" ? "sv" : null,
-      });
-    },
-    [patchSettings],
+  const setSpokenLanguage = useCallback(
+    (code: string | null) => setSettings((s) => ({ ...s, ...forSpokenLanguage(s, code) })),
+    [],
   );
 
   const model = findModel(settings.modelId)!;
@@ -366,7 +383,7 @@ export default function App() {
         const format = formats[0];
         downloadText(
           withExtension(base, extFor(format)),
-          render(result, format, job.speakerNames, document),
+          render(result, format, job.speakerNames, document, t.export),
           format,
         );
         return;
@@ -374,12 +391,12 @@ export default function App() {
       const zip = createZip(
         formats.map((format) => ({
           name: withExtension(base, extFor(format)),
-          text: render(result, format, job.speakerNames, document),
+          text: render(result, format, job.speakerNames, document, t.export),
         })),
       );
       downloadBlob(withExtension(base, "zip"), zip);
     },
-    [],
+    [t],
   );
 
   // ── Sequential queue runner ───────────────────────────────────────────────
@@ -427,9 +444,12 @@ export default function App() {
         updateJob(job.id, { liveText: result.text.trim() });
 
         let finalResult = result;
-        let warning: string | null = null;
+        let warning: Message | null = null;
         if (settings.diarizeSpeakers && tooLongToDiarize) {
-          warning = `Speaker separation skipped: recording is ${Math.round(durationSec / 60)} min, longer than the ${MAX_DIARIZE_MINUTES} min limit.`;
+          warning = {
+            key: "diarizeTooLong",
+            params: { minutes: Math.round(durationSec / 60), limit: MAX_DIARIZE_MINUTES },
+          };
         } else if (wantsDiarize) {
           // No multi-pass warning: labels used to restart at every window, so
           // warning was always right. They're now matched across the overlap,
@@ -445,7 +465,7 @@ export default function App() {
               chunks: smoothSpeakers(assignSpeakers(result.chunks, activity)),
             };
           } catch (e) {
-            warning = `Speaker separation failed: ${String((e as Error)?.message ?? e)}`;
+            warning = { key: "diarizeFailed", params: { detail: String((e as Error)?.message ?? e) } };
           }
         }
 
@@ -466,7 +486,7 @@ export default function App() {
       } catch (e) {
         updateJob(job.id, {
           status: "error",
-          error: String((e as Error)?.message ?? e),
+          error: messageOf(e),
           liveText: undefined,
         });
       }
@@ -660,71 +680,82 @@ export default function App() {
   const busy = state.status === "loading" || !!activeJob;
 
   return (
+    <I18nContext.Provider value={t}>
     <div className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
+      <LanguageSwitch
+        value={settings.uiLanguage}
+        onChange={(uiLanguage) => patchSettings({ uiLanguage })}
+      />
       {/* Header */}
-      <header className="mb-8 text-center">
-        <div className="mb-3 flex items-center justify-center gap-3">
-          <div className="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 to-cyan-400 text-white shadow-lg shadow-sky-500/20">
-            <FileAudio className="size-7" />
-          </div>
-          <h1 className="bg-gradient-to-r from-white to-slate-300 bg-clip-text text-3xl font-extrabold tracking-tight text-transparent sm:text-4xl">
-            Vem sa vad?
-          </h1>
-        </div>
+      <header className="mb-16 text-center">
+        <h1 className="mb-4 flex justify-center">
+          <Logo className="sm:w-[462px]" />
+        </h1>
         <p className="mx-auto max-w-md text-base text-slate-400">
-          Turn talking into text — privately, right in your browser.{" "}
-          <span className="whitespace-nowrap">Nothing is uploaded ✨</span>
+          {t.header.tagline}
         </p>
-        <div className="mt-4 flex justify-center">
-          <span className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
-            <ShieldCheck className="size-4" />
-            100% on your device
-          </span>
-        </div>
       </header>
 
-      {/* Step 1 — language */}
-      <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
-        What language is it in?
-      </p>
-      <LanguageChooser
-        value={family}
-        onChange={setFamily}
-        disabled={state.status === "loading"}
-      />
+      {/* The recording's language (it also picks the model), with the privacy and FAQ badges beside it */}
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <RecordingLanguage
+          value={spokenLanguage(settings)}
+          onChange={setSpokenLanguage}
+          disabled={state.status === "loading"}
+        />
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
+            <ShieldCheck className="size-4" />
+            {t.header.onDevice}
+          </span>
+          <Faq />
+        </div>
+      </div>
 
-      {/* Step 2 — source tabs */}
+      {/* Source tabs */}
       <div className="mt-6 grid grid-cols-3 gap-2">
-        {TABS.map((t) => {
-          const Icon = t.icon;
-          const active = tab === t.id;
+        {TABS.map((tab) => {
+          const Icon = tab.icon;
+          const active = activeTab === tab.id;
           return (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setTab(t.id)}
-              className={`flex items-center justify-center gap-2 rounded-xl px-3 py-3 text-sm font-semibold transition ${
-                active
-                  ? "bg-sky-500 text-white shadow-lg shadow-sky-500/20"
-                  : "bg-[var(--color-surface)]/60 text-slate-300 ring-1 ring-inset ring-[var(--color-border)] hover:bg-white/[0.04]"
-              }`}
-            >
-              <Icon className="size-4" />
-              {t.label}
-            </button>
+            // The hint is a sibling of the button, not inside it, so it isn't read
+            // as part of the tab's name — only once, as its description.
+            <div key={tab.id} className="group relative">
+              <button
+                type="button"
+                onClick={() => setTab(tab.id)}
+                aria-describedby={`tab-hint-${tab.id}`}
+                className={`flex w-full items-center justify-center gap-2 rounded-xl px-3 py-3 text-sm font-semibold transition ${
+                  active
+                    ? "bg-sky-500 text-white shadow-lg shadow-sky-500/20"
+                    : "bg-[var(--color-surface)]/60 text-slate-300 ring-1 ring-inset ring-[var(--color-border)] hover:bg-white/[0.04]"
+                }`}
+              >
+                <Icon className="size-4" />
+                {t.tabs[tab.id]}
+              </button>
+              {/* A short hint above the tab, after a brief hover or on keyboard focus. */}
+              <span
+                id={`tab-hint-${tab.id}`}
+                role="tooltip"
+                className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-max max-w-[15rem] -translate-x-1/2 rounded-lg bg-slate-100 px-2.5 py-1.5 text-center text-xs font-medium text-slate-900 opacity-0 shadow-lg shadow-black/40 transition-opacity group-hover:opacity-100 group-hover:delay-300 group-has-[:focus-visible]:opacity-100"
+              >
+                {t.tabHints[tab.id]}
+              </span>
+            </div>
           );
         })}
       </div>
 
       {/* Source area */}
-      <div className="mt-3">
-        {tab === "files" && <Dropzone onFiles={onFiles} />}
-        {tab === "mic" && (
+      <div className="mt-4.5">
+        {activeTab === "files" && <Dropzone onFiles={onFiles} />}
+        {activeTab === "mic" && (
           <Card className="p-4">
             <Recorder onRecorded={onRecorded} />
           </Card>
         )}
-        {tab === "podcast" && (
+        {activeTab === "podcast" && (
           <Card className="p-5">
             <PodcastPanel proxyBase={proxyBase} onEnqueue={onEnqueueEpisodes} />
           </Card>
@@ -735,11 +766,11 @@ export default function App() {
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-sm text-slate-400">
           <span className="text-base">{FAMILY_META[family].emoji}</span>
-          <span className="font-medium text-slate-200">{model.name}</span>
+          <span className="font-medium text-slate-200">{modelName(model.name, t)}</span>
           <span className="text-slate-600">·</span>
           {state.status === "loading" ? (
             <span className="text-sky-300">
-              loading {Math.round(state.overall * 100)}%
+              {t.model.loading(Math.round(state.overall * 100))}
             </span>
           ) : loadedForModel ? (
             <span className="inline-flex items-center gap-1 text-emerald-300">
@@ -748,10 +779,10 @@ export default function App() {
               ) : (
                 <Cpu className="size-3.5" />
               )}
-              ready
+              {t.model.ready}
             </span>
           ) : (
-            <span>{formatSize(tierSizeMB(currentTier, gpuF16))} · loads on first file</span>
+            <span>{t.model.loadsOnFirstFile(formatSize(tierSizeMB(currentTier, gpuF16)))}</span>
           )}
         </div>
         <button
@@ -760,7 +791,7 @@ export default function App() {
           className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-slate-400 transition hover:bg-white/5 hover:text-slate-200"
         >
           <Sliders className="size-4" />
-          Settings
+          {t.settings.toggle}
           <ChevronDown
             className={`size-4 transition ${showSettings ? "rotate-180" : ""}`}
           />
@@ -775,7 +806,7 @@ export default function App() {
           className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/40 px-4 py-2 text-sm text-slate-300 transition hover:border-sky-400/30 hover:text-white"
         >
           <Download className="size-4" />
-          Pre-download {model.name} ({formatSize(tierSizeMB(currentTier, gpuF16))})
+          {t.model.preDownload(modelName(model.name, t), formatSize(tierSizeMB(currentTier, gpuF16)))}
         </button>
       )}
 
@@ -783,7 +814,7 @@ export default function App() {
       {showSettings && (
         <Card className="mt-3 p-5">
           <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-300">
-            <Sparkles className="size-4 text-sky-300" /> Fine-tune
+            <Sparkles className="size-4 text-sky-300" /> {t.settings.heading}
           </div>
           <AdvancedSettings
             settings={settings}
@@ -799,7 +830,7 @@ export default function App() {
               onClick={handleLoad}
               className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-600"
             >
-              <Download className="size-4" /> Apply &amp; reload model
+              <Download className="size-4" /> {t.settings.applyReload}
             </button>
           )}
           {state.status === "error" && state.error && (
@@ -821,11 +852,7 @@ export default function App() {
       )}
 
       {saveFailed && settings.keepTranscripts && (
-        <p className="mt-5 text-xs text-amber-300">
-          This browser refused to save a transcript (a private window, or storage
-          is full or blocked), so it may be missing after a reload. Download
-          anything you want to keep.
-        </p>
+        <p className="mt-5 text-xs text-amber-300">{t.saveFailed}</p>
       )}
 
       <div className="mt-5">
@@ -850,19 +877,36 @@ export default function App() {
 
       <footer className="mt-12 border-t border-[var(--color-border)] pt-6 text-center text-xs text-slate-500">
         <p>
-          Vem sa vad? by{" "}
-          <span className="font-medium text-slate-300">Micke Quick</span> ·{" "}
+          <strong className="font-semibold text-slate-300">Vem sa vad?</strong> {t.footer.by}{" "}
+          <a
+            href="https://mickequick.se"
+            className="font-medium text-slate-300 underline-offset-2 hover:underline"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Micke Quick
+          </a>
+          ,{" "}
+          <a
+            href="https://promptagency.se"
+            className="font-medium text-slate-300 underline-offset-2 hover:underline"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Prompt Agency
+          </a>{" "}
+          ·{" "}
           <a
             href="https://github.com/promptagency/vem-sa-vad"
             className="text-slate-400 underline-offset-2 hover:underline"
             target="_blank"
             rel="noreferrer"
           >
-            Source on GitHub
+            {t.footer.source}
           </a>
         </p>
         <p className="mt-2">
-          Based on{" "}
+          {t.footer.basedOn}{" "}
           <a
             href="https://github.com/fltman/bjarbys-transcriber"
             className="text-slate-400 underline-offset-2 hover:underline"
@@ -871,10 +915,10 @@ export default function App() {
           >
             Bjarbys Transcriber
           </a>{" "}
-          by <span className="font-medium text-slate-300">Anders Bjarby</span>
+          {t.footer.byAuthor} <span className="font-medium text-slate-300">Anders Bjarby</span>
         </p>
         <p className="mt-2">
-          Powered by{" "}
+          {t.footer.poweredBy}{" "}
           <a
             href="https://github.com/huggingface/transformers.js"
             className="text-slate-400 underline-offset-2 hover:underline"
@@ -901,9 +945,10 @@ export default function App() {
           >
             pyannote
           </a>{" "}
-          · models download once and cache in your browser.
+          · {t.footer.cached}
         </p>
       </footer>
     </div>
+    </I18nContext.Provider>
   );
 }

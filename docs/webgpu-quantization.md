@@ -33,7 +33,7 @@ known 112-word script. Score is word error rate (WER) against the script. Hardwa
 ## Second test: language switch, no language set
 
 `twovoice.wav`: 22 s of Swedish (Alva) followed by 8 s of English (Daniel), model `Xenova/whisper-base`, no
-language given (the app's "Any language"). Every configuration renders the Swedish part as English (Whisper
+language given (the app's auto-detect, then called "Any language"). Every configuration renders the Swedish part as English (Whisper
 detects one language) — that is how this model behaves, not a regression. What differs is whether the English
 part at the end survives:
 

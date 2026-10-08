@@ -17,6 +17,7 @@ import type { TranscriptChunk } from "../lib/protocol";
 import { TranscriptReview } from "./TranscriptReview";
 import { speakersIn, toTxt } from "../lib/exporters";
 import { Badge, ProgressBar, Spinner } from "./ui";
+import { formatMessage, useT } from "../lib/i18n";
 
 const SOURCE_ICON: Record<JobSource, typeof FileAudio> = {
   file: FileAudio,
@@ -25,22 +26,25 @@ const SOURCE_ICON: Record<JobSource, typeof FileAudio> = {
 };
 
 function StatusCell({ job }: { job: Job }) {
+  const t = useT();
+  const s = t.queue.status;
+  const pct = Math.round(job.stageProgress * 100);
   switch (job.status) {
     case "queued":
-      return <Badge tone="neutral">Queued</Badge>;
+      return <Badge tone="neutral">{s.queued}</Badge>;
     case "fetching":
       return (
         <div className="w-40">
           <ProgressBar value={job.stageProgress} />
           <span className="mt-1 block text-xs text-slate-400">
-            Downloading… {Math.round(job.stageProgress * 100)}%
+            {s.downloading(pct)}
           </span>
         </div>
       );
     case "decoding":
       return (
         <Badge tone="brand">
-          <Spinner className="size-3" /> Decoding
+          <Spinner className="size-3" /> {s.decoding}
         </Badge>
       );
     case "transcribing":
@@ -48,7 +52,7 @@ function StatusCell({ job }: { job: Job }) {
         <div className="w-40">
           <ProgressBar value={job.stageProgress} />
           <span className="mt-1 block text-xs text-slate-400">
-            Transcribing… {Math.round(job.stageProgress * 100)}%
+            {s.transcribing(pct)}
           </span>
         </div>
       );
@@ -57,24 +61,24 @@ function StatusCell({ job }: { job: Job }) {
         <div className="w-40">
           <ProgressBar value={job.stageProgress} />
           <span className="mt-1 block text-xs text-slate-400">
-            Separating speakers… {Math.round(job.stageProgress * 100)}%
+            {s.diarizing(pct)}
           </span>
         </div>
       );
     case "done":
       return job.warning ? (
         <Badge tone="amber">
-          <TriangleAlert className="size-3" /> Done
+          <TriangleAlert className="size-3" /> {s.done}
         </Badge>
       ) : (
         <Badge tone="green">
-          <Check className="size-3" /> Done
+          <Check className="size-3" /> {s.done}
         </Badge>
       );
     case "error":
       return (
         <Badge tone="red">
-          <TriangleAlert className="size-3" /> Failed
+          <TriangleAlert className="size-3" /> {s.failed}
         </Badge>
       );
   }
@@ -85,6 +89,7 @@ function StatusCell({ job }: { job: Job }) {
  * reader has scrolled up to read something earlier.
  */
 function LivePreview({ text }: { text: string }) {
+  const t = useT();
   const box = useRef<HTMLDivElement | null>(null);
   const follow = useRef(true);
   useEffect(() => {
@@ -93,7 +98,7 @@ function LivePreview({ text }: { text: string }) {
   return (
     <div className="border-t border-[var(--color-border)] px-3 pb-3 pt-2">
       <p className="mb-1 text-[11px] uppercase tracking-wide text-slate-500">
-        Live preview · the finished transcript may differ slightly
+        {t.queue.livePreview}
       </p>
       <div
         ref={box}
@@ -136,6 +141,7 @@ export function JobQueue({
   askKeepTranscripts: boolean;
   onChooseKeepTranscripts: (keep: boolean) => void;
 }) {
+  const t = useT();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -155,7 +161,7 @@ export function JobQueue({
   async function copy(job: Job) {
     if (!job.result) return;
     await navigator.clipboard.writeText(
-      toTxt(job.result, job.speakerNames).trim(),
+      toTxt(job.result, job.speakerNames, t.export).trim(),
     );
     setCopied(job.id);
     window.setTimeout(() => setCopied((c) => (c === job.id ? null : c)), 1500);
@@ -165,16 +171,16 @@ export function JobQueue({
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
-          Queue · {jobs.length}
+          {t.queue.title(jobs.length)}
         </h2>
         {doneCount > 0 && (
           <button
             type="button"
             onClick={onClearCompleted}
-            title="Deletes all finished transcripts from this list and from this browser"
+            title={t.queue.deleteFinishedTitle}
             className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-300"
           >
-            <Trash2 className="size-3.5" /> Delete all finished
+            <Trash2 className="size-3.5" /> {t.queue.deleteFinished}
           </button>
         )}
       </div>
@@ -189,15 +195,11 @@ export function JobQueue({
       */}
       {doneCount > 0 && askKeepTranscripts && (
         <div className="rounded-xl border border-sky-400/30 bg-sky-400/[0.07] p-3.5 text-xs leading-relaxed text-sky-100/90">
-          <p className="mb-1 text-sm font-semibold text-sky-100">
-            Keep finished transcripts if you reload the page?
-          </p>
+          <p className="mb-1 text-sm font-semibold text-sky-100">{t.queue.askTitle}</p>
           <p>
-            If you say yes, they&rsquo;re saved in this browser (never uploaded)
-            and <strong className="font-semibold text-sky-100">stay until you
-            delete them</strong> — anyone using this browser could open them. If
-            you say no, they disappear when you close or reload the page, so
-            download what you need. You can change this later in Settings.
+            {t.queue.askBefore}
+            <strong className="font-semibold text-sky-100">{t.queue.askStay}</strong>
+            {t.queue.askAfter}
           </p>
           <div className="mt-2.5 flex flex-wrap gap-2">
             <button
@@ -205,14 +207,14 @@ export function JobQueue({
               onClick={() => onChooseKeepTranscripts(true)}
               className="rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-600"
             >
-              Yes, keep them
+              {t.queue.yesKeep}
             </button>
             <button
               type="button"
               onClick={() => onChooseKeepTranscripts(false)}
               className="rounded-lg px-3 py-1.5 text-xs text-slate-300 ring-1 ring-inset ring-[var(--color-border)] hover:bg-white/5"
             >
-              No thanks
+              {t.queue.noThanks}
             </button>
           </div>
         </div>
@@ -225,15 +227,15 @@ export function JobQueue({
             {restoredCount > 0 && (
               <>
                 <strong className="font-semibold text-sky-100">
-                  Restored {restoredCount} transcript{restoredCount === 1 ? "" : "s"} from
-                  your last visit.
+                  {t.queue.restored(restoredCount)}
                 </strong>{" "}
               </>
             )}
-            Finished transcripts are <strong className="font-semibold text-sky-100">saved
-            in this browser and stay until you delete them</strong> — with ✕ on each one,
-            or <em>Delete all finished</em>. On a shared computer, delete them when
-            you&rsquo;re done.
+            {t.queue.keptBefore}
+            <strong className="font-semibold text-sky-100">{t.queue.keptStay}</strong>
+            {t.queue.keptAfter}
+            <em>{t.queue.keptDeleteAll}</em>
+            {t.queue.keptEnd}
           </p>
         </div>
       )}
@@ -256,16 +258,18 @@ export function JobQueue({
                     {job.label}
                   </p>
                   {job.status === "error" && job.error && (
-                    <p className="truncate text-xs text-red-300">{job.error}</p>
+                    <p className="truncate text-xs text-red-300">
+                      {formatMessage(t, job.error)}
+                    </p>
                   )}
                   {job.status === "done" && job.result && (
                     <p className="truncate text-xs text-slate-500">
-                      {job.result.text.trim().slice(0, 80) || "(no speech detected)"}
+                      {job.result.text.trim().slice(0, 80) || t.queue.noSpeech}
                     </p>
                   )}
                   {job.warning && (
                     <p className="truncate text-xs text-amber-300">
-                      {job.warning}
+                      {formatMessage(t, job.warning)}
                     </p>
                   )}
                 </div>
@@ -277,7 +281,7 @@ export function JobQueue({
                     <>
                       <button
                         type="button"
-                        title="Show transcript"
+                        title={t.queue.show}
                         onClick={() => toggle(job.id)}
                         className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-slate-200"
                       >
@@ -287,7 +291,7 @@ export function JobQueue({
                       </button>
                       <button
                         type="button"
-                        title="Download transcript"
+                        title={t.queue.download}
                         onClick={() => onDownload(job)}
                         className="rounded-lg p-2 text-sky-300 hover:bg-sky-400/10"
                       >
@@ -300,7 +304,7 @@ export function JobQueue({
                     job.status === "queued") && (
                     <button
                       type="button"
-                      title="Remove"
+                      title={t.queue.remove}
                       onClick={() => onRemove(job)}
                       className="rounded-lg p-2 text-slate-500 hover:bg-white/5 hover:text-slate-300"
                     >
@@ -324,11 +328,11 @@ export function JobQueue({
                     >
                       {copied === job.id ? (
                         <>
-                          <Check className="size-3.5" /> Copied
+                          <Check className="size-3.5" /> {t.queue.copied}
                         </>
                       ) : (
                         <>
-                          <Copy className="size-3.5" /> Copy
+                          <Copy className="size-3.5" /> {t.queue.copy}
                         </>
                       )}
                     </button>
@@ -360,32 +364,29 @@ function SpeakerNamer({
   job: Job;
   onRename: (job: Job, speaker: number, name: string) => void;
 }) {
+  const t = useT();
   const speakers = job.result ? speakersIn(job.result) : [];
   if (speakers.length === 0) return null;
   return (
     <div className="mb-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)]/40 p-3">
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-        Name the speakers
+        {t.queue.nameSpeakers}
       </p>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         {speakers.map((speaker) => (
           <label key={speaker} className="flex flex-col gap-1">
-            <span className="text-xs text-slate-500">Speaker {speaker}</span>
+            <span className="text-xs text-slate-500">{t.export.speaker(speaker)}</span>
             <input
               type="text"
               value={job.speakerNames[speaker] ?? ""}
-              placeholder={`Speaker ${speaker}`}
+              placeholder={t.export.speaker(speaker)}
               onChange={(e) => onRename(job, speaker, e.target.value)}
               className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-1.5 text-sm text-slate-100 outline-none transition focus:border-sky-400/60 focus:ring-2 focus:ring-sky-400/20"
             />
           </label>
         ))}
       </div>
-      <p className="mt-2 text-xs text-slate-500">
-        Names are used in the transcript, Copy and downloads. A file that was
-        downloaded automatically still says &ldquo;Speaker 1&rdquo; — download
-        it again after naming.
-      </p>
+      <p className="mt-2 text-xs text-slate-500">{t.queue.namesHint}</p>
     </div>
   );
 }

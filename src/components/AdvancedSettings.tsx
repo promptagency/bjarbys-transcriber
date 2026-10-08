@@ -1,7 +1,6 @@
 import {
   type Backend,
   type Dtype,
-  DTYPE_LABEL,
   MODEL_GROUPS,
   MODELS,
   availableTiers,
@@ -14,10 +13,11 @@ import { EXPORT_FORMATS, type ExportFormat } from "../lib/exporters";
 
 /** The readable formats: paragraphs per speaker turn rather than one line per fragment. */
 const isDocument = (f: ExportFormat) => f === "txt" || f === "md";
-// Two formats end in .txt, so these show their name rather than just the extension.
-const showLabel = (f: ExportFormat) => isDocument(f) || f === "lines";
-import { type DeviceMode, LANGUAGES, type Settings } from "../lib/settings";
-import { Field, Select } from "./ui";
+// The documents show their name rather than just the extension.
+const showLabel = (f: ExportFormat) => isDocument(f);
+import { type DeviceMode, type Settings, forModel } from "../lib/settings";
+import { Field, InfoTip, Select } from "./ui";
+import { modelName, useT } from "../lib/i18n";
 
 export function AdvancedSettings({
   settings,
@@ -35,6 +35,7 @@ export function AdvancedSettings({
   gpuF16: boolean;
   disabled?: boolean;
 }) {
+  const t = useT();
   const model = findModel(settings.modelId)!;
   const tiers = availableTiers(model, resolvedDevice);
   const englishOnly = isEnglishOnly(settings.modelId);
@@ -42,17 +43,17 @@ export function AdvancedSettings({
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <Field label="Model" hint={model.language}>
+      <Field label={t.settings.model} tip={t.settings.tips.model}>
         <Select
           value={settings.modelId}
           disabled={disabled}
-          onChange={(e) => onChange({ modelId: e.target.value })}
+          onChange={(e) => onChange(forModel(e.target.value))}
         >
           {MODEL_GROUPS.map((group) => (
-            <optgroup key={group} label={group}>
+            <optgroup key={group} label={t.settings.group[group]}>
               {MODELS.filter((m) => m.group === group).map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.name}
+                  {modelName(m.name, t)}
                   {m.recommended ? "  ★" : ""}
                 </option>
               ))}
@@ -62,36 +63,37 @@ export function AdvancedSettings({
       </Field>
 
       <Field
-        label="Quality / size"
-        hint={currentTier ? `${formatSize(tierSizeMB(currentTier, gpuF16))} download` : ""}
+        label={t.settings.quality}
+        tip={t.settings.tips.quality}
+        hint={currentTier ? t.settings.download(formatSize(tierSizeMB(currentTier, gpuF16))) : ""}
       >
         <Select
           value={settings.dtype}
           disabled={disabled}
           onChange={(e) => onChange({ dtype: e.target.value as Dtype })}
         >
-          {tiers.map((t) => (
-            <option key={t.dtype} value={t.dtype}>
-              {DTYPE_LABEL[t.dtype]} — {formatSize(tierSizeMB(t, gpuF16))}
+          {tiers.map((tier) => (
+            <option key={tier.dtype} value={tier.dtype}>
+              {t.settings.dtype[tier.dtype]} — {formatSize(tierSizeMB(tier, gpuF16))}
             </option>
           ))}
         </Select>
       </Field>
 
       <Field
-        label="Run on"
-        hint={webgpuAvailable ? "WebGPU detected" : "WebGPU unavailable"}
+        label={t.settings.runOn}
+        tip={t.settings.tips.runOn}
       >
         <Select
           value={settings.deviceMode}
           disabled={disabled}
           onChange={(e) => onChange({ deviceMode: e.target.value as DeviceMode })}
         >
-          <option value="auto">Auto ({webgpuAvailable ? "GPU" : "CPU"})</option>
+          <option value="auto">{t.settings.auto(webgpuAvailable ? "GPU" : "CPU")}</option>
           <option value="webgpu" disabled={!webgpuAvailable}>
-            GPU — WebGPU{webgpuAvailable ? "" : " (not available)"}
+            {t.settings.gpu(webgpuAvailable)}
           </option>
-          <option value="wasm">CPU — WASM</option>
+          <option value="wasm">{t.settings.cpu}</option>
         </Select>
       </Field>
 
@@ -101,13 +103,9 @@ export function AdvancedSettings({
       */}
       <div>
         <div className="mb-1.5 flex items-baseline justify-between">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-            Output formats
-          </span>
-          <span className="text-xs text-slate-500">
-            {settings.exportFormats.length > 1
-              ? "transcribed once · saved as a .zip"
-              : "transcribed once per file"}
+          <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            {t.settings.formats}
+            <InfoTip text={t.settings.tips.formats} />
           </span>
         </div>
         <div className="grid grid-cols-2 gap-x-3 gap-y-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2.5">
@@ -119,7 +117,7 @@ export function AdvancedSettings({
             return (
               <label
                 key={f.value}
-                title={f.label}
+                title={t.settings.format[f.value]}
                 className={`flex items-center gap-2 text-sm text-slate-300 ${
                   disabled || isOnlyOne
                     ? "cursor-not-allowed opacity-60"
@@ -139,7 +137,7 @@ export function AdvancedSettings({
                   }
                   className="size-4 rounded border-[var(--color-border)] bg-[var(--color-surface-2)] accent-sky-500"
                 />
-                {showLabel(f.value) ? f.label : `.${f.ext}`}
+                {showLabel(f.value) ? t.settings.format[f.value] : `.${f.ext}`}
               </label>
             );
           })}
@@ -152,28 +150,17 @@ export function AdvancedSettings({
               onChange={(e) => onChange({ documentTimestamps: e.target.checked })}
               className="size-3.5 rounded border-[var(--color-border)] bg-[var(--color-surface-2)] accent-sky-500"
             />
-            Timestamps in documents ([00:09] before each paragraph)
+            {t.settings.timestamps}
+            <InfoTip text={t.settings.tips.timestamps} />
           </label>
         )}
       </div>
 
-      <Field label="Language" hint={englishOnly ? "English-only model" : ""}>
-        <Select
-          value={settings.language ?? ""}
-          disabled={disabled || englishOnly}
-          onChange={(e) =>
-            onChange({ language: e.target.value === "" ? null : e.target.value })
-          }
-        >
-          {LANGUAGES.map((l) => (
-            <option key={l.label} value={l.code ?? ""}>
-              {l.label}
-            </option>
-          ))}
-        </Select>
-      </Field>
-
-      <Field label="Task" hint="translate → English">
+      <Field
+        label={t.settings.task}
+        tip={t.settings.tips.task}
+        hint={englishOnly ? t.settings.englishOnlyModel : t.settings.taskHint}
+      >
         <Select
           value={settings.task}
           disabled={disabled || englishOnly}
@@ -181,8 +168,8 @@ export function AdvancedSettings({
             onChange({ task: e.target.value as "transcribe" | "translate" })
           }
         >
-          <option value="transcribe">Transcribe (same language)</option>
-          <option value="translate">Translate to English</option>
+          <option value="transcribe">{t.settings.transcribe}</option>
+          <option value="translate">{t.settings.translate}</option>
         </Select>
       </Field>
 
@@ -193,7 +180,8 @@ export function AdvancedSettings({
           onChange={(e) => onChange({ autoDownload: e.target.checked })}
           className="size-4 rounded border-[var(--color-border)] bg-[var(--color-surface-2)] accent-sky-500"
         />
-        Automatically download each transcript when it finishes
+        {t.settings.autoDownload}
+        <InfoTip text={t.settings.tips.autoDownload} />
       </label>
 
       <label className="flex cursor-pointer items-center gap-2.5 text-sm text-slate-300 sm:col-span-2">
@@ -203,11 +191,12 @@ export function AdvancedSettings({
           onChange={(e) => onChange({ diarizeSpeakers: e.target.checked })}
           className="size-4 rounded border-[var(--color-border)] bg-[var(--color-surface-2)] accent-sky-500"
         />
-        Separate speakers (experimental — labels each line "Speaker 1",
-        "Speaker 2", etc.)
+        <span>
+          {t.settings.diarize} <InfoTip text={t.settings.tips.diarize} />
+        </span>
       </label>
 
-      <label className="flex cursor-pointer items-start gap-2.5 text-sm text-slate-300 sm:col-span-2">
+      <label className="flex cursor-pointer items-center gap-2.5 text-sm text-slate-300 sm:col-span-2">
         <input
           type="checkbox"
           checked={settings.keepTranscripts}
@@ -217,15 +206,10 @@ export function AdvancedSettings({
               keepTranscriptsAsked: true,
             })
           }
-          className="mt-0.5 size-4 rounded border-[var(--color-border)] bg-[var(--color-surface-2)] accent-sky-500"
+          className="size-4 rounded border-[var(--color-border)] bg-[var(--color-surface-2)] accent-sky-500"
         />
         <span>
-          Keep finished transcripts in this browser after a reload
-          <span className="mt-0.5 block text-xs text-slate-500">
-            They stay until you delete them, and anyone using this browser could
-            open them — leave this off on a shared computer. Turning it off
-            deletes the saved copies.
-          </span>
+          {t.settings.keep} <InfoTip text={t.settings.tips.keep} />
         </span>
       </label>
     </div>

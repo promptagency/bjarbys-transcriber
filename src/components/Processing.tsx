@@ -1,6 +1,7 @@
 import { Cpu, Loader2, Zap } from "lucide-react";
 import { type Job, jobProgress } from "../lib/jobs";
 import type { ModelState } from "../hooks/useWhisper";
+import { formatMessage, useT } from "../lib/i18n";
 
 /** Animated equalizer bars. */
 export function WaveBars({
@@ -105,13 +106,6 @@ export function ProgressRing({
   );
 }
 
-const STAGE_TEXT: Record<string, string> = {
-  fetching: "Downloading episode",
-  decoding: "Decoding audio",
-  transcribing: "Transcribing speech",
-  diarizing: "Separating speakers",
-};
-
 /**
  * The "now processing" hero. Shows model-download progress while loading, then
  * a live equalizer + queue progress while jobs run.
@@ -127,6 +121,7 @@ export function ProcessingHero({
   done: number;
   total: number;
 }) {
+  const t = useT();
   const loading = state.status === "loading";
   const hasWork = loading || !!activeJob;
   if (!hasWork) return null;
@@ -138,14 +133,11 @@ export function ProcessingHero({
     <div className="relative overflow-hidden rounded-2xl border border-sky-400/20 bg-gradient-to-br from-sky-500/[0.07] to-cyan-400/[0.04] p-5">
       <div className="flex items-center gap-5">
         {loading ? (
-          <ProgressRing value={state.overall} label="download" />
+          <ProgressRing value={state.overall} label={t.processing.ringDownload} />
         ) : activeJob?.status === "transcribing" ? (
-          <ProgressRing value={activeJob.stageProgress} label="transcribing" />
+          <ProgressRing value={activeJob.stageProgress} label={t.processing.ringTranscribing} />
         ) : activeJob?.status === "diarizing" ? (
-          <ProgressRing
-            value={activeJob.stageProgress}
-            label="speakers"
-          />
+          <ProgressRing value={activeJob.stageProgress} label={t.processing.ringSpeakers} />
         ) : (
           <ProgressRing value={0} indeterminate label="" />
         )}
@@ -155,11 +147,10 @@ export function ProcessingHero({
             <>
               <p className="flex items-center gap-2 text-base font-semibold text-slate-100">
                 <Loader2 className="size-4 animate-spin text-sky-300" />
-                Downloading model
+                {t.processing.downloadingModel}
               </p>
               <p className="mt-1 truncate text-sm text-slate-400">
-                {Math.round(state.overall * 100)}% · cached in your browser after
-                the first time
+                {t.processing.cachedAfter(Math.round(state.overall * 100))}
               </p>
               <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
                 {state.device === "webgpu" ? (
@@ -167,7 +158,7 @@ export function ProcessingHero({
                 ) : (
                   <Cpu className="size-3.5" />
                 )}
-                Preparing {state.device === "webgpu" ? "GPU" : "CPU"} runtime
+                {t.processing.preparing(state.device === "webgpu" ? "GPU" : "CPU")}
               </div>
             </>
           ) : activeJob ? (
@@ -176,7 +167,7 @@ export function ProcessingHero({
                 <WaveBars className="h-7 w-14" />
                 <div className="min-w-0">
                   <p className="truncate text-base font-semibold text-slate-100">
-                    {STAGE_TEXT[activeJob.status] ?? "Working"}
+                    {t.processing.stage[activeJob.status] ?? t.processing.working}
                   </p>
                   <p className="truncate text-sm text-slate-400">
                     {activeJob.label}
@@ -186,16 +177,14 @@ export function ProcessingHero({
 
               {activeJob.warning && (
                 <p className="mt-3 text-sm text-amber-300">
-                  {activeJob.warning}
+                  {formatMessage(t, activeJob.warning)}
                 </p>
               )}
 
               <div className="mt-4">
                 <div className="mb-1.5 flex justify-between text-xs text-slate-400">
-                  <span>Queue progress</span>
-                  <span className="tabular-nums">
-                    {done} / {total} done
-                  </span>
+                  <span>{t.processing.queueProgress}</span>
+                  <span className="tabular-nums">{t.processing.done(done, total)}</span>
                 </div>
                 <div className="shimmer-track h-2 w-full overflow-hidden rounded-full bg-[var(--color-surface-2)]">
                   <div

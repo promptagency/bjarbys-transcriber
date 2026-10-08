@@ -14,6 +14,7 @@ import {
   formatDuration,
   searchPodcasts,
 } from "../lib/podcasts";
+import { type Strings, formatMessage, messageOf, useT } from "../lib/i18n";
 
 export function PodcastPanel({
   proxyBase,
@@ -24,10 +25,12 @@ export function PodcastPanel({
   disabled?: boolean;
   onEnqueue: (podcast: Podcast, episodes: Episode[]) => void;
 }) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<Podcast[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  // A function of the strings, so the message follows a language switch.
+  const [error, setError] = useState<((t: Strings) => string) | null>(null);
 
   const [podcast, setPodcast] = useState<Podcast | null>(null);
   const [loadingEpisodes, setLoadingEpisodes] = useState(false);
@@ -43,7 +46,8 @@ export function PodcastPanel({
     try {
       setResults(await searchPodcasts(query.trim()));
     } catch (err) {
-      setError(`Search failed: ${(err as Error).message}`);
+      const message = messageOf(err);
+      setError(() => (t: Strings) => t.podcast.searchFailed(formatMessage(t, message)));
     } finally {
       setSearching(false);
     }
@@ -59,7 +63,8 @@ export function PodcastPanel({
       const { episodes } = await fetchEpisodes(p.feedUrl, proxyBase);
       setEpisodes(episodes);
     } catch (err) {
-      setError(`Couldn't load episodes: ${(err as Error).message}`);
+      const message = messageOf(err);
+      setError(() => (t: Strings) => t.podcast.loadFailed(formatMessage(t, message)));
     } finally {
       setLoadingEpisodes(false);
     }
@@ -98,7 +103,7 @@ export function PodcastPanel({
             onClick={() => setPodcast(null)}
             className="flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-slate-400 hover:bg-white/5 hover:text-slate-200"
           >
-            <ArrowLeft className="size-4" /> Back
+            <ArrowLeft className="size-4" /> {t.podcast.back}
           </button>
           {podcast.artwork && (
             <img
@@ -117,10 +122,10 @@ export function PodcastPanel({
 
         {loadingEpisodes && (
           <div className="flex items-center justify-center gap-2 py-12 text-slate-400">
-            <Loader2 className="size-5 animate-spin" /> Loading episodes…
+            <Loader2 className="size-5 animate-spin" /> {t.podcast.loadingEpisodes}
           </div>
         )}
-        {error && <p className="text-sm text-red-300">{error}</p>}
+        {error && <p className="text-sm text-red-300">{error(t)}</p>}
 
         {!loadingEpisodes && episodes.length > 0 && (
           <>
@@ -135,12 +140,10 @@ export function PodcastPanel({
                 ) : (
                   <Square className="size-4" />
                 )}
-                {selected.size === episodes.length
-                  ? "Deselect all"
-                  : "Select all"}
+                {selected.size === episodes.length ? t.podcast.deselectAll : t.podcast.selectAll}
               </button>
               <span className="text-xs text-slate-500">
-                {episodes.length} episodes
+                {t.podcast.episodes(episodes.length)}
               </span>
             </div>
 
@@ -170,7 +173,7 @@ export function PodcastPanel({
                           {ep.title}
                         </span>
                         <span className="mt-0.5 block text-xs text-slate-500">
-                          {ep.date ? ep.date.toLocaleDateString() : ""}
+                          {ep.date ? ep.date.toLocaleDateString(t.locale) : ""}
                           {ep.date && ep.durationSec != null ? " · " : ""}
                           {ep.durationSec != null
                             ? formatDuration(ep.durationSec)
@@ -190,14 +193,14 @@ export function PodcastPanel({
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-sky-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Plus className="size-4" />
-              Add {selected.size || ""} to transcription queue
+              {t.podcast.add(selected.size)}
             </button>
           </>
         )}
 
         {!loadingEpisodes && episodes.length === 0 && !error && (
           <p className="py-8 text-center text-sm text-slate-500">
-            No playable episodes found in this feed.
+            {t.podcast.noEpisodes}
           </p>
         )}
       </div>
@@ -213,7 +216,7 @@ export function PodcastPanel({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search for a podcast by name…"
+            placeholder={t.podcast.placeholder}
             className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] py-2.5 pl-9 pr-3 text-sm text-slate-100 outline-none transition focus:border-sky-400/60 focus:ring-2 focus:ring-sky-400/20"
           />
         </div>
@@ -222,11 +225,11 @@ export function PodcastPanel({
           disabled={searching || !query.trim()}
           className="flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-600 disabled:opacity-40"
         >
-          {searching ? <Loader2 className="size-4 animate-spin" /> : "Search"}
+          {searching ? <Loader2 className="size-4 animate-spin" /> : t.podcast.search}
         </button>
       </form>
 
-      {error && <p className="text-sm text-red-300">{error}</p>}
+      {error && <p className="text-sm text-red-300">{error(t)}</p>}
 
       {results.length > 0 && (
         <ul className="grid max-h-96 grid-cols-1 gap-2 overflow-y-auto pr-1 scroll-thin sm:grid-cols-2">
@@ -262,8 +265,7 @@ export function PodcastPanel({
 
       {!searching && results.length === 0 && (
         <p className="py-6 text-center text-sm text-slate-500">
-          Find a show, pick episodes, and they’ll be transcribed locally — the
-          audio is fetched through your own server, never a third party.
+          {t.podcast.intro}
         </p>
       )}
     </div>
