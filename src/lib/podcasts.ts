@@ -23,6 +23,9 @@ export interface Episode {
   mime: string | null;
 }
 
+/** Response header set by proxy.php, its Cloudflare and dev-server stand-ins. */
+const PROXY_MARKER = "X-Vem-Sa-Vad-Proxy";
+
 /** Default same-origin proxy endpoint (shipped as proxy.php). */
 export const DEFAULT_PROXY = "./proxy.php?url=";
 
@@ -44,10 +47,11 @@ async function fetchMaybeProxied(
   let proxyProblem = "";
   try {
     const res = await fetch(proxied(url, proxyBase), init);
-    // A missing proxy usually comes back as the app's own HTML (SPA fallback).
-    const ct = res.headers.get("content-type") ?? "";
-    if (res.ok && !ct.includes("text/html")) return res;
-    proxyProblem = res.ok ? "the proxy isn't running (got a web page)" : `the proxy answered HTTP ${res.status}`;
+    // Only a response marked by one of our proxies counts. Without a proxy, a
+    // static host answers with the app's own page, or with proxy.php's source
+    // where PHP isn't running — neither is the feed or the episode.
+    if (res.ok && res.headers.get(PROXY_MARKER) === "1") return res;
+    proxyProblem = res.ok ? "no proxy is running here" : `the proxy answered HTTP ${res.status}`;
   } catch (err) {
     proxyProblem = `the proxy couldn't be reached (${String((err as Error)?.message ?? err)})`;
   }
@@ -70,7 +74,15 @@ export async function searchPodcasts(
   const url = `https://itunes.apple.com/search?media=podcast&limit=${limit}&term=${encodeURIComponent(
     term,
   )}`;
-  const res = await fetchMaybeProxied(url, proxyBase);
+  // Apple's search allows cross-origin requests (and the CSP allows it), so it
+  // goes direct; the proxy is only a fallback.
+  let res: Response;
+  try {
+    res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  } catch {
+    res = await fetchMaybeProxied(url, proxyBase);
+  }
   const data = (await res.json()) as {
     results: Array<{
       collectionId: number;

@@ -7,16 +7,18 @@
 // than a general proxy:
 //   • only GET, only http(s), never local or private-looking hosts;
 //   • only requests from this site's own pages (Sec-Fetch-Site: same-origin);
-//   • only feeds and media come back — an HTML page is refused, so it can't be
-//     used to browse the web through us.
+//   • web pages and scripts are refused (a feed mislabelled as HTML is let
+//     through if it starts like XML), so it can't be used to browse the web
+//     through us;
+//   • responses are marked X-Vem-Sa-Vad-Proxy, so the app can tell the proxy
+//     from a static host that merely serves a file called proxy.php.
 
-const ALLOWED_TYPES = [
-  /^application\/(rss\+xml|atom\+xml|xml)\b/i,
-  /^text\/xml\b/i,
-  /^audio\//i,
-  /^video\//i,
-  /^application\/(octet-stream|ogg|x-mpegurl)\b/i,
-];
+// Web pages and scripts are refused; everything else (feeds and media come with
+// many labels: application/rss+xml, application/x-rss+xml, text/xml, text/plain,
+// audio/mpeg, application/mp3, binary/octet-stream, …) is passed through.
+const REFUSED_TYPES = /^(text\/(html|javascript|css)|application\/(xhtml\+xml|javascript|json))\b/i;
+/** A feed served with an HTML label still starts like XML. */
+const LOOKS_LIKE_XML = /^\s*(<\?xml|<rss|<feed)/i;
 
 const PRIVATE_HOST =
   /^(localhost|.*\.local|.*\.internal|0\.0\.0\.0|127\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|169\.254\.\d+\.\d+|\[.*\])$/i;
@@ -25,6 +27,34 @@ function refuse(status: number, message: string): Response {
   return new Response(message, {
     status,
     headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" },
+  });
+}
+
+/**
+ * The body again, if its first bytes look like XML; null if they don't. Reads
+ * just the first chunk, then streams the rest through unchanged.
+ */
+async function sniffXml(body: ReadableStream<Uint8Array>): Promise<ReadableStream<Uint8Array> | null> {
+  const reader = body.getReader();
+  const first = await reader.read();
+  const head = first.value ? new TextDecoder().decode(first.value.slice(0, 512)) : "";
+  if (!LOOKS_LIKE_XML.test(head.replace(/^\uFEFF/, ""))) {
+    void reader.cancel();
+    return null;
+  }
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      if (first.value) controller.enqueue(first.value);
+      if (first.done) controller.close();
+    },
+    async pull(controller) {
+      const next = await reader.read();
+      if (next.done) controller.close();
+      else controller.enqueue(next.value);
+    },
+    cancel(reason) {
+      return reader.cancel(reason);
+    },
   });
 }
 
@@ -59,14 +89,23 @@ export const onRequestGet: PagesFunction = async ({ request }) => {
   if (!upstream.ok) return refuse(upstream.status, `Upstream returned HTTP ${upstream.status}`);
 
   const type = upstream.headers.get("Content-Type") ?? "";
-  // Some podcast hosts send no type at all; let those through, as proxy.php does.
-  if (type && !ALLOWED_TYPES.some((re) => re.test(type))) {
-    return refuse(415, "Only podcast feeds and media are proxied.");
+  let body: ReadableStream<Uint8Array> | null = upstream.body;
+  if (REFUSED_TYPES.test(type)) {
+    // Some feeds are mislabelled as HTML; let them through if they start like XML.
+    const sniffed = /^text\/html\b/i.test(type) && body ? await sniffXml(body) : null;
+    if (!sniffed) return refuse(415, "Only podcast feeds and media are proxied.");
+    body = sniffed;
   }
 
-  const headers = new Headers({ "Cache-Control": "no-store" });
+  const headers = new Headers({
+    "Cache-Control": "no-store",
+    // Tells the app this really is the proxy (see src/lib/podcasts.ts).
+    "X-Vem-Sa-Vad-Proxy": "1",
+  });
   if (type) headers.set("Content-Type", type);
+  // fetch() decompresses gzip/brotli bodies; the upstream length would then be
+  // the compressed size, so it's only passed on for uncompressed responses.
   const length = upstream.headers.get("Content-Length");
-  if (length) headers.set("Content-Length", length);
-  return new Response(upstream.body, { status: 200, headers });
+  if (length && !upstream.headers.get("Content-Encoding")) headers.set("Content-Length", length);
+  return new Response(body, { status: 200, headers });
 };

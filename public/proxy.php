@@ -14,6 +14,8 @@
  */
 
 header('Access-Control-Allow-Origin: *');
+// Tells the app this response really comes from the proxy (see src/lib/podcasts.ts).
+header('X-Vem-Sa-Vad-Proxy: 1');
 
 $url = isset($_GET['url']) ? $_GET['url'] : '';
 if ($url === '') {

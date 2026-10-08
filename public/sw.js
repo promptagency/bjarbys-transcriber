@@ -35,8 +35,13 @@ async function precache() {
       }
       await cache.put(url, response);
     } catch {
-      /* offline or a missing file: skip it */
+      /* offline, a missing file or full storage: skip it */
     }
+  }
+  // Content-hashed files from earlier releases are never asked for again.
+  for (const request of await cache.keys()) {
+    const url = new URL(request.url);
+    if (url.pathname.includes("/assets/") && !seen.has(url.toString())) await cache.delete(request);
   }
 }
 
@@ -56,9 +61,13 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-async function fetchAndKeep(cache, request) {
+// Saving is done in the background and may fail — e.g. when the origin's storage
+// is full of cached models — without ever withholding the response itself.
+async function fetchAndKeep(event, cache, request) {
   const response = await fetch(request);
-  if (response.ok && response.type === "basic") await cache.put(request, response.clone());
+  if (response.ok && response.type === "basic") {
+    event.waitUntil(cache.put(request, response.clone()).catch(() => {}));
+  }
   return response;
 }
 
@@ -70,7 +79,7 @@ self.addEventListener("fetch", (event) => {
 
   if (url.pathname.includes("/assets/")) {
     event.respondWith(
-      caches.open(CACHE).then(async (cache) => (await cache.match(request)) ?? fetchAndKeep(cache, request)),
+      caches.open(CACHE).then(async (cache) => (await cache.match(request)) ?? fetchAndKeep(event, cache, request)),
     );
     return;
   }
@@ -78,7 +87,7 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     caches.open(CACHE).then(async (cache) => {
       try {
-        return await fetchAndKeep(cache, request);
+        return await fetchAndKeep(event, cache, request);
       } catch {
         const cached = await cache.match(request);
         if (cached) return cached;

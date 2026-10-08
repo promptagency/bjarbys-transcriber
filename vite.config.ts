@@ -27,6 +27,7 @@ function devPodcastProxy(): PluginOption {
             const ct = upstream.headers.get('content-type')
             if (ct) res.setHeader('Content-Type', ct)
             res.setHeader('Access-Control-Allow-Origin', '*')
+            res.setHeader('X-Vem-Sa-Vad-Proxy', '1')
             const buf = Buffer.from(await upstream.arrayBuffer())
             res.end(buf)
           })
