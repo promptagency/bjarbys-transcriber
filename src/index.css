@@ -6,10 +6,10 @@
  * and lavender for the two badges. Change them here, not in components.
  */
 @theme {
-  --color-bg: #222222; /* dark charcoal */
-  --color-surface: #2a2a2a;
-  --color-surface-2: #333333;
-  --color-border: #3d3d3d;
+  --color-bg: #1a1a1a; /* dark charcoal — Prompt Agency brand-black */
+  --color-surface: #232323;
+  --color-surface-2: #2c2c2c;
+  --color-border: #363636;
 
   /* Sienna — the "vad?" bubble (#C85A3E) and Prompt Agency's primary. */
   --color-brand-100: #f8e3da;
@@ -33,7 +33,7 @@
   --color-lavender-500: #8f7cb8;
 
   /* The faintest grey (hints, footer), lightened from Tailwind's #737373 so
-     small text keeps a 4.5:1 contrast on the charcoal background. */
+     small text keeps at least 4.5:1 contrast on the background and panels. */
   --color-neutral-500: #969696;
 
   /* The logo's text colour, used on the solid bubble-coloured badges. */
