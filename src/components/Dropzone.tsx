@@ -43,7 +43,7 @@ export function Dropzone({
         if ((e.key === "Enter" || e.key === " ") && !disabled)
           inputRef.current?.click();
       }}
-      className={`group flex cursor-pointer flex-col items-center justify-center gap-4 rounded-3xl border-2 border-dashed px-6 py-16 text-center transition sm:py-20 ${
+      className={`group flex cursor-pointer flex-col items-center justify-center gap-4 rounded-3xl border-2 border-dashed px-6 py-[30px] text-center transition sm:py-[43px] ${
         hover
           ? "scale-[1.01] border-brand-400/70 bg-brand-400/[0.06]"
           : // The same surface as the Spela in and Podd panels (Card).
