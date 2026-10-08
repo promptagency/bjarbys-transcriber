@@ -46,7 +46,8 @@ export function Dropzone({
       className={`group flex cursor-pointer flex-col items-center justify-center gap-4 rounded-3xl border-2 border-dashed px-6 py-16 text-center transition sm:py-20 ${
         hover
           ? "scale-[1.01] border-sky-400/70 bg-sky-400/[0.06]"
-          : "border-[var(--color-border)] hover:border-sky-400/40 hover:bg-white/[0.02]"
+          : // The same surface as the Spela in and Podd panels (Card).
+            "border-[var(--color-border)] bg-[var(--color-surface)]/80 backdrop-blur hover:border-sky-400/40"
       } ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
     >
       <input
