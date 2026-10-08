@@ -1,9 +1,9 @@
 // Turn a Whisper result into downloadable transcript formats.
 import type { TranscriptResult } from "./protocol";
 
-// "txt" is the readable document; "lines" is the older one-fragment-per-line
-// text, kept for scripts and tools that read a transcript line by line.
-export type ExportFormat = "txt" | "md" | "srt" | "vtt" | "json" | "lines";
+// "txt" is the readable document. The older one-fragment-per-line text is no
+// longer a download — it's what Copy gives (toTxt) — but JSON still builds on it.
+export type ExportFormat = "txt" | "md" | "srt" | "vtt" | "json";
 
 // The labels are for the developer benchmark page; the app shows its own (i18n).
 export const EXPORT_FORMATS: { value: ExportFormat; label: string; ext: string }[] =
@@ -13,8 +13,6 @@ export const EXPORT_FORMATS: { value: ExportFormat; label: string; ext: string }
     { value: "srt", label: "Subtitles (.srt)", ext: "srt" },
     { value: "vtt", label: "WebVTT (.vtt)", ext: "vtt" },
     { value: "json", label: "JSON (.json)", ext: "json" },
-    // A distinct suffix so it can sit next to the document .txt in one zip.
-    { value: "lines", label: "Lines (.txt)", ext: "lines.txt" },
   ];
 
 export function mimeFor(format: ExportFormat): string {
@@ -356,8 +354,6 @@ export function render(
       return toVtt(result, names, labels);
     case "json":
       return toJson(result, names, labels);
-    case "lines":
-      return toTxt(result, names, labels);
   }
 }
 

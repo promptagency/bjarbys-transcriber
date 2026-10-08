@@ -13,8 +13,8 @@ import { EXPORT_FORMATS, type ExportFormat } from "../lib/exporters";
 
 /** The readable formats: paragraphs per speaker turn rather than one line per fragment. */
 const isDocument = (f: ExportFormat) => f === "txt" || f === "md";
-// Two formats end in .txt, so these show their name rather than just the extension.
-const showLabel = (f: ExportFormat) => isDocument(f) || f === "lines";
+// The documents show their name rather than just the extension.
+const showLabel = (f: ExportFormat) => isDocument(f);
 import { type DeviceMode, type Settings, forModel } from "../lib/settings";
 import { Field, InfoTip, Select } from "./ui";
 import { modelName, useT } from "../lib/i18n";

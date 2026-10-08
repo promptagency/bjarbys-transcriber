@@ -43,9 +43,9 @@ If you find it useful, consider
   speaker turn (a new one after a pause of 4 s or more), the speaker named
   once, a header with title, date, length and speakers, and optional `[mm:ss]`
   timestamps.
-- 📝 **More formats** — `.srt` and `.vtt` subtitles, `.json` (with
-  timestamps), and **Lines** (`.lines.txt`, one Whisper fragment per line, for
-  scripts). Tick as many as you like; the audio is only analysed once and every
+- 📝 **More formats** — `.srt` and `.vtt` subtitles and `.json` (with
+  timestamps); **Copy** gives the raw text, one Whisper fragment per line. Tick as
+  many as you like; the audio is only analysed once and every
   format is rendered from that same result. Several are saved as one `.zip`.
 - 🗣️ **Speaker separation** (optional, experimental) — labels each line
   `Speaker 1`, `Speaker 2`, … via
