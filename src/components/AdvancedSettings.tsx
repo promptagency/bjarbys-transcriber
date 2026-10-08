@@ -103,7 +103,7 @@ export function AdvancedSettings({
       */}
       <div>
         <div className="mb-1.5 flex items-baseline justify-between">
-          <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+          <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-neutral-400">
             {t.settings.formats}
             <InfoTip text={t.settings.tips.formats} />
           </span>
@@ -118,7 +118,7 @@ export function AdvancedSettings({
               <label
                 key={f.value}
                 title={t.settings.format[f.value]}
-                className={`flex items-center gap-2 text-sm text-slate-300 ${
+                className={`flex items-center gap-2 text-sm text-neutral-300 ${
                   disabled || isOnlyOne
                     ? "cursor-not-allowed opacity-60"
                     : "cursor-pointer"
@@ -135,7 +135,7 @@ export function AdvancedSettings({
                         : settings.exportFormats.filter((v) => v !== f.value),
                     })
                   }
-                  className="size-4 rounded border-[var(--color-border)] bg-[var(--color-surface-2)] accent-sky-500"
+                  className="size-4 rounded border-[var(--color-border)] bg-[var(--color-surface-2)] accent-brand-500"
                 />
                 {showLabel(f.value) ? t.settings.format[f.value] : `.${f.ext}`}
               </label>
@@ -143,12 +143,12 @@ export function AdvancedSettings({
           })}
         </div>
         {settings.exportFormats.some(isDocument) && (
-          <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs text-slate-400">
+          <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs text-neutral-400">
             <input
               type="checkbox"
               checked={settings.documentTimestamps}
               onChange={(e) => onChange({ documentTimestamps: e.target.checked })}
-              className="size-3.5 rounded border-[var(--color-border)] bg-[var(--color-surface-2)] accent-sky-500"
+              className="size-3.5 rounded border-[var(--color-border)] bg-[var(--color-surface-2)] accent-brand-500"
             />
             {t.settings.timestamps}
             <InfoTip text={t.settings.tips.timestamps} />
@@ -173,30 +173,30 @@ export function AdvancedSettings({
         </Select>
       </Field>
 
-      <label className="flex cursor-pointer items-center gap-2.5 text-sm text-slate-300 sm:col-span-2">
+      <label className="flex cursor-pointer items-center gap-2.5 text-sm text-neutral-300 sm:col-span-2">
         <input
           type="checkbox"
           checked={settings.autoDownload}
           onChange={(e) => onChange({ autoDownload: e.target.checked })}
-          className="size-4 rounded border-[var(--color-border)] bg-[var(--color-surface-2)] accent-sky-500"
+          className="size-4 rounded border-[var(--color-border)] bg-[var(--color-surface-2)] accent-brand-500"
         />
         {t.settings.autoDownload}
         <InfoTip text={t.settings.tips.autoDownload} />
       </label>
 
-      <label className="flex cursor-pointer items-center gap-2.5 text-sm text-slate-300 sm:col-span-2">
+      <label className="flex cursor-pointer items-center gap-2.5 text-sm text-neutral-300 sm:col-span-2">
         <input
           type="checkbox"
           checked={settings.diarizeSpeakers}
           onChange={(e) => onChange({ diarizeSpeakers: e.target.checked })}
-          className="size-4 rounded border-[var(--color-border)] bg-[var(--color-surface-2)] accent-sky-500"
+          className="size-4 rounded border-[var(--color-border)] bg-[var(--color-surface-2)] accent-brand-500"
         />
         <span>
           {t.settings.diarize} <InfoTip text={t.settings.tips.diarize} />
         </span>
       </label>
 
-      <label className="flex cursor-pointer items-center gap-2.5 text-sm text-slate-300 sm:col-span-2">
+      <label className="flex cursor-pointer items-center gap-2.5 text-sm text-neutral-300 sm:col-span-2">
         <input
           type="checkbox"
           checked={settings.keepTranscripts}
@@ -206,7 +206,7 @@ export function AdvancedSettings({
               keepTranscriptsAsked: true,
             })
           }
-          className="size-4 rounded border-[var(--color-border)] bg-[var(--color-surface-2)] accent-sky-500"
+          className="size-4 rounded border-[var(--color-border)] bg-[var(--color-surface-2)] accent-brand-500"
         />
         <span>
           {t.settings.keep} <InfoTip text={t.settings.tips.keep} />

@@ -16,7 +16,7 @@ function Highlighted({ text, pattern }: { text: string; pattern: RegExp | null }
   for (const [start, end] of ranges) {
     parts.push(text.slice(at, start));
     parts.push(
-      <mark key={start} className="rounded bg-sky-400/30 px-0.5 text-inherit">
+      <mark key={start} className="rounded bg-brand-400/30 px-0.5 text-inherit">
         {text.slice(start, end)}
       </mark>,
     );
@@ -251,7 +251,7 @@ export function TranscriptReview({
         />
       )}
 
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-400">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
           {hasSpeakers && (
             <label className="flex cursor-pointer items-center gap-2">
@@ -267,7 +267,7 @@ export function TranscriptReview({
           <button
             type="button"
             onClick={() => setFindOpen((o) => !o)}
-            className={`flex items-center gap-1.5 rounded px-1.5 py-0.5 hover:bg-white/5 ${findOpen ? "text-sky-300" : ""}`}
+            className={`flex items-center gap-1.5 rounded px-1.5 py-0.5 hover:bg-white/5 ${findOpen ? "text-brand-300" : ""}`}
           >
             <Search className="size-3.5" /> {r.findReplace}
           </button>
@@ -287,7 +287,7 @@ export function TranscriptReview({
       </div>
 
       {findOpen && (
-        <div className="mb-2 rounded-lg border border-[var(--color-border)] bg-white/[0.02] p-2 text-xs text-slate-400">
+        <div className="mb-2 rounded-lg border border-[var(--color-border)] bg-white/[0.02] p-2 text-xs text-neutral-400">
           <div className="flex flex-wrap items-center gap-2">
             <input
               autoFocus
@@ -298,27 +298,27 @@ export function TranscriptReview({
               }}
               placeholder={r.find}
               aria-label={r.find}
-              className="min-w-0 flex-1 rounded border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2 py-1 text-sm text-slate-100 outline-none focus:border-sky-400/50"
+              className="min-w-0 flex-1 rounded border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2 py-1 text-sm text-neutral-100 outline-none focus:border-brand-400/50"
             />
             <input
               value={replacement}
               onChange={(e) => setReplacement(e.target.value)}
               placeholder={r.replaceWith}
               aria-label={r.replaceWith}
-              className="min-w-0 flex-1 rounded border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2 py-1 text-sm text-slate-100 outline-none focus:border-sky-400/50"
+              className="min-w-0 flex-1 rounded border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2 py-1 text-sm text-neutral-100 outline-none focus:border-brand-400/50"
             />
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
             <label className="flex cursor-pointer items-center gap-1.5">
-              <input type="checkbox" checked={matchCase} onChange={(e) => setMatchCase(e.target.checked)} className="size-3.5 accent-sky-500" />
+              <input type="checkbox" checked={matchCase} onChange={(e) => setMatchCase(e.target.checked)} className="size-3.5 accent-brand-500" />
               {r.matchCase}
             </label>
             <label className="flex cursor-pointer items-center gap-1.5">
-              <input type="checkbox" checked={wholeWords} onChange={(e) => setWholeWords(e.target.checked)} className="size-3.5 accent-sky-500" />
+              <input type="checkbox" checked={wholeWords} onChange={(e) => setWholeWords(e.target.checked)} className="size-3.5 accent-brand-500" />
               {r.wholeWords}
             </label>
             <label className="flex cursor-pointer items-center gap-1.5">
-              <input type="checkbox" checked={onlyMatches} onChange={(e) => setOnlyMatches(e.target.checked)} className="size-3.5 accent-sky-500" />
+              <input type="checkbox" checked={onlyMatches} onChange={(e) => setOnlyMatches(e.target.checked)} className="size-3.5 accent-brand-500" />
               {r.onlyMatches}
             </label>
             <span className="ml-auto">
@@ -332,7 +332,7 @@ export function TranscriptReview({
               onClick={replaceAll}
               disabled={!pattern || toChange === 0 || editing !== null}
               title={editing !== null ? r.finishEditing : ""}
-              className="rounded bg-sky-500 px-2.5 py-1 font-semibold text-white hover:bg-sky-600 disabled:opacity-40"
+              className="rounded bg-brand-500 px-2.5 py-1 font-semibold text-white hover:bg-brand-600 disabled:opacity-40"
             >
               {r.replaceAll}
             </button>
@@ -340,18 +340,18 @@ export function TranscriptReview({
               <button
                 type="button"
                 onClick={undoReplace}
-                className="rounded border border-[var(--color-border)] px-2.5 py-1 text-slate-200 hover:bg-white/5"
+                className="rounded border border-[var(--color-border)] px-2.5 py-1 text-neutral-200 hover:bg-white/5"
               >
                 {r.undo}
               </button>
             )}
           </div>
-          {replaceNote && <p className="mt-1.5 text-slate-300">{replaceNote(t)}</p>}
+          {replaceNote && <p className="mt-1.5 text-neutral-300">{replaceNote(t)}</p>}
         </div>
       )}
 
       {shown.length === 0 ? (
-        <p className="py-4 text-center text-sm text-slate-500">
+        <p className="py-4 text-center text-sm text-neutral-500">
           {onlyMatches && pattern ? r.noMatches : onlyUnsure ? r.noUnsure : t.queue.noSpeech}
         </p>
       ) : (
@@ -373,7 +373,7 @@ export function TranscriptReview({
                   title={playing === index ? r.stop : r.play}
                   disabled={!canPlay}
                   onClick={() => togglePlay(index)}
-                  className="mt-0.5 shrink-0 rounded p-1 text-slate-400 hover:bg-white/5 hover:text-sky-300 disabled:opacity-30"
+                  className="mt-0.5 shrink-0 rounded p-1 text-neutral-400 hover:bg-white/5 hover:text-brand-300 disabled:opacity-30"
                 >
                   {playing === index ? (
                     <Square className="size-3.5" />
@@ -381,7 +381,7 @@ export function TranscriptReview({
                     <Play className="size-3.5" />
                   )}
                 </button>
-                <span className="mt-1 w-10 shrink-0 font-mono text-[11px] tabular-nums text-slate-500">
+                <span className="mt-1 w-10 shrink-0 font-mono text-[11px] tabular-nums text-neutral-500">
                   {clock(chunk.timestamp[0])}
                 </span>
 
@@ -393,7 +393,7 @@ export function TranscriptReview({
                     className={`mt-0.5 w-28 shrink-0 truncate rounded border bg-[var(--color-surface-2)] px-1 py-0.5 text-xs ${
                       unsure
                         ? "border-amber-400/50 text-amber-200"
-                        : "border-[var(--color-border)] text-slate-300"
+                        : "border-[var(--color-border)] text-neutral-300"
                     }`}
                   >
                     {speakers.map((id) => (
@@ -428,19 +428,19 @@ export function TranscriptReview({
                         }
                       }}
                       rows={Math.max(1, Math.ceil(draft.length / 60))}
-                      className="w-full resize-none rounded border border-sky-400/50 bg-[var(--color-surface-2)] px-1.5 py-0.5 text-sm leading-relaxed text-slate-100 outline-none"
+                      className="w-full resize-none rounded border border-brand-400/50 bg-[var(--color-surface-2)] px-1.5 py-0.5 text-sm leading-relaxed text-neutral-100 outline-none"
                     />
                   ) : (
                     <button
                       type="button"
                       onClick={() => startEdit(index)}
                       title={r.clickToEdit}
-                      className="w-full rounded px-1.5 py-0.5 text-left text-sm leading-relaxed text-slate-200 hover:bg-white/5"
+                      className="w-full rounded px-1.5 py-0.5 text-left text-sm leading-relaxed text-neutral-200 hover:bg-white/5"
                     >
                       {chunk.text.trim() ? (
                         <Highlighted text={chunk.text.trim()} pattern={pattern} />
                       ) : (
-                        <span className="italic text-slate-500">{r.removed}</span>
+                        <span className="italic text-neutral-500">{r.removed}</span>
                       )}
                     </button>
                   )}
@@ -451,7 +451,7 @@ export function TranscriptReview({
                     type="button"
                     title={r.revert}
                     onClick={() => onRevert(job, index)}
-                    className="mt-0.5 shrink-0 rounded p-1 text-slate-500 hover:bg-white/5 hover:text-slate-200"
+                    className="mt-0.5 shrink-0 rounded p-1 text-neutral-500 hover:bg-white/5 hover:text-neutral-200"
                   >
                     <RotateCcw className="size-3.5" />
                   </button>

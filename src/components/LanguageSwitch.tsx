@@ -19,7 +19,7 @@ export function LanguageSwitch({ value, onChange }: { value: Lang; onChange: (la
             title={t.uiLanguage[lang]}
             onClick={() => onChange(lang)}
             className={`rounded-md px-2 py-1 font-semibold uppercase transition ${
-              value === lang ? "bg-white/10 text-slate-100" : "text-slate-500 hover:text-slate-300"
+              value === lang ? "bg-white/10 text-neutral-100" : "text-neutral-500 hover:text-neutral-300"
             }`}
           >
             {lang}

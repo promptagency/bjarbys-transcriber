@@ -20,13 +20,13 @@ export function RecordingLanguage({
 }) {
   const t = useT();
   return (
-    <label className="flex items-center justify-center gap-2 text-sm text-slate-400">
+    <label className="flex items-center justify-center gap-2 text-sm text-neutral-400">
       {t.spokenLanguage}
       <select
         value={value ?? ""}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value || null)}
-        className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] py-1.5 pl-2.5 pr-8 text-sm font-medium text-slate-100 outline-none transition focus:border-sky-400/60 focus:ring-2 focus:ring-sky-400/20 disabled:opacity-50"
+        className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] py-1.5 pl-2.5 pr-8 text-sm font-medium text-neutral-100 outline-none transition focus:border-brand-400/60 focus:ring-2 focus:ring-brand-400/20 disabled:opacity-50"
       >
         <option value="sv">🇸🇪 {languageName("sv", t)}</option>
         <option value="en">🇬🇧 {languageName("en", t)}</option>

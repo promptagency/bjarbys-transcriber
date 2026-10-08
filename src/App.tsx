@@ -8,7 +8,6 @@ import {
 } from "./lib/i18n";
 import {
   ChevronDown,
-  Cpu,
   Download,
   FileAudio,
   Mic,
@@ -16,7 +15,6 @@ import {
   ShieldCheck,
   Sliders,
   Sparkles,
-  Zap,
 } from "lucide-react";
 import { WHISPER_SAMPLE_RATE, decodeToPCM } from "./lib/audio";
 import {
@@ -27,10 +25,8 @@ import {
 } from "./lib/diarize";
 import {
   type Backend,
-  FAMILY_META,
   availableTiers,
   defaultDtype,
-  familyOf,
   findModel,
   formatSize,
   isEnglishOnly,
@@ -198,7 +194,6 @@ export default function App() {
     }
   }, [settings.modelId, settings.dtype, resolvedDevice, patchSettings]);
 
-  const family = familyOf(settings.modelId);
   const setSpokenLanguage = useCallback(
     (code: string | null) => setSettings((s) => ({ ...s, ...forSpokenLanguage(s, code) })),
     [],
@@ -526,9 +521,17 @@ export default function App() {
   }, [jobs, loadedForModel, drain]);
 
   // ── Model loading (manual + auto when work arrives) ───────────────────────
+  // Only a failed *load* is reported as one, and only for the model it was for:
+  // the worker's error state also covers a crash later on (e.g. out of memory
+  // on a long file), which the job itself reports.
+  const [loadFailure, setLoadFailure] = useState<{ key: string; message: string } | null>(null);
   const handleLoad = useCallback(() => {
-    loadedReqKey.current = `${settings.modelId}|${settings.dtype}|${resolvedDevice}`;
-    loadModel(settings.modelId, settings.dtype, resolvedDevice).catch(() => {});
+    const key = `${settings.modelId}|${settings.dtype}|${resolvedDevice}`;
+    loadedReqKey.current = key;
+    setLoadFailure(null);
+    loadModel(settings.modelId, settings.dtype, resolvedDevice).catch((e) =>
+      setLoadFailure({ key, message: String((e as Error)?.message ?? e) }),
+    );
   }, [loadModel, settings.modelId, settings.dtype, resolvedDevice]);
 
   useEffect(() => {
@@ -681,7 +684,7 @@ export default function App() {
 
   return (
     <I18nContext.Provider value={t}>
-    <div className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
+    <div className="mx-auto max-w-3xl px-4 pt-[33.2px] pb-10 sm:pt-[48.4px] sm:pb-14">
       <LanguageSwitch
         value={settings.uiLanguage}
         onChange={(uiLanguage) => patchSettings({ uiLanguage })}
@@ -691,7 +694,7 @@ export default function App() {
         <h1 className="mb-4 flex justify-center">
           <Logo className="sm:w-[462px]" />
         </h1>
-        <p className="mx-auto max-w-md text-base text-slate-400">
+        <p className="mx-auto max-w-md text-base text-neutral-400">
           {t.header.tagline}
         </p>
       </header>
@@ -704,7 +707,7 @@ export default function App() {
           disabled={state.status === "loading"}
         />
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
+          <span className="inline-flex items-center gap-2 rounded-full bg-mint-300 px-3 py-1.5 text-xs font-semibold text-ink">
             <ShieldCheck className="size-4" />
             {t.header.onDevice}
           </span>
@@ -727,8 +730,8 @@ export default function App() {
                 aria-describedby={`tab-hint-${tab.id}`}
                 className={`flex w-full items-center justify-center gap-2 rounded-xl px-3 py-3 text-sm font-semibold transition ${
                   active
-                    ? "bg-sky-500 text-white shadow-lg shadow-sky-500/20"
-                    : "bg-[var(--color-surface)]/60 text-slate-300 ring-1 ring-inset ring-[var(--color-border)] hover:bg-white/[0.04]"
+                    ? "bg-brand-500 text-white shadow-lg shadow-brand-500/20"
+                    : "bg-[var(--color-surface)]/60 text-neutral-300 ring-1 ring-inset ring-[var(--color-border)] hover:bg-white/[0.04]"
                 }`}
               >
                 <Icon className="size-4" />
@@ -738,7 +741,7 @@ export default function App() {
               <span
                 id={`tab-hint-${tab.id}`}
                 role="tooltip"
-                className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-max max-w-[15rem] -translate-x-1/2 rounded-lg bg-slate-100 px-2.5 py-1.5 text-center text-xs font-medium text-slate-900 opacity-0 shadow-lg shadow-black/40 transition-opacity group-hover:opacity-100 group-hover:delay-300 group-has-[:focus-visible]:opacity-100"
+                className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-max max-w-[15rem] -translate-x-1/2 rounded-lg bg-neutral-100 px-2.5 py-1.5 text-center text-xs font-medium text-neutral-900 opacity-0 shadow-lg shadow-black/40 transition-opacity group-hover:opacity-100 group-hover:delay-300 group-has-[:focus-visible]:opacity-100"
               >
                 {t.tabHints[tab.id]}
               </span>
@@ -748,7 +751,7 @@ export default function App() {
       </div>
 
       {/* Source area */}
-      <div className="mt-4.5">
+      <div className="mt-[22.5px]">
         {activeTab === "files" && <Dropzone onFiles={onFiles} />}
         {activeTab === "mic" && (
           <Card className="p-4">
@@ -762,59 +765,56 @@ export default function App() {
         )}
       </div>
 
-      {/* Model status + settings toggle */}
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-sm text-slate-400">
-          <span className="text-base">{FAMILY_META[family].emoji}</span>
-          <span className="font-medium text-slate-200">{modelName(model.name, t)}</span>
-          <span className="text-slate-600">·</span>
-          {state.status === "loading" ? (
-            <span className="text-sky-300">
-              {t.model.loading(Math.round(state.overall * 100))}
-            </span>
-          ) : loadedForModel ? (
-            <span className="inline-flex items-center gap-1 text-emerald-300">
-              {state.device === "webgpu" ? (
-                <Zap className="size-3.5" />
-              ) : (
-                <Cpu className="size-3.5" />
-              )}
-              {t.model.ready}
-            </span>
-          ) : (
-            <span>{t.model.loadsOnFirstFile(formatSize(tierSizeMB(currentTier, gpuF16)))}</span>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowSettings((s) => !s)}
-          className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-slate-400 transition hover:bg-white/5 hover:text-slate-200"
-        >
-          <Sliders className="size-4" />
-          {t.settings.toggle}
-          <ChevronDown
-            className={`size-4 transition ${showSettings ? "rotate-180" : ""}`}
-          />
-        </button>
-      </div>
+      {/* A failed model load stops the queue, so say so here, not only inside Settings.
+          The download button below doubles as "try again". */}
+      {loadFailure && loadFailure.key === desiredKey && state.status !== "loading" && (
+        <p role="alert" className="mt-3 text-sm text-red-300">
+          {t.model.failed(loadFailure.message)}
+        </p>
+      )}
 
-      {/* Optional: pre-load button when idle */}
+      {/* Optional: pre-load the model when idle — right under the drop area, so the
+          settings panel can open directly beneath its own button. */}
       {!loadedForModel && state.status !== "loading" && (
         <button
           type="button"
           onClick={handleLoad}
-          className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/40 px-4 py-2 text-sm text-slate-300 transition hover:border-sky-400/30 hover:text-white"
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-brand-500/50 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-500/65"
         >
           <Download className="size-4" />
           {t.model.preDownload(modelName(model.name, t), formatSize(tierSizeMB(currentTier, gpuF16)))}
         </button>
       )}
 
+      {/* Settings toggle (the model's name, size and progress show in the
+          download button and the loading panel) */}
+      <div className="mt-3">
+        <button
+          type="button"
+          onClick={() => setShowSettings((s) => !s)}
+          aria-expanded={showSettings}
+          // Full width like the cards around it; an outlined sienna button, clearly
+          // clickable but quieter than the solid active tab.
+          className={`flex w-full items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition ${
+            showSettings
+              ? "border-brand-400 bg-brand-500/15 text-brand-200"
+              : "border-brand-400/60 text-brand-300 hover:border-brand-400 hover:bg-brand-500/10 hover:text-brand-200"
+          }`}
+        >
+          <Sliders className="size-4" />
+          {t.settings.toggle}
+          <ChevronDown
+            className={`ml-auto size-4 transition ${showSettings ? "rotate-180" : ""}`}
+          />
+        </button>
+      </div>
+
       {/* Advanced settings drawer */}
       {showSettings && (
-        <Card className="mt-3 p-5">
-          <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-300">
-            <Sparkles className="size-4 text-sky-300" /> {t.settings.heading}
+        // A sienna border ties the open panel to its button.
+        <Card className="mt-3 border-brand-400/60! p-5">
+          <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-neutral-300">
+            <Sparkles className="size-4 text-brand-300" /> {t.settings.heading}
           </div>
           <AdvancedSettings
             settings={settings}
@@ -828,13 +828,10 @@ export default function App() {
             <button
               type="button"
               onClick={handleLoad}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-600"
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600"
             >
               <Download className="size-4" /> {t.settings.applyReload}
             </button>
-          )}
-          {state.status === "error" && state.error && (
-            <p className="mt-3 text-sm text-red-300">{state.error}</p>
           )}
         </Card>
       )}
@@ -875,12 +872,12 @@ export default function App() {
         />
       </div>
 
-      <footer className="mt-12 border-t border-[var(--color-border)] pt-6 text-center text-xs text-slate-500">
+      <footer className="mt-12 border-t border-[var(--color-border)] pt-6 text-center text-xs text-neutral-500">
         <p>
-          <strong className="font-semibold text-slate-300">Vem sa vad?</strong> {t.footer.by}{" "}
+          <strong className="font-semibold text-neutral-300">Vem sa vad?</strong> {t.footer.by}{" "}
           <a
             href="https://mickequick.se"
-            className="font-medium text-slate-300 underline-offset-2 hover:underline"
+            className="font-medium text-neutral-300 underline-offset-2 hover:underline"
             target="_blank"
             rel="noreferrer"
           >
@@ -889,7 +886,7 @@ export default function App() {
           ,{" "}
           <a
             href="https://promptagency.se"
-            className="font-medium text-slate-300 underline-offset-2 hover:underline"
+            className="font-medium text-neutral-300 underline-offset-2 hover:underline"
             target="_blank"
             rel="noreferrer"
           >
@@ -898,7 +895,7 @@ export default function App() {
           ·{" "}
           <a
             href="https://github.com/promptagency/vem-sa-vad"
-            className="text-slate-400 underline-offset-2 hover:underline"
+            className="text-neutral-400 underline-offset-2 hover:underline"
             target="_blank"
             rel="noreferrer"
           >
@@ -909,19 +906,19 @@ export default function App() {
           {t.footer.basedOn}{" "}
           <a
             href="https://github.com/fltman/bjarbys-transcriber"
-            className="text-slate-400 underline-offset-2 hover:underline"
+            className="text-neutral-400 underline-offset-2 hover:underline"
             target="_blank"
             rel="noreferrer"
           >
             Bjarbys Transcriber
           </a>{" "}
-          {t.footer.byAuthor} <span className="font-medium text-slate-300">Anders Bjarby</span>
+          {t.footer.byAuthor} <span className="font-medium text-neutral-300">Anders Bjarby</span>
         </p>
         <p className="mt-2">
           {t.footer.poweredBy}{" "}
           <a
             href="https://github.com/huggingface/transformers.js"
-            className="text-slate-400 underline-offset-2 hover:underline"
+            className="text-neutral-400 underline-offset-2 hover:underline"
             target="_blank"
             rel="noreferrer"
           >
@@ -930,7 +927,7 @@ export default function App() {
           ·{" "}
           <a
             href="https://huggingface.co/KBLab"
-            className="text-slate-400 underline-offset-2 hover:underline"
+            className="text-neutral-400 underline-offset-2 hover:underline"
             target="_blank"
             rel="noreferrer"
           >
@@ -939,7 +936,7 @@ export default function App() {
           ·{" "}
           <a
             href="https://huggingface.co/pyannote/segmentation-3.0"
-            className="text-slate-400 underline-offset-2 hover:underline"
+            className="text-neutral-400 underline-offset-2 hover:underline"
             target="_blank"
             rel="noreferrer"
           >

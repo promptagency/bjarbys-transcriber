@@ -54,6 +54,9 @@ export function Recorder({
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const rafRef = useRef<number | null>(null);
+  // The waveform's sienna gradient, read from the theme once per recording:
+  // canvas can't use CSS variables directly.
+  const colorsRef = useRef<[string, string]>(["#c85a3e", "#e59a7e"]);
 
   useEffect(() => {
     return () => stopEverything();
@@ -97,8 +100,8 @@ export function Recorder({
     const mid = cssH / 2;
 
     const grad = ctx.createLinearGradient(0, 0, cssW, 0);
-    grad.addColorStop(0, "#0ea5e9");
-    grad.addColorStop(1, "#22d3ee");
+    grad.addColorStop(0, colorsRef.current[0]);
+    grad.addColorStop(1, colorsRef.current[1]);
     ctx.fillStyle = grad;
 
     for (let i = 0; i < bars; i++) {
@@ -120,6 +123,11 @@ export function Recorder({
 
   async function start() {
     setError(null);
+    const theme = getComputedStyle(document.documentElement);
+    colorsRef.current = [
+      theme.getPropertyValue("--color-brand-500").trim() || "#c85a3e",
+      theme.getPropertyValue("--color-brand-300").trim() || "#e59a7e",
+    ];
     if (!navigator.mediaDevices?.getUserMedia) {
       setError(() => (t: Strings) => t.recorder.insecure);
       return;
@@ -185,14 +193,14 @@ export function Recorder({
       <div
         className={`flex h-24 w-full max-w-md items-center justify-center rounded-2xl border transition ${
           recording
-            ? "border-sky-400/30 bg-sky-400/[0.04]"
+            ? "border-brand-400/30 bg-brand-400/[0.04]"
             : "border-[var(--color-border)] bg-[var(--color-surface-2)]/40"
         }`}
       >
         {recording ? (
           <canvas ref={canvasRef} className="h-16 w-[92%]" />
         ) : (
-          <p className="text-sm text-slate-500">{t.recorder.placeholder}</p>
+          <p className="text-sm text-neutral-500">{t.recorder.placeholder}</p>
         )}
       </div>
 
@@ -203,7 +211,7 @@ export function Recorder({
         className={`relative flex size-20 items-center justify-center rounded-full text-white shadow-lg transition disabled:opacity-50 ${
           recording
             ? "rec-ring bg-red-500 hover:bg-red-600"
-            : "bg-sky-500 hover:bg-sky-600"
+            : "bg-brand-500 hover:bg-brand-600"
         }`}
         aria-label={recording ? t.recorder.stop : t.recorder.start}
       >
@@ -212,13 +220,13 @@ export function Recorder({
 
       <div className="text-center">
         {recording ? (
-          <p className="font-mono text-lg tabular-nums text-slate-100">
+          <p className="font-mono text-lg tabular-nums text-neutral-100">
             {fmt(elapsed)}
           </p>
         ) : (
-          <p className="text-sm font-medium text-slate-200">{t.recorder.title}</p>
+          <p className="text-sm font-medium text-neutral-200">{t.recorder.title}</p>
         )}
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-1 text-xs text-neutral-500">
           {recording ? t.recorder.recording : t.recorder.idle}
         </p>
       </div>

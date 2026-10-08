@@ -36,7 +36,7 @@ function StatusCell({ job }: { job: Job }) {
       return (
         <div className="w-40">
           <ProgressBar value={job.stageProgress} />
-          <span className="mt-1 block text-xs text-slate-400">
+          <span className="mt-1 block text-xs text-neutral-400">
             {s.downloading(pct)}
           </span>
         </div>
@@ -51,7 +51,7 @@ function StatusCell({ job }: { job: Job }) {
       return (
         <div className="w-40">
           <ProgressBar value={job.stageProgress} />
-          <span className="mt-1 block text-xs text-slate-400">
+          <span className="mt-1 block text-xs text-neutral-400">
             {s.transcribing(pct)}
           </span>
         </div>
@@ -60,7 +60,7 @@ function StatusCell({ job }: { job: Job }) {
       return (
         <div className="w-40">
           <ProgressBar value={job.stageProgress} />
-          <span className="mt-1 block text-xs text-slate-400">
+          <span className="mt-1 block text-xs text-neutral-400">
             {s.diarizing(pct)}
           </span>
         </div>
@@ -97,7 +97,7 @@ function LivePreview({ text }: { text: string }) {
   }, [text]);
   return (
     <div className="border-t border-[var(--color-border)] px-3 pb-3 pt-2">
-      <p className="mb-1 text-[11px] uppercase tracking-wide text-slate-500">
+      <p className="mb-1 text-[11px] uppercase tracking-wide text-neutral-500">
         {t.queue.livePreview}
       </p>
       <div
@@ -106,7 +106,7 @@ function LivePreview({ text }: { text: string }) {
           const el = e.currentTarget;
           follow.current = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
         }}
-        className="max-h-40 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed text-slate-300 scroll-thin"
+        className="max-h-40 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed text-neutral-300 scroll-thin"
       >
         {text}
       </div>
@@ -170,7 +170,7 @@ export function JobQueue({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">
           {t.queue.title(jobs.length)}
         </h2>
         {doneCount > 0 && (
@@ -178,7 +178,7 @@ export function JobQueue({
             type="button"
             onClick={onClearCompleted}
             title={t.queue.deleteFinishedTitle}
-            className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-300"
+            className="flex items-center gap-1 text-xs text-neutral-400 hover:text-red-300"
           >
             <Trash2 className="size-3.5" /> {t.queue.deleteFinished}
           </button>
@@ -194,25 +194,25 @@ export function JobQueue({
         the choice means — instead of quietly storing anything.
       */}
       {doneCount > 0 && askKeepTranscripts && (
-        <div className="rounded-xl border border-sky-400/30 bg-sky-400/[0.07] p-3.5 text-xs leading-relaxed text-sky-100/90">
-          <p className="mb-1 text-sm font-semibold text-sky-100">{t.queue.askTitle}</p>
+        <div className="rounded-xl border border-brand-400/30 bg-brand-400/[0.07] p-3.5 text-xs leading-relaxed text-brand-100/90">
+          <p className="mb-1 text-sm font-semibold text-brand-100">{t.queue.askTitle}</p>
           <p>
             {t.queue.askBefore}
-            <strong className="font-semibold text-sky-100">{t.queue.askStay}</strong>
+            <strong className="font-semibold text-brand-100">{t.queue.askStay}</strong>
             {t.queue.askAfter}
           </p>
           <div className="mt-2.5 flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => onChooseKeepTranscripts(true)}
-              className="rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-600"
+              className="rounded-lg bg-brand-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-600"
             >
               {t.queue.yesKeep}
             </button>
             <button
               type="button"
               onClick={() => onChooseKeepTranscripts(false)}
-              className="rounded-lg px-3 py-1.5 text-xs text-slate-300 ring-1 ring-inset ring-[var(--color-border)] hover:bg-white/5"
+              className="rounded-lg px-3 py-1.5 text-xs text-neutral-300 ring-1 ring-inset ring-[var(--color-border)] hover:bg-white/5"
             >
               {t.queue.noThanks}
             </button>
@@ -221,18 +221,18 @@ export function JobQueue({
       )}
 
       {doneCount > 0 && keepTranscripts && (
-        <div className="flex gap-2.5 rounded-xl border border-sky-400/25 bg-sky-400/[0.06] p-3 text-xs leading-relaxed text-sky-100/90">
-          <HardDrive className="mt-0.5 size-4 shrink-0 text-sky-300" />
+        <div className="flex gap-2.5 rounded-xl border border-brand-400/25 bg-brand-400/[0.06] p-3 text-xs leading-relaxed text-brand-100/90">
+          <HardDrive className="mt-0.5 size-4 shrink-0 text-brand-300" />
           <p>
             {restoredCount > 0 && (
               <>
-                <strong className="font-semibold text-sky-100">
+                <strong className="font-semibold text-brand-100">
                   {t.queue.restored(restoredCount)}
                 </strong>{" "}
               </>
             )}
             {t.queue.keptBefore}
-            <strong className="font-semibold text-sky-100">{t.queue.keptStay}</strong>
+            <strong className="font-semibold text-brand-100">{t.queue.keptStay}</strong>
             {t.queue.keptAfter}
             <em>{t.queue.keptDeleteAll}</em>
             {t.queue.keptEnd}
@@ -250,11 +250,11 @@ export function JobQueue({
               className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/60"
             >
               <div className="flex items-center gap-3 p-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-slate-300">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-neutral-300">
                   <Icon className="size-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-slate-100">
+                  <p className="truncate text-sm font-medium text-neutral-100">
                     {job.label}
                   </p>
                   {job.status === "error" && job.error && (
@@ -263,7 +263,7 @@ export function JobQueue({
                     </p>
                   )}
                   {job.status === "done" && job.result && (
-                    <p className="truncate text-xs text-slate-500">
+                    <p className="truncate text-xs text-neutral-500">
                       {job.result.text.trim().slice(0, 80) || t.queue.noSpeech}
                     </p>
                   )}
@@ -283,7 +283,7 @@ export function JobQueue({
                         type="button"
                         title={t.queue.show}
                         onClick={() => toggle(job.id)}
-                        className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-slate-200"
+                        className="rounded-lg p-2 text-neutral-400 hover:bg-white/5 hover:text-neutral-200"
                       >
                         <ChevronDown
                           className={`size-4 transition ${open ? "rotate-180" : ""}`}
@@ -293,7 +293,7 @@ export function JobQueue({
                         type="button"
                         title={t.queue.download}
                         onClick={() => onDownload(job)}
-                        className="rounded-lg p-2 text-sky-300 hover:bg-sky-400/10"
+                        className="rounded-lg p-2 text-brand-300 hover:bg-brand-400/10"
                       >
                         <Download className="size-4" />
                       </button>
@@ -306,7 +306,7 @@ export function JobQueue({
                       type="button"
                       title={t.queue.remove}
                       onClick={() => onRemove(job)}
-                      className="rounded-lg p-2 text-slate-500 hover:bg-white/5 hover:text-slate-300"
+                      className="rounded-lg p-2 text-neutral-500 hover:bg-white/5 hover:text-neutral-300"
                     >
                       <X className="size-4" />
                     </button>
@@ -324,7 +324,7 @@ export function JobQueue({
                     <button
                       type="button"
                       onClick={() => copy(job)}
-                      className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs text-slate-300 hover:bg-white/5"
+                      className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs text-neutral-300 hover:bg-white/5"
                     >
                       {copied === job.id ? (
                         <>
@@ -369,24 +369,24 @@ function SpeakerNamer({
   if (speakers.length === 0) return null;
   return (
     <div className="mb-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)]/40 p-3">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
         {t.queue.nameSpeakers}
       </p>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         {speakers.map((speaker) => (
           <label key={speaker} className="flex flex-col gap-1">
-            <span className="text-xs text-slate-500">{t.export.speaker(speaker)}</span>
+            <span className="text-xs text-neutral-500">{t.export.speaker(speaker)}</span>
             <input
               type="text"
               value={job.speakerNames[speaker] ?? ""}
               placeholder={t.export.speaker(speaker)}
               onChange={(e) => onRename(job, speaker, e.target.value)}
-              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-1.5 text-sm text-slate-100 outline-none transition focus:border-sky-400/60 focus:ring-2 focus:ring-sky-400/20"
+              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-1.5 text-sm text-neutral-100 outline-none transition focus:border-brand-400/60 focus:ring-2 focus:ring-brand-400/20"
             />
           </label>
         ))}
       </div>
-      <p className="mt-2 text-xs text-slate-500">{t.queue.namesHint}</p>
+      <p className="mt-2 text-xs text-neutral-500">{t.queue.namesHint}</p>
     </div>
   );
 }

@@ -19,7 +19,7 @@ export function WaveBars({
       {Array.from({ length: count }).map((_, i) => (
         <span
           key={i}
-          className={`w-[3px] rounded-full bg-gradient-to-t from-sky-500 to-cyan-300 ${
+          className={`w-[3px] rounded-full bg-gradient-to-t from-brand-500 to-brand-300 ${
             active ? "eq-bar" : ""
           }`}
           style={{
@@ -65,8 +65,8 @@ export function ProgressRing({
       >
         <defs>
           <linearGradient id="ring-grad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#0ea5e9" />
-            <stop offset="100%" stopColor="#22d3ee" />
+            <stop offset="0%" style={{ stopColor: "var(--color-brand-500)" }} />
+            <stop offset="100%" style={{ stopColor: "var(--color-brand-300)" }} />
           </linearGradient>
         </defs>
         <circle
@@ -91,12 +91,12 @@ export function ProgressRing({
       </svg>
       {!indeterminate && (
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-bold tabular-nums text-slate-100">
+          <span className="text-2xl font-bold tabular-nums text-neutral-100">
             {Math.round(pct * 100)}
-            <span className="text-sm text-slate-400">%</span>
+            <span className="text-sm text-neutral-400">%</span>
           </span>
           {label && (
-            <span className="text-[10px] uppercase tracking-wide text-slate-500">
+            <span className="text-[10px] uppercase tracking-wide text-neutral-500">
               {label}
             </span>
           )}
@@ -130,7 +130,7 @@ export function ProcessingHero({
   const queuePct = total > 0 ? (done + activeFraction) / total : 0;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-sky-400/20 bg-gradient-to-br from-sky-500/[0.07] to-cyan-400/[0.04] p-5">
+    <div className="relative overflow-hidden rounded-2xl border border-brand-400/20 bg-gradient-to-br from-brand-500/[0.07] to-brand-400/[0.04] p-5">
       <div className="flex items-center gap-5">
         {loading ? (
           <ProgressRing value={state.overall} label={t.processing.ringDownload} />
@@ -145,16 +145,16 @@ export function ProcessingHero({
         <div className="min-w-0 flex-1">
           {loading ? (
             <>
-              <p className="flex items-center gap-2 text-base font-semibold text-slate-100">
-                <Loader2 className="size-4 animate-spin text-sky-300" />
+              <p className="flex items-center gap-2 text-base font-semibold text-neutral-100">
+                <Loader2 className="size-4 animate-spin text-brand-300" />
                 {t.processing.downloadingModel}
               </p>
-              <p className="mt-1 truncate text-sm text-slate-400">
+              <p className="mt-1 truncate text-sm text-neutral-400">
                 {t.processing.cachedAfter(Math.round(state.overall * 100))}
               </p>
-              <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
+              <div className="mt-3 flex items-center gap-2 text-xs text-neutral-500">
                 {state.device === "webgpu" ? (
-                  <Zap className="size-3.5 text-sky-300" />
+                  <Zap className="size-3.5 text-brand-300" />
                 ) : (
                   <Cpu className="size-3.5" />
                 )}
@@ -166,10 +166,10 @@ export function ProcessingHero({
               <div className="flex items-center gap-3">
                 <WaveBars className="h-7 w-14" />
                 <div className="min-w-0">
-                  <p className="truncate text-base font-semibold text-slate-100">
+                  <p className="truncate text-base font-semibold text-neutral-100">
                     {t.processing.stage[activeJob.status] ?? t.processing.working}
                   </p>
-                  <p className="truncate text-sm text-slate-400">
+                  <p className="truncate text-sm text-neutral-400">
                     {activeJob.label}
                   </p>
                 </div>
@@ -182,13 +182,13 @@ export function ProcessingHero({
               )}
 
               <div className="mt-4">
-                <div className="mb-1.5 flex justify-between text-xs text-slate-400">
+                <div className="mb-1.5 flex justify-between text-xs text-neutral-400">
                   <span>{t.processing.queueProgress}</span>
                   <span className="tabular-nums">{t.processing.done(done, total)}</span>
                 </div>
                 <div className="shimmer-track h-2 w-full overflow-hidden rounded-full bg-[var(--color-surface-2)]">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-300 transition-[width] duration-300"
+                    className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-300 transition-[width] duration-300"
                     style={{ width: `${queuePct * 100}%` }}
                   />
                 </div>

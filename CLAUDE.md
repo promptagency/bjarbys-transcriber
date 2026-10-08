@@ -97,7 +97,8 @@ names or in-app actions, and keep the FAQ's "Räknar ni besök?" in step with an
 
 **FAQ (`src/components/Faq.tsx`, text in i18n's `faq`).** A badge beside "100 % på din enhet" opens a native
 `<dialog>`. Its answers make factual promises — what leaves the computer (the page via Cloudflare, models from
-Hugging Face, the runtime from jsDelivr, podcasts via the proxy, the visit count), what's stored, the 95.6% speaker figure, the
+Hugging Face, the runtime from jsDelivr, podcast search terms and cover art to/from Apple, feeds and episodes via
+the proxy, the visit count), what's stored, the 95.6% speaker figure, the
 limits — so update it whenever those change.
 
 **Phones (`src/lib/device.ts`, `PhoneNotice`).** `main.tsx` shows phones a "use a computer" page instead of
@@ -149,6 +150,11 @@ because progress ticks change `jobs` constantly) writes changed jobs and deletes
 also flushes on `visibilitychange`/`pagehide`. Writes resolve on transaction commit; storage failures are
 silent except for an on-page note. Queued/running jobs aren't saved — without their files they can't resume.
 Turning keeping off (or loading with it off) deletes every stored transcript. Settings are always saved.
+
+**Colours (`src/index.css` `@theme`).** Matched to the logo and Prompt Agency's brand: neutral near-black and
+greys (`neutral-*`, no blue-tinted `slate`), **sienna** (`brand-*`, #C85A3E) for actions, focus and progress,
+**mint** (`mint-*`) for "done/ready" and, solid with `ink` text like the logo's bubbles, the privacy badge; **lavender** (`lavender-*`), solid, for the FAQ badge. Red
+for errors and amber for unsure lines stay. Use these tokens rather than Tailwind's sky/cyan/emerald/violet.
 
 ## Repository conventions
 
