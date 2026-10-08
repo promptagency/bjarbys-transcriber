@@ -129,6 +129,25 @@ const sv = {
   },
   settings: {
     toggle: "Inställningar",
+    moreInfo: "Mer information",
+    tips: {
+      model:
+        "Vilken AI-modell som transkriberar. En större modell ger bättre text men tar längre tid att ladda ned och köra. KB-Whisper är tränad på svenska.",
+      quality:
+        "Hur mycket modellen är komprimerad. Standardvalet är snabbast med nästan samma kvalitet; full kvalitet är större och långsammare.",
+      runOn:
+        "GPU (grafikkortet) är oftast flera gånger snabbare än CPU (processorn). Automatiskt väljer GPU när datorn klarar det. Välj CPU om något krånglar.",
+      formats:
+        "Filerna du får när en transkription är klar. Dokument: läsbar text i stycken per talare. Undertexter (.srt, .vtt): för video. JSON: text med tider, för program. Rader: en textbit per rad. Flera format sparas i en .zip.",
+      timestamps: "Tiden ([00:09]) före varje stycke, så att du lätt hittar tillbaka i inspelningen.",
+      task: "Transkribera skriver ned det som sägs, på samma språk. Översätt skriver i stället texten på engelska.",
+      autoDownload:
+        "Filerna sparas i mappen för hämtade filer så fort en transkription är klar. Stäng av det om du hellre laddar ned med knappen på varje rad.",
+      diarize:
+        "Tar reda på vem som pratar när och märker raderna Talare 1, Talare 2 osv. Tar lite extra tid. Du kan namnge talarna efteråt.",
+      keep:
+        "Klara transkriptioner finns kvar om du laddar om sidan eller kommer tillbaka senare. De sparas bara i den här webbläsaren, aldrig på någon server.",
+    },
     heading: "Finjustera",
     applyReload: "Använd och ladda om modellen",
     model: "Modell",
@@ -464,6 +483,25 @@ const en: Strings = {
   },
   settings: {
     toggle: "Settings",
+    moreInfo: "More information",
+    tips: {
+      model:
+        "The AI model that transcribes. A larger model gives better text but takes longer to download and run. KB-Whisper is trained on Swedish.",
+      quality:
+        "How much the model is compressed. The default is fastest with almost the same quality; full quality is larger and slower.",
+      runOn:
+        "The GPU (graphics card) is usually several times faster than the CPU (processor). Auto picks the GPU when the computer supports it. Choose CPU if something goes wrong.",
+      formats:
+        "The files you get when a transcript is done. Document: readable text in paragraphs per speaker. Subtitles (.srt, .vtt): for video. JSON: text with times, for software. Lines: one fragment per line. Several formats are saved as one .zip.",
+      timestamps: "The time ([00:09]) before each paragraph, so you can easily find your way back in the recording.",
+      task: "Transcribe writes down what is said, in the same language. Translate writes the text in English instead.",
+      autoDownload:
+        "The files are saved to your downloads folder as soon as a transcript is done. Turn it off if you’d rather download with the button on each row.",
+      diarize:
+        "Works out who speaks when and labels the lines Speaker 1, Speaker 2 and so on. Takes a little extra time. You can name the speakers afterwards.",
+      keep:
+        "Finished transcripts stay if you reload the page or come back later. They’re kept only in this browser, never on a server.",
+    },
     heading: "Fine-tune",
     applyReload: "Apply & reload model",
     model: "Model",

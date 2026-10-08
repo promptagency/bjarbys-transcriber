@@ -16,7 +16,7 @@ const isDocument = (f: ExportFormat) => f === "txt" || f === "md";
 // Two formats end in .txt, so these show their name rather than just the extension.
 const showLabel = (f: ExportFormat) => isDocument(f) || f === "lines";
 import { type DeviceMode, type Settings, forModel } from "../lib/settings";
-import { Field, Select } from "./ui";
+import { Field, InfoTip, Select } from "./ui";
 import { modelName, useT } from "../lib/i18n";
 
 export function AdvancedSettings({
@@ -43,7 +43,7 @@ export function AdvancedSettings({
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <Field label={t.settings.model} hint={t.settings.coverage[model.group]}>
+      <Field label={t.settings.model} hint={t.settings.coverage[model.group]} tip={t.settings.tips.model}>
         <Select
           value={settings.modelId}
           disabled={disabled}
@@ -64,6 +64,7 @@ export function AdvancedSettings({
 
       <Field
         label={t.settings.quality}
+        tip={t.settings.tips.quality}
         hint={currentTier ? t.settings.download(formatSize(tierSizeMB(currentTier, gpuF16))) : ""}
       >
         <Select
@@ -81,6 +82,7 @@ export function AdvancedSettings({
 
       <Field
         label={t.settings.runOn}
+        tip={t.settings.tips.runOn}
         hint={webgpuAvailable ? t.settings.webgpuFound : t.settings.webgpuMissing}
       >
         <Select
@@ -102,8 +104,9 @@ export function AdvancedSettings({
       */}
       <div>
         <div className="mb-1.5 flex items-baseline justify-between">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+          <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
             {t.settings.formats}
+            <InfoTip text={t.settings.tips.formats} />
           </span>
           <span className="text-xs text-slate-500">
             {settings.exportFormats.length > 1 ? t.settings.formatsZip : t.settings.formatsOne}
@@ -152,12 +155,14 @@ export function AdvancedSettings({
               className="size-3.5 rounded border-[var(--color-border)] bg-[var(--color-surface-2)] accent-sky-500"
             />
             {t.settings.timestamps}
+            <InfoTip text={t.settings.tips.timestamps} />
           </label>
         )}
       </div>
 
       <Field
         label={t.settings.task}
+        tip={t.settings.tips.task}
         hint={englishOnly ? t.settings.englishOnlyModel : t.settings.taskHint}
       >
         <Select
@@ -180,6 +185,7 @@ export function AdvancedSettings({
           className="size-4 rounded border-[var(--color-border)] bg-[var(--color-surface-2)] accent-sky-500"
         />
         {t.settings.autoDownload}
+        <InfoTip text={t.settings.tips.autoDownload} />
       </label>
 
       <label className="flex cursor-pointer items-center gap-2.5 text-sm text-slate-300 sm:col-span-2">
@@ -189,7 +195,9 @@ export function AdvancedSettings({
           onChange={(e) => onChange({ diarizeSpeakers: e.target.checked })}
           className="size-4 rounded border-[var(--color-border)] bg-[var(--color-surface-2)] accent-sky-500"
         />
-        {t.settings.diarize}
+        <span>
+          {t.settings.diarize} <InfoTip text={t.settings.tips.diarize} />
+        </span>
       </label>
 
       <label className="flex cursor-pointer items-start gap-2.5 text-sm text-slate-300 sm:col-span-2">
@@ -205,7 +213,7 @@ export function AdvancedSettings({
           className="mt-0.5 size-4 rounded border-[var(--color-border)] bg-[var(--color-surface-2)] accent-sky-500"
         />
         <span>
-          {t.settings.keep}
+          {t.settings.keep} <InfoTip text={t.settings.tips.keep} />
           <span className="mt-0.5 block text-xs text-slate-500">{t.settings.keepHint}</span>
         </span>
       </label>
