@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   I18nContext,
-  LANGS,
-  type Lang,
   type Message,
   STRINGS,
   messageOf,
@@ -81,6 +79,7 @@ import { createZip } from "./lib/zip";
 import type { TranscriptChunk, TranscriptResult } from "./lib/protocol";
 import { useWhisper } from "./hooks/useWhisper";
 import { RecordingLanguage } from "./components/RecordingLanguage";
+import { LanguageSwitch } from "./components/LanguageSwitch";
 import { AdvancedSettings } from "./components/AdvancedSettings";
 import { Dropzone } from "./components/Dropzone";
 import { Recorder } from "./components/Recorder";
@@ -923,35 +922,5 @@ export default function App() {
       </footer>
     </div>
     </I18nContext.Provider>
-  );
-}
-
-/** Svenska / English, top right. */
-function LanguageSwitch({ value, onChange }: { value: Lang; onChange: (lang: Lang) => void }) {
-  const t = STRINGS[value];
-  return (
-    <div className="-mt-4 mb-4 flex justify-end sm:-mt-6">
-      <div
-        role="group"
-        aria-label={t.uiLanguage.label}
-        className="flex rounded-lg p-0.5 text-xs ring-1 ring-inset ring-[var(--color-border)]"
-      >
-        {LANGS.map((lang) => (
-          <button
-            key={lang}
-            type="button"
-            lang={lang}
-            aria-pressed={value === lang}
-            title={t.uiLanguage[lang]}
-            onClick={() => onChange(lang)}
-            className={`rounded-md px-2 py-1 font-semibold uppercase transition ${
-              value === lang ? "bg-white/10 text-slate-100" : "text-slate-500 hover:text-slate-300"
-            }`}
-          >
-            {lang}
-          </button>
-        ))}
-      </div>
-    </div>
   );
 }

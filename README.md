@@ -30,6 +30,8 @@ If you find it useful, consider
   themselves and show which one they heard.
 - 🗣️ **In Swedish or English** — the interface is Swedish by default, with an
   SV/EN switch in the corner. Downloads follow it too ("Talare 1" / "Speaker 1").
+- 💻 **Made for computers** — phones get a short page asking to open it on a
+  computer (with a share button to send yourself the link) and a way past it.
 - ⚡ **Fast** — on a 2021 MacBook Pro (M1 Pro), 25 minutes of Swedish
   transcribes in under 3 minutes with the default model, about 9× real time
   ([benchmark](#speed-and-accuracy); 7% word error on clean synthetic speech).

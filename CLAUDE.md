@@ -88,6 +88,11 @@ which goes to the speaker whose speech is most contained in it (backchannels ove
 surroundings and renumbers speakers by first appearance. Hard limits: 3 speakers at once, 240 min per file.
 The README documents why word-level timestamps were measured and rejected — don't reintroduce them.
 
+**Phones (`src/lib/device.ts`, `PhoneNotice`).** `main.tsx` shows phones a "use a computer" page instead of
+the app (the worker never starts); "continue anyway" is remembered for the session. Detection uses
+`userAgentData.mobile` or the UA's phone markers, never screen width, so tablets and narrow desktop windows get
+the app.
+
 **Interface language (`src/lib/i18n.ts`).** All UI text lives in one dictionary: Swedish (`sv`, the default
 and the master) and English (`en: Strings`, so a missing key fails the build); no i18n library. App picks
 `STRINGS[settings.uiLanguage]`, provides it via `I18nContext`, and components read it with `useT()`. New UI
