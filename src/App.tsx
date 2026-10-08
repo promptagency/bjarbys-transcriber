@@ -788,7 +788,13 @@ export default function App() {
         <button
           type="button"
           onClick={() => setShowSettings((s) => !s)}
-          className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-neutral-400 transition hover:bg-white/5 hover:text-neutral-200"
+          aria-expanded={showSettings}
+          // An outlined sienna button: clearly clickable, but quieter than the solid active tab.
+          className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
+            showSettings
+              ? "border-brand-400 bg-brand-500/15 text-brand-200"
+              : "border-brand-400/60 text-brand-300 hover:border-brand-400 hover:bg-brand-500/10 hover:text-brand-200"
+          }`}
         >
           <Sliders className="size-4" />
           {t.settings.toggle}
