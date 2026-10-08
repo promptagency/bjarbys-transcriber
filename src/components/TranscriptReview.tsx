@@ -5,6 +5,7 @@ import type { TranscriptChunk } from "../lib/protocol";
 import { LOW_CONFIDENCE } from "../lib/diarize";
 import { speakerLabel, speakersIn } from "../lib/exporters";
 import { changingMatches, findPattern, matchRanges, replaceInChunks } from "../lib/replace";
+import { type Strings, languageName, useT } from "../lib/i18n";
 
 /** `text` with every match of `pattern` marked. React escapes the text itself. */
 function Highlighted({ text, pattern }: { text: string; pattern: RegExp | null }) {
@@ -46,15 +47,6 @@ interface LastReplace {
 /** A chunk with no end timestamp plays up to the next chunk, or this long. */
 const FALLBACK_PLAY_SECONDS = 5;
 
-/** "sv" → "Swedish"; the code itself if the browser can't name it. */
-function languageName(code: string): string {
-  try {
-    return new Intl.DisplayNames(["en"], { type: "language" }).of(code) ?? code;
-  } catch {
-    return code;
-  }
-}
-
 function clock(seconds: number): string {
   const s = Math.max(0, Math.floor(seconds));
   const m = Math.floor(s / 60);
@@ -88,6 +80,8 @@ export function TranscriptReview({
   onRevert: (job: Job, index: number) => void;
   onReplace: (job: Job, changes: Map<number, TranscriptChunk>) => void;
 }) {
+  const t = useT();
+  const r = t.review;
   const result = job.result!;
   const chunks = result.chunks;
   const allSpeakers = speakersIn(result, { includeBlank: true });
@@ -107,7 +101,8 @@ export function TranscriptReview({
   const [wholeWords, setWholeWords] = useState(true);
   const [onlyMatches, setOnlyMatches] = useState(false);
   const [lastReplace, setLastReplace] = useState<LastReplace | null>(null);
-  const [replaceNote, setReplaceNote] = useState("");
+  // A function of the strings, not finished text, so it follows a language switch.
+  const [replaceNote, setReplaceNote] = useState<((t: Strings) => string) | null>(null);
   const pattern = useMemo(
     () => (findOpen ? findPattern(query, { matchCase, wholeWords }) : null),
     [findOpen, query, matchCase, wholeWords],
@@ -155,9 +150,7 @@ export function TranscriptReview({
     const before = new Map([...changes.keys()].map((i) => [i, chunks[i]]));
     onReplace(job, changes);
     setLastReplace({ before, after: changes, matches });
-    setReplaceNote(
-      `Replaced ${matches} ${matches === 1 ? "match" : "matches"} in ${changes.size} ${changes.size === 1 ? "line" : "lines"}.`,
-    );
+    setReplaceNote(() => (t: Strings) => t.review.replaced(matches, changes.size));
   }
 
   function undoReplace() {
@@ -179,11 +172,7 @@ export function TranscriptReview({
     }
     onReplace(job, restore);
     setLastReplace(null);
-    setReplaceNote(
-      kept
-        ? `Undone. ${kept} ${kept === 1 ? "line" : "lines"} you changed since ${kept === 1 ? "was" : "were"} left as is.`
-        : "Undone.",
-    );
+    setReplaceNote(() => (t: Strings) => (kept ? t.review.undoneKept(kept) : t.review.undone));
   }
 
   function endOf(index: number): number {
@@ -272,7 +261,7 @@ export function TranscriptReview({
                 onChange={(e) => setOnlyUnsure(e.target.checked)}
                 className="size-3.5 accent-amber-500"
               />
-              Only unsure lines ({unsureCount})
+              {r.onlyUnsure(unsureCount)}
             </label>
           )}
           <button
@@ -280,25 +269,20 @@ export function TranscriptReview({
             onClick={() => setFindOpen((o) => !o)}
             className={`flex items-center gap-1.5 rounded px-1.5 py-0.5 hover:bg-white/5 ${findOpen ? "text-sky-300" : ""}`}
           >
-            <Search className="size-3.5" /> Find &amp; replace
+            <Search className="size-3.5" /> {r.findReplace}
           </button>
           {result.language && (
-            <span title="Auto-detected from the first 30 seconds">
-              Detected language: {languageName(result.language)}
+            <span title={r.detectedTitle}>
+              {r.detected(languageName(result.language, t))}
             </span>
           )}
         </div>
         {job.restored ? (
-          <span>
-            Restored after a reload · the audio isn&rsquo;t kept, so lines
-            can&rsquo;t be played · click text to edit it
-          </span>
+          <span>{r.restored}</span>
         ) : playbackError || !job.media ? (
-          <span className="text-amber-300">
-            Playback isn&rsquo;t available for this file in the browser.
-          </span>
+          <span className="text-amber-300">{r.noPlayback}</span>
         ) : (
-          <span>Click ▶ to hear a line · click text to edit it</span>
+          <span>{r.hint}</span>
         )}
       </div>
 
@@ -310,47 +294,47 @@ export function TranscriptReview({
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
-                setReplaceNote("");
+                setReplaceNote(null);
               }}
-              placeholder="Find"
-              aria-label="Find"
+              placeholder={r.find}
+              aria-label={r.find}
               className="min-w-0 flex-1 rounded border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2 py-1 text-sm text-slate-100 outline-none focus:border-sky-400/50"
             />
             <input
               value={replacement}
               onChange={(e) => setReplacement(e.target.value)}
-              placeholder="Replace with"
-              aria-label="Replace with"
+              placeholder={r.replaceWith}
+              aria-label={r.replaceWith}
               className="min-w-0 flex-1 rounded border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2 py-1 text-sm text-slate-100 outline-none focus:border-sky-400/50"
             />
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
             <label className="flex cursor-pointer items-center gap-1.5">
               <input type="checkbox" checked={matchCase} onChange={(e) => setMatchCase(e.target.checked)} className="size-3.5 accent-sky-500" />
-              Match case
+              {r.matchCase}
             </label>
             <label className="flex cursor-pointer items-center gap-1.5">
               <input type="checkbox" checked={wholeWords} onChange={(e) => setWholeWords(e.target.checked)} className="size-3.5 accent-sky-500" />
-              Whole words
+              {r.wholeWords}
             </label>
             <label className="flex cursor-pointer items-center gap-1.5">
               <input type="checkbox" checked={onlyMatches} onChange={(e) => setOnlyMatches(e.target.checked)} className="size-3.5 accent-sky-500" />
-              Only lines with matches
+              {r.onlyMatches}
             </label>
             <span className="ml-auto">
               {pattern
-                ? `${matchCount} ${matchCount === 1 ? "match" : "matches"} in ${matchLines} ${matchLines === 1 ? "line" : "lines"}` +
-                  (toChange < matchCount ? ` · ${matchCount - toChange} already as replaced` : "")
+                ? r.matches(matchCount, matchLines) +
+                  (toChange < matchCount ? r.alreadyReplaced(matchCount - toChange) : "")
                 : ""}
             </span>
             <button
               type="button"
               onClick={replaceAll}
               disabled={!pattern || toChange === 0 || editing !== null}
-              title={editing !== null ? "Finish editing the line first" : ""}
+              title={editing !== null ? r.finishEditing : ""}
               className="rounded bg-sky-500 px-2.5 py-1 font-semibold text-white hover:bg-sky-600 disabled:opacity-40"
             >
-              Replace all
+              {r.replaceAll}
             </button>
             {lastReplace && (
               <button
@@ -358,21 +342,17 @@ export function TranscriptReview({
                 onClick={undoReplace}
                 className="rounded border border-[var(--color-border)] px-2.5 py-1 text-slate-200 hover:bg-white/5"
               >
-                Undo
+                {r.undo}
               </button>
             )}
           </div>
-          {replaceNote && <p className="mt-1.5 text-slate-300">{replaceNote}</p>}
+          {replaceNote && <p className="mt-1.5 text-slate-300">{replaceNote(t)}</p>}
         </div>
       )}
 
       {shown.length === 0 ? (
         <p className="py-4 text-center text-sm text-slate-500">
-          {onlyMatches && pattern
-            ? "No lines match."
-            : onlyUnsure
-              ? "No unsure lines left."
-              : "(no speech detected)"}
+          {onlyMatches && pattern ? r.noMatches : onlyUnsure ? r.noUnsure : t.queue.noSpeech}
         </p>
       ) : (
         <ul className="max-h-96 space-y-1 overflow-y-auto pr-1 scroll-thin">
@@ -390,7 +370,7 @@ export function TranscriptReview({
               >
                 <button
                   type="button"
-                  title={playing === index ? "Stop" : "Play this line"}
+                  title={playing === index ? r.stop : r.play}
                   disabled={!canPlay}
                   onClick={() => togglePlay(index)}
                   className="mt-0.5 shrink-0 rounded p-1 text-slate-400 hover:bg-white/5 hover:text-sky-300 disabled:opacity-30"
@@ -409,7 +389,7 @@ export function TranscriptReview({
                   <select
                     value={chunk.speaker == null ? "none" : String(chunk.speaker)}
                     onChange={(e) => setSpeaker(index, e.target.value)}
-                    title={unsure ? "The model wasn't sure who said this" : "Speaker"}
+                    title={unsure ? r.unsureTitle : r.speaker}
                     className={`mt-0.5 w-28 shrink-0 truncate rounded border bg-[var(--color-surface-2)] px-1 py-0.5 text-xs ${
                       unsure
                         ? "border-amber-400/50 text-amber-200"
@@ -418,16 +398,16 @@ export function TranscriptReview({
                   >
                     {speakers.map((id) => (
                       <option key={id} value={id}>
-                        {speakerLabel(id, job.speakerNames)}
+                        {speakerLabel(id, job.speakerNames, t.export)}
                       </option>
                     ))}
                     {chunk.speaker != null && !speakers.includes(chunk.speaker) && (
                       <option value={chunk.speaker}>
-                        {speakerLabel(chunk.speaker, job.speakerNames)}
+                        {speakerLabel(chunk.speaker, job.speakerNames, t.export)}
                       </option>
                     )}
-                    <option value="new">New speaker</option>
-                    <option value="none">No speaker</option>
+                    <option value="new">{r.newSpeaker}</option>
+                    <option value="none">{r.noSpeaker}</option>
                   </select>
                 )}
 
@@ -454,13 +434,13 @@ export function TranscriptReview({
                     <button
                       type="button"
                       onClick={() => startEdit(index)}
-                      title="Click to edit"
+                      title={r.clickToEdit}
                       className="w-full rounded px-1.5 py-0.5 text-left text-sm leading-relaxed text-slate-200 hover:bg-white/5"
                     >
                       {chunk.text.trim() ? (
                         <Highlighted text={chunk.text.trim()} pattern={pattern} />
                       ) : (
-                        <span className="italic text-slate-500">(removed)</span>
+                        <span className="italic text-slate-500">{r.removed}</span>
                       )}
                     </button>
                   )}
@@ -469,7 +449,7 @@ export function TranscriptReview({
                 {chunk.edited && (
                   <button
                     type="button"
-                    title="Undo my changes to this line"
+                    title={r.revert}
                     onClick={() => onRevert(job, index)}
                     className="mt-0.5 shrink-0 rounded p-1 text-slate-500 hover:bg-white/5 hover:text-slate-200"
                   >

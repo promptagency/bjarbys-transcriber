@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { FileAudio, Upload } from "lucide-react";
 import { ACCEPTED_EXTS } from "../lib/audio";
+import { useT } from "../lib/i18n";
 
 const ACCEPT = ["audio/*", "video/*", ...ACCEPTED_EXTS.map((e) => `.${e}`)].join(
   ",",
@@ -13,6 +14,7 @@ export function Dropzone({
   onFiles: (files: File[]) => void;
   disabled?: boolean;
 }) {
+  const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
   const [hover, setHover] = useState(false);
 
@@ -67,15 +69,12 @@ export function Dropzone({
       </div>
       <div>
         <p className="text-2xl font-bold text-slate-100">
-          {hover ? "Drop them! 🎉" : "Drop audio or video here"}
+          {hover ? t.dropzone.dropping : t.dropzone.drop}
         </p>
-        <p className="mt-1.5 text-base text-slate-400">
-          or click to browse — pile on as many as you like
-        </p>
+        <p className="mt-1.5 text-base text-slate-400">{t.dropzone.browse}</p>
       </div>
       <p className="max-w-md text-xs text-slate-500">
-        MP3 · WAV · M4A · OGG · FLAC · MP4 · MOV · WebM — transcribed one after
-        another, 100% on your device.
+        MP3 · WAV · M4A · OGG · FLAC · MP4 · MOV · WebM — {t.dropzone.formats}
       </p>
     </div>
   );

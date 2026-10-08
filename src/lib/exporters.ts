@@ -5,6 +5,7 @@ import type { TranscriptResult } from "./protocol";
 // text, kept for scripts and tools that read a transcript line by line.
 export type ExportFormat = "txt" | "md" | "srt" | "vtt" | "json" | "lines";
 
+// The labels are for the developer benchmark page; the app shows its own (i18n).
 export const EXPORT_FORMATS: { value: ExportFormat; label: string; ext: string }[] =
   [
     { value: "txt", label: "Document (.txt)", ext: "txt" },
@@ -75,9 +76,29 @@ function stamp(seconds: number, msSep: "," | "."): string {
 /** Names the user gave a transcript's speakers, keyed by speaker number. */
 export type SpeakerNames = Record<number, string>;
 
-/** The user's name for a speaker, or "Speaker N" when none was given. */
-export function speakerLabel(speaker: number, names: SpeakerNames = {}): string {
-  return names[speaker]?.trim() || `Speaker ${speaker}`;
+/** The words an export needs, in the interface language (i18n's `export`). */
+export interface ExportLabels {
+  /** An unnamed speaker: "Speaker 1" / "Talare 1". */
+  speaker: (n: number) => string;
+  /** The document header's list of speakers. */
+  speakers: string;
+  /** A document heading when there is no title. */
+  untitled: string;
+}
+
+export const ENGLISH_LABELS: ExportLabels = {
+  speaker: (n) => `Speaker ${n}`,
+  speakers: "Speakers",
+  untitled: "Transcript",
+};
+
+/** The user's name for a speaker, or "Speaker N" (in `labels`' language) when none was given. */
+export function speakerLabel(
+  speaker: number,
+  names: SpeakerNames = {},
+  labels: ExportLabels = ENGLISH_LABELS,
+): string {
+  return names[speaker]?.trim() || labels.speaker(speaker);
 }
 
 /**
@@ -102,15 +123,20 @@ export function speakersIn(
 function withSpeaker(
   chunk: TranscriptResult["chunks"][number],
   names: SpeakerNames,
+  labels: ExportLabels,
 ): string {
   const text = chunk.text.trim();
-  return chunk.speaker != null ? `${speakerLabel(chunk.speaker, names)}: ${text}` : text;
+  return chunk.speaker != null ? `${speakerLabel(chunk.speaker, names, labels)}: ${text}` : text;
 }
 
-export function toTxt(result: TranscriptResult, names: SpeakerNames = {}): string {
+export function toTxt(
+  result: TranscriptResult,
+  names: SpeakerNames = {},
+  labels: ExportLabels = ENGLISH_LABELS,
+): string {
   const chunks = result.chunks?.filter((c) => c.text.trim().length > 0) ?? [];
   if (chunks.some((c) => c.speaker != null)) {
-    return chunks.map((c) => withSpeaker(c, names)).join("\n") + "\n";
+    return chunks.map((c) => withSpeaker(c, names, labels)).join("\n") + "\n";
   }
   return result.text.trim() + "\n";
 }
@@ -122,32 +148,44 @@ function cuesFrom(result: TranscriptResult): TranscriptResult["chunks"] {
   return [{ text: result.text.trim(), timestamp: [0, null] }];
 }
 
-export function toSrt(result: TranscriptResult, names: SpeakerNames = {}): string {
+export function toSrt(
+  result: TranscriptResult,
+  names: SpeakerNames = {},
+  labels: ExportLabels = ENGLISH_LABELS,
+): string {
   const cues = cuesFrom(result);
   return (
     cues
       .map((c, i) => {
         const start = c.timestamp[0] ?? 0;
         const end = c.timestamp[1] ?? start + 2;
-        return `${i + 1}\n${stamp(start, ",")} --> ${stamp(end, ",")}\n${withSpeaker(c, names)}\n`;
+        return `${i + 1}\n${stamp(start, ",")} --> ${stamp(end, ",")}\n${withSpeaker(c, names, labels)}\n`;
       })
       .join("\n") + "\n"
   );
 }
 
-export function toVtt(result: TranscriptResult, names: SpeakerNames = {}): string {
+export function toVtt(
+  result: TranscriptResult,
+  names: SpeakerNames = {},
+  labels: ExportLabels = ENGLISH_LABELS,
+): string {
   const cues = cuesFrom(result);
   const body = cues
     .map((c) => {
       const start = c.timestamp[0] ?? 0;
       const end = c.timestamp[1] ?? start + 2;
-      return `${stamp(start, ".")} --> ${stamp(end, ".")}\n${withSpeaker(c, names)}\n`;
+      return `${stamp(start, ".")} --> ${stamp(end, ".")}\n${withSpeaker(c, names, labels)}\n`;
     })
     .join("\n");
   return `WEBVTT\n\n${body}\n`;
 }
 
-export function toJson(result: TranscriptResult, names: SpeakerNames = {}): string {
+export function toJson(
+  result: TranscriptResult,
+  names: SpeakerNames = {},
+  labels: ExportLabels = ENGLISH_LABELS,
+): string {
   // `text` is the readable rendering and `chunks` the structured data, so the
   // two fields have distinct jobs rather than one being a degraded copy of the
   // other. Whisper's own flat `text` is deliberately not used here: it carries
@@ -166,12 +204,12 @@ export function toJson(result: TranscriptResult, names: SpeakerNames = {}): stri
   const chunks = result.chunks?.length ? result.chunks : cuesFrom(result);
   const ids = speakersIn(result, { includeBlank: true });
   const speakers = ids.length
-    ? Object.fromEntries(ids.map((id) => [id, speakerLabel(id, names)]))
+    ? Object.fromEntries(ids.map((id) => [id, speakerLabel(id, names, labels)]))
     : undefined;
   return (
     JSON.stringify(
       {
-        text: toTxt(result, names).trim(),
+        text: toTxt(result, names, labels).trim(),
         ...(result.language && { language: result.language }),
         ...(speakers && { speakers }),
         chunks,
@@ -263,6 +301,7 @@ export function toDocument(
   names: SpeakerNames,
   options: DocumentOptions,
   markdown: boolean,
+  labels: ExportLabels = ENGLISH_LABELS,
 ): string {
   const paragraphs = paragraphsOf(result);
   const duration = Math.max(
@@ -276,7 +315,9 @@ export function toDocument(
   const facts = [
     localDate(options.date ?? new Date()),
     duration > 0 ? clockTime(duration, withHours) : null,
-    ids.length ? `Speakers: ${ids.map((id) => speakerLabel(id, names)).join(", ")}` : null,
+    ids.length
+      ? `${labels.speakers}: ${ids.map((id) => speakerLabel(id, names, labels)).join(", ")}`
+      : null,
   ].filter(Boolean);
 
   const lines: string[] = markdown
@@ -285,7 +326,7 @@ export function toDocument(
 
   for (const p of paragraphs) {
     const time = options.timestamps ? `[${clockTime(p.start, withHours)}]` : "";
-    const who = p.speaker != null ? `${speakerLabel(p.speaker, names)}:` : "";
+    const who = p.speaker != null ? `${speakerLabel(p.speaker, names, labels)}:` : "";
     const lead = [time, who].filter(Boolean).join(" ");
     if (markdown) {
       lines.push(lead ? `**${esc(lead)}** ${esc(p.text)}` : esc(p.text), "");
@@ -300,21 +341,23 @@ export function render(
   result: TranscriptResult,
   format: ExportFormat,
   names: SpeakerNames = {},
-  document: DocumentOptions = { title: "Transcript", timestamps: true },
+  document?: DocumentOptions,
+  labels: ExportLabels = ENGLISH_LABELS,
 ): string {
+  const doc = document ?? { title: labels.untitled, timestamps: true };
   switch (format) {
     case "md":
-      return toDocument(result, names, document, true);
+      return toDocument(result, names, doc, true, labels);
     case "txt":
-      return toDocument(result, names, document, false);
+      return toDocument(result, names, doc, false, labels);
     case "srt":
-      return toSrt(result, names);
+      return toSrt(result, names, labels);
     case "vtt":
-      return toVtt(result, names);
+      return toVtt(result, names, labels);
     case "json":
-      return toJson(result, names);
+      return toJson(result, names, labels);
     case "lines":
-      return toTxt(result, names);
+      return toTxt(result, names, labels);
   }
 }
 

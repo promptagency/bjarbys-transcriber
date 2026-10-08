@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Mic, Square } from "lucide-react";
+import { type Strings, useT } from "../lib/i18n";
 
 function pickMime(): string {
   const candidates = [
@@ -15,6 +16,15 @@ function pickMime(): string {
   return "";
 }
 
+/** 2026-10-08_14-03-27 — sorts by time, and the same in every language. */
+function fileStamp(date: Date): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return (
+    `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}` +
+    `_${p(date.getHours())}-${p(date.getMinutes())}-${p(date.getSeconds())}`
+  );
+}
+
 function fmt(sec: number): string {
   const m = Math.floor(sec / 60);
   const s = Math.floor(sec % 60);
@@ -28,9 +38,11 @@ export function Recorder({
   onRecorded: (blob: Blob, label: string) => void;
   disabled?: boolean;
 }) {
+  const t = useT();
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
-  const [error, setError] = useState<string | null>(null);
+  // A function of the strings, so the message follows a language switch.
+  const [error, setError] = useState<((t: Strings) => string) | null>(null);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -109,9 +121,7 @@ export function Recorder({
   async function start() {
     setError(null);
     if (!navigator.mediaDevices?.getUserMedia) {
-      setError(
-        "Microphone needs a secure context (HTTPS or localhost). It isn't available here.",
-      );
+      setError(() => (t: Strings) => t.recorder.insecure);
       return;
     }
     try {
@@ -140,11 +150,7 @@ export function Recorder({
         const blob = new Blob(chunksRef.current, {
           type: rec.mimeType || "audio/webm",
         });
-        const stamp = new Date()
-          .toLocaleString()
-          .replace(/[/:,]/g, "-")
-          .replace(/\s+/g, "_");
-        onRecorded(blob, `recording_${stamp}`);
+        onRecorded(blob, `${t.recorder.fileName}_${fileStamp(new Date())}`);
       };
       rec.start();
       recorderRef.current = rec;
@@ -153,11 +159,9 @@ export function Recorder({
       timerRef.current = window.setInterval(() => setElapsed((e) => e + 1), 1000);
       rafRef.current = requestAnimationFrame(drawLoop);
     } catch (e) {
-      setError(
-        (e as Error)?.name === "NotAllowedError"
-          ? "Microphone permission was denied."
-          : `Couldn't start recording: ${(e as Error)?.message ?? e}`,
-      );
+      const denied = (e as Error)?.name === "NotAllowedError";
+      const detail = String((e as Error)?.message ?? e);
+      setError(() => (t: Strings) => (denied ? t.recorder.denied : t.recorder.failed(detail)));
       stopEverything();
     }
   }
@@ -188,9 +192,7 @@ export function Recorder({
         {recording ? (
           <canvas ref={canvasRef} className="h-16 w-[92%]" />
         ) : (
-          <p className="text-sm text-slate-500">
-            Your voice will appear here as you speak
-          </p>
+          <p className="text-sm text-slate-500">{t.recorder.placeholder}</p>
         )}
       </div>
 
@@ -203,7 +205,7 @@ export function Recorder({
             ? "rec-ring bg-red-500 hover:bg-red-600"
             : "bg-sky-500 hover:bg-sky-600"
         }`}
-        aria-label={recording ? "Stop recording" : "Start recording"}
+        aria-label={recording ? t.recorder.stop : t.recorder.start}
       >
         {recording ? <Square className="size-7" /> : <Mic className="size-8" />}
       </button>
@@ -214,17 +216,13 @@ export function Recorder({
             {fmt(elapsed)}
           </p>
         ) : (
-          <p className="text-sm font-medium text-slate-200">
-            Record from your microphone
-          </p>
+          <p className="text-sm font-medium text-slate-200">{t.recorder.title}</p>
         )}
         <p className="mt-1 text-xs text-slate-500">
-          {recording
-            ? "Recording… click to stop and transcribe"
-            : "Click the mic, speak, then stop to add it to the queue"}
+          {recording ? t.recorder.recording : t.recorder.idle}
         </p>
       </div>
-      {error && <p className="text-sm text-red-300">{error}</p>}
+      {error && <p className="text-sm text-red-300">{error(t)}</p>}
     </div>
   );
 }

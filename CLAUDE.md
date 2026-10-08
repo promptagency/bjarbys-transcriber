@@ -88,6 +88,16 @@ which goes to the speaker whose speech is most contained in it (backchannels ove
 surroundings and renumbers speakers by first appearance. Hard limits: 3 speakers at once, 240 min per file.
 The README documents why word-level timestamps were measured and rejected — don't reintroduce them.
 
+**Interface language (`src/lib/i18n.ts`).** All UI text lives in one dictionary: Swedish (`sv`, the default
+and the master) and English (`en: Strings`, so a missing key fails the build); no i18n library. App picks
+`STRINGS[settings.uiLanguage]`, provides it via `I18nContext`, and components read it with `useT()`. New UI
+text goes into both languages, never inline. Text that is stored and shown later — job warnings/errors — is a
+`Message` (key + params, rendered by `formatMessage`), and libs throw `MessageError`, so it follows a language
+switch and survives in IndexedDB; plain strings (engine errors, older saves) still render as-is. Component
+state messages are kept as `(t) => string` for the same reason. Exports take `t.export` as `ExportLabels`
+("Talare 1"). English labels left in libs (`DTYPE_LABEL`, `LANGUAGES`, `EXPORT_FORMATS`) serve only the
+English-only `bench.html`.
+
 **Exports (`src/lib/exporters.ts`, `src/lib/zip.ts`).** All formats are rendered from the one
 stored `TranscriptResult`; lines get a speaker prefix when chunks carry speakers — the user's name from
 `job.speakerNames` (per job, edited in `JobQueue`) or `Speaker N` — and JSON's `text` is built from `toTxt()`

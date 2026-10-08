@@ -37,6 +37,7 @@ export interface ModelOption {
   gpuPreferred?: boolean;
 }
 
+// For the developer benchmark page; the app shows i18n's `settings.dtype`.
 export const DTYPE_LABEL: Record<Dtype, string> = {
   q4f16: "Balanced (GPU)",
   q4: "4-bit",
@@ -221,13 +222,11 @@ export function findModel(id: string): ModelOption | undefined {
 // ── Simple top-level "what language?" grouping ──────────────────────────────
 export type Family = "swedish" | "multilingual" | "english";
 
-export const FAMILY_META: Record<
-  Family,
-  { label: string; emoji: string; hint: string }
-> = {
-  swedish: { label: "Swedish", emoji: "🇸🇪", hint: "KB-Whisper" },
-  multilingual: { label: "Any language", emoji: "🌍", hint: "~100 languages" },
-  english: { label: "English", emoji: "🇬🇧", hint: "fastest for English" },
+// Names and hints are interface text (i18n's `family`).
+export const FAMILY_META: Record<Family, { emoji: string }> = {
+  swedish: { emoji: "🇸🇪" },
+  multilingual: { emoji: "🌍" },
+  english: { emoji: "🇬🇧" },
 };
 
 export const FAMILY_ORDER: Family[] = ["swedish", "multilingual", "english"];

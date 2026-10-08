@@ -1,8 +1,8 @@
 {
   "name": "Vem sa vad?",
   "short_name": "Vem sa vad?",
-  "description": "Private transcription with speaker separation. Runs entirely on your computer — nothing is uploaded.",
-  "lang": "en",
+  "description": "Privat transkribering med talaruppdelning. Körs helt på din dator — inget laddas upp.",
+  "lang": "sv",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

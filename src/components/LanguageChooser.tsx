@@ -1,4 +1,5 @@
 import { type Family, FAMILY_META, FAMILY_ORDER } from "../lib/models";
+import { useT } from "../lib/i18n";
 
 export function LanguageChooser({
   value,
@@ -9,6 +10,7 @@ export function LanguageChooser({
   onChange: (family: Family) => void;
   disabled?: boolean;
 }) {
+  const t = useT();
   return (
     <div className="grid grid-cols-3 gap-2 sm:gap-3">
       {FAMILY_ORDER.map((family) => {
@@ -30,9 +32,9 @@ export function LanguageChooser({
             <span
               className={`text-sm font-semibold ${active ? "text-sky-200" : "text-slate-200"}`}
             >
-              {meta.label}
+              {t.family[family].label}
             </span>
-            <span className="text-[11px] text-slate-500">{meta.hint}</span>
+            <span className="text-[11px] text-slate-500">{t.family[family].hint}</span>
           </button>
         );
       })}

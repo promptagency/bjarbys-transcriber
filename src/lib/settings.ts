@@ -1,5 +1,6 @@
 import { type Dtype, findModel } from "./models";
 import { EXPORT_FORMATS, type ExportFormat } from "./exporters";
+import { DEFAULT_LANG, LANGS, type Lang } from "./i18n";
 
 export type DeviceMode = "auto" | "webgpu" | "wasm";
 
@@ -27,8 +28,12 @@ export interface Settings {
   keepTranscriptsAsked: boolean;
   /** Prefix each paragraph of the document formats (.txt, .md) with its time. */
   documentTimestamps: boolean;
+  /** The interface language — also used for the text inside downloads. */
+  uiLanguage: Lang;
 }
 
+// The labels are for the developer benchmark page; the app names languages in
+// the interface language (see languageName in ./i18n).
 export const LANGUAGES: { code: string | null; label: string }[] = [
   { code: null, label: "Auto-detect" },
   { code: "sv", label: "Swedish" },
@@ -56,6 +61,7 @@ export const DEFAULT_SETTINGS: Settings = {
   keepTranscripts: false,
   keepTranscriptsAsked: false,
   documentTimestamps: true,
+  uiLanguage: DEFAULT_LANG,
 };
 
 /**
@@ -105,5 +111,10 @@ export function restoreSettings(raw: Record<string, unknown> | null): Settings {
     keepTranscripts: pick(raw.keepTranscripts, isBool, d.keepTranscripts),
     keepTranscriptsAsked: pick(raw.keepTranscriptsAsked, isBool, d.keepTranscriptsAsked),
     documentTimestamps: pick(raw.documentTimestamps, isBool, d.documentTimestamps),
+    uiLanguage: pick(
+      raw.uiLanguage,
+      (v): v is Lang => LANGS.includes(v as Lang),
+      d.uiLanguage,
+    ),
   };
 }

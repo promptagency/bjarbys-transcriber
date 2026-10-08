@@ -1,4 +1,5 @@
 import type { ReactNode, SelectHTMLAttributes } from "react";
+import { useT } from "../lib/i18n";
 
 export function ProgressBar({
   value,
@@ -21,11 +22,12 @@ export function ProgressBar({
 }
 
 export function Spinner({ className = "" }: { className?: string }) {
+  const t = useT();
   return (
     <span
       className={`inline-block size-4 animate-spin rounded-full border-2 border-current border-t-transparent ${className}`}
       role="status"
-      aria-label="Loading"
+      aria-label={t.processing.working}
     />
   );
 }

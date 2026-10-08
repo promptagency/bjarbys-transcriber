@@ -28,6 +28,8 @@ If you find it useful, consider
   Library of Sweden) tiny → large, alongside standard multilingual and
   English-only Whisper models. The multilingual models **detect the language**
   themselves and show which one they heard.
+- 🗣️ **In Swedish or English** — the interface is Swedish by default, with an
+  SV/EN switch in the corner. Downloads follow it too ("Talare 1" / "Speaker 1").
 - ⚡ **Fast** — on a 2021 MacBook Pro (M1 Pro), 25 minutes of Swedish
   transcribes in under 3 minutes with the default model, about 9× real time
   ([benchmark](#speed-and-accuracy); 7% word error on clean synthetic speech).
