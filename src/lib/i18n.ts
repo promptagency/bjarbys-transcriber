@@ -138,7 +138,7 @@ const sv = {
       runOn:
         "GPU (grafikkortet) är oftast flera gånger snabbare än CPU (processorn). Automatiskt väljer GPU när datorn klarar det. Välj CPU om något krånglar.",
       formats:
-        "Filerna du får när en transkription är klar.\nDokument: läsbar text i stycken per talare.\nUndertexter (.srt, .vtt): för video.\nJSON: text med tider, för program.\nFlera format sparas i en .zip.",
+        "Filerna du får när en transkription är klar.\n\nDokument: läsbar text i stycken per talare.\n\nUndertexter (.srt, .vtt): för video.\n\nJSON: text med tider, för program.\n\nFlera format sparas i en .zip.",
       timestamps: "Tiden ([00:09]) före varje stycke, så att du lätt hittar tillbaka i inspelningen.",
       task: "Transkribera skriver ned det som sägs, på samma språk. Översätt skriver i stället texten på engelska.",
       autoDownload:
@@ -480,7 +480,7 @@ const en: Strings = {
       runOn:
         "The GPU (graphics card) is usually several times faster than the CPU (processor). Auto picks the GPU when the computer supports it. Choose CPU if something goes wrong.",
       formats:
-        "The files you get when a transcript is done.\nDocument: readable text in paragraphs per speaker.\nSubtitles (.srt, .vtt): for video.\nJSON: text with times, for software.\nSeveral formats are saved as one .zip.",
+        "The files you get when a transcript is done.\n\nDocument: readable text in paragraphs per speaker.\n\nSubtitles (.srt, .vtt): for video.\n\nJSON: text with times, for software.\n\nSeveral formats are saved as one .zip.",
       timestamps: "The time ([00:09]) before each paragraph, so you can easily find your way back in the recording.",
       task: "Transcribe writes down what is said, in the same language. Translate writes the text in English instead.",
       autoDownload:
