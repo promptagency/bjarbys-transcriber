@@ -823,6 +823,8 @@ export default function App() {
             webgpuAvailable={webgpuAvailable}
             gpuF16={gpuF16}
             disabled={state.status === "loading"}
+            busy={busy}
+            storageRefreshKey={`${state.status}|${state.storageVersion}|${processed}`}
           />
           {state.status === "ready" && !loadedForModel && (
             <button

@@ -88,6 +88,13 @@ which goes to the speaker whose speech is most contained in it (backchannels ove
 surroundings and renumbers speakers by first appearance. Hard limits: 3 speakers at once, 240 min per file.
 The README documents why word-level timestamps were measured and rejected — don't reintroduce them.
 
+**Downloaded models (`src/lib/modelStorage.ts`, `ModelStorage` in Settings).** Transformers.js keeps models
+and the ONNX runtime in Cache Storage (`transformers-cache`), keyed by their Hugging Face / jsDelivr URLs, each
+with a `content-length`. Settings › Lagring lists them per model with sizes and removes one or all (locked while
+a model loads or a job runs; never touches settings or IndexedDB). After a load that used the dtype first asked
+for, the worker prunes the model's other quantizations and other ONNX runtime versions (`pruneAfterLoad`), then
+posts `storage-changed`; after a fallback it prunes nothing, so the preferred files can load next time.
+
 **Visit counting (`src/lib/analytics.ts`).** `countVisit()` in `main.tsx` POSTs one page view to Prompt
 Agency's Plausible (`plausible.app.promptagency.se`, allowed in the CSP's `connect-src`) — our own code, not
 Plausible's script, so no outside code runs on the page. Only on `vemsavad.promptagency.se`; skipped for

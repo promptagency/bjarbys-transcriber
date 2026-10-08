@@ -18,6 +18,7 @@ import {
   stitchWindows,
 } from "./lib/diarize";
 import { isEnglishOnly, type Backend, type Dtype } from "./lib/models";
+import { pruneAfterLoad } from "./lib/modelStorage";
 import type {
   FileProgress,
   FromWorker,
@@ -403,9 +404,16 @@ async function ensurePipeline(
   }
 
   try {
-    pipe = await build(modelId, dtype, device);
+    const dtypeArg = await resolveDtype(dtype, device);
+    pipe = await build(modelId, dtype, device, dtypeArg);
     loadedKey = key;
     loadedModelId = modelId;
+    // Loaded as first asked: other quantizations of this model, and older ONNX
+    // runtimes, are now dead weight on disk. (Not after a fallback below — the
+    // preferred files may well load next time.) Best effort, in the background.
+    void pruneAfterLoad(modelId, dtypeArg, env.backends.onnx?.versions?.web)
+      .then(() => post({ type: "storage-changed" }))
+      .catch(() => {});
     return pipe;
   } catch (err) {
     // If the 16-bit GPU variant fails to load, the 32-bit one may still work
