@@ -697,17 +697,19 @@ export default function App() {
       </header>
 
       {/* The recording's language (it also picks the model), with the privacy and FAQ badges beside it */}
-      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <RecordingLanguage
           value={spokenLanguage(settings)}
           onChange={setSpokenLanguage}
           disabled={state.status === "loading"}
         />
-        <span className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
-          <ShieldCheck className="size-4" />
-          {t.header.onDevice}
-        </span>
-        <Faq />
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
+            <ShieldCheck className="size-4" />
+            {t.header.onDevice}
+          </span>
+          <Faq />
+        </div>
       </div>
 
       {/* Source tabs */}
