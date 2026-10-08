@@ -780,13 +780,14 @@ export default function App() {
 
       {/* Settings toggle (the model's name, size and progress show in the
           download button and the loading panel) */}
-      <div className="mt-4 flex justify-end">
+      <div className="mt-3">
         <button
           type="button"
           onClick={() => setShowSettings((s) => !s)}
           aria-expanded={showSettings}
-          // An outlined sienna button: clearly clickable, but quieter than the solid active tab.
-          className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
+          // Full width like the cards around it; an outlined sienna button, clearly
+          // clickable but quieter than the solid active tab.
+          className={`flex w-full items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition ${
             showSettings
               ? "border-brand-400 bg-brand-500/15 text-brand-200"
               : "border-brand-400/60 text-brand-300 hover:border-brand-400 hover:bg-brand-500/10 hover:text-brand-200"
@@ -795,14 +796,15 @@ export default function App() {
           <Sliders className="size-4" />
           {t.settings.toggle}
           <ChevronDown
-            className={`size-4 transition ${showSettings ? "rotate-180" : ""}`}
+            className={`ml-auto size-4 transition ${showSettings ? "rotate-180" : ""}`}
           />
         </button>
       </div>
 
       {/* Advanced settings drawer */}
       {showSettings && (
-        <Card className="mt-3 p-5">
+        // A sienna border ties the open panel to its button.
+        <Card className="mt-3 border-brand-400/60! p-5">
           <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-neutral-300">
             <Sparkles className="size-4 text-brand-300" /> {t.settings.heading}
           </div>
