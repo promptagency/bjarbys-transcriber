@@ -146,16 +146,11 @@ const sv = {
       diarize:
         "Tar reda på vem som pratar när och märker raderna Talare 1, Talare 2 osv. Tar lite extra tid. Du kan namnge talarna efteråt.",
       keep:
-        "Klara transkriptioner finns kvar om du laddar om sidan eller kommer tillbaka senare. De sparas bara i den här webbläsaren, aldrig på någon server.",
+        "Klara transkriptioner finns kvar om du laddar om sidan eller kommer tillbaka senare, tills du tar bort dem. De sparas bara i den här webbläsaren, aldrig på någon server, men alla som använder webbläsaren kan öppna dem: låt det vara av på en delad dator. Stänger du av det raderas de sparade kopiorna.",
     },
     heading: "Finjustera",
     applyReload: "Använd och ladda om modellen",
     model: "Modell",
-    coverage: {
-      "Swedish — KB-Whisper": "Svenska (klarar även engelska)",
-      "Multilingual — Whisper": "~100 språk",
-      "English — Whisper": "Bara engelska",
-    } satisfies Record<ModelGroup, string>,
     group: {
       "Swedish — KB-Whisper": "Svenska — KB-Whisper",
       "Multilingual — Whisper": "Flerspråkig — Whisper",
@@ -171,14 +166,10 @@ const sv = {
       fp32: "Full kvalitet (störst)",
     } satisfies Record<Dtype, string>,
     runOn: "Kör på",
-    webgpuFound: "WebGPU finns",
-    webgpuMissing: "WebGPU saknas",
     auto: (device: string) => `Automatiskt (${device})`,
     gpu: (available: boolean) => `GPU — WebGPU${available ? "" : " (inte tillgängligt)"}`,
     cpu: "CPU — WASM",
     formats: "Filformat",
-    formatsZip: "transkriberas en gång · sparas som .zip",
-    formatsOne: "transkriberas en gång per fil",
     format: {
       txt: "Dokument (.txt)",
       md: "Dokument (.md)",
@@ -200,8 +191,6 @@ const sv = {
     diarize:
       "Dela upp på talare (experimentellt — märker varje rad ”Talare 1”, ”Talare 2” osv.)",
     keep: "Spara klara transkriptioner i den här webbläsaren efter en omladdning",
-    keepHint:
-      "De ligger kvar tills du tar bort dem, och alla som använder webbläsaren kan öppna dem — låt det vara av på en delad dator. Stänger du av det raderas de sparade kopiorna.",
   },
   saveFailed:
     "Webbläsaren vägrade spara en transkription (ett privat fönster, eller lagringen är full eller blockerad), så den kan saknas efter en omladdning. Ladda ned det du vill behålla.",
@@ -500,16 +489,11 @@ const en: Strings = {
       diarize:
         "Works out who speaks when and labels the lines Speaker 1, Speaker 2 and so on. Takes a little extra time. You can name the speakers afterwards.",
       keep:
-        "Finished transcripts stay if you reload the page or come back later. They’re kept only in this browser, never on a server.",
+        "Finished transcripts stay if you reload the page or come back later, until you delete them. They’re kept only in this browser, never on a server, but anyone using this browser can open them: leave this off on a shared computer. Turning it off deletes the saved copies.",
     },
     heading: "Fine-tune",
     applyReload: "Apply & reload model",
     model: "Model",
-    coverage: {
-      "Swedish — KB-Whisper": "Swedish (also handles English)",
-      "Multilingual — Whisper": "~100 languages",
-      "English — Whisper": "English only",
-    },
     group: {
       "Swedish — KB-Whisper": "Swedish — KB-Whisper",
       "Multilingual — Whisper": "Multilingual — Whisper",
@@ -525,14 +509,10 @@ const en: Strings = {
       fp32: "Full quality (largest)",
     },
     runOn: "Run on",
-    webgpuFound: "WebGPU detected",
-    webgpuMissing: "WebGPU unavailable",
     auto: (device) => `Auto (${device})`,
     gpu: (available) => `GPU — WebGPU${available ? "" : " (not available)"}`,
     cpu: "CPU — WASM",
     formats: "Output formats",
-    formatsZip: "transcribed once · saved as a .zip",
-    formatsOne: "transcribed once per file",
     format: {
       txt: "Document (.txt)",
       md: "Document (.md)",
@@ -553,8 +533,6 @@ const en: Strings = {
     diarize:
       "Separate speakers (experimental — labels each line “Speaker 1”, “Speaker 2”, etc.)",
     keep: "Keep finished transcripts in this browser after a reload",
-    keepHint:
-      "They stay until you delete them, and anyone using this browser could open them — leave this off on a shared computer. Turning it off deletes the saved copies.",
   },
   saveFailed:
     "This browser refused to save a transcript (a private window, or storage is full or blocked), so it may be missing after a reload. Download anything you want to keep.",

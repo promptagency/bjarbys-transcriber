@@ -43,7 +43,7 @@ export function AdvancedSettings({
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <Field label={t.settings.model} hint={t.settings.coverage[model.group]} tip={t.settings.tips.model}>
+      <Field label={t.settings.model} tip={t.settings.tips.model}>
         <Select
           value={settings.modelId}
           disabled={disabled}
@@ -83,7 +83,6 @@ export function AdvancedSettings({
       <Field
         label={t.settings.runOn}
         tip={t.settings.tips.runOn}
-        hint={webgpuAvailable ? t.settings.webgpuFound : t.settings.webgpuMissing}
       >
         <Select
           value={settings.deviceMode}
@@ -107,9 +106,6 @@ export function AdvancedSettings({
           <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
             {t.settings.formats}
             <InfoTip text={t.settings.tips.formats} />
-          </span>
-          <span className="text-xs text-slate-500">
-            {settings.exportFormats.length > 1 ? t.settings.formatsZip : t.settings.formatsOne}
           </span>
         </div>
         <div className="grid grid-cols-2 gap-x-3 gap-y-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2.5">
@@ -200,7 +196,7 @@ export function AdvancedSettings({
         </span>
       </label>
 
-      <label className="flex cursor-pointer items-start gap-2.5 text-sm text-slate-300 sm:col-span-2">
+      <label className="flex cursor-pointer items-center gap-2.5 text-sm text-slate-300 sm:col-span-2">
         <input
           type="checkbox"
           checked={settings.keepTranscripts}
@@ -210,11 +206,10 @@ export function AdvancedSettings({
               keepTranscriptsAsked: true,
             })
           }
-          className="mt-0.5 size-4 rounded border-[var(--color-border)] bg-[var(--color-surface-2)] accent-sky-500"
+          className="size-4 rounded border-[var(--color-border)] bg-[var(--color-surface-2)] accent-sky-500"
         />
         <span>
           {t.settings.keep} <InfoTip text={t.settings.tips.keep} />
-          <span className="mt-0.5 block text-xs text-slate-500">{t.settings.keepHint}</span>
         </span>
       </label>
     </div>
