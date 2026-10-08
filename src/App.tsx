@@ -81,6 +81,7 @@ import { useWhisper } from "./hooks/useWhisper";
 import { RecordingLanguage } from "./components/RecordingLanguage";
 import { LanguageSwitch } from "./components/LanguageSwitch";
 import { Logo } from "./components/Logo";
+import { Faq } from "./components/Faq";
 import { AdvancedSettings } from "./components/AdvancedSettings";
 import { Dropzone } from "./components/Dropzone";
 import { Recorder } from "./components/Recorder";
@@ -695,7 +696,7 @@ export default function App() {
         </p>
       </header>
 
-      {/* The recording's language (it also picks the model), with the privacy badge beside it */}
+      {/* The recording's language (it also picks the model), with the privacy and FAQ badges beside it */}
       <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
         <RecordingLanguage
           value={spokenLanguage(settings)}
@@ -706,6 +707,7 @@ export default function App() {
           <ShieldCheck className="size-4" />
           {t.header.onDevice}
         </span>
+        <Faq />
       </div>
 
       {/* Source tabs */}

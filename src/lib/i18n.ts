@@ -34,6 +34,69 @@ const sv = {
     copied: "Länken är kopierad",
     continue: "Fortsätt ändå på mobilen",
   },
+  faq: {
+    badge: "Vanliga frågor",
+    title: "Vanliga frågor",
+    close: "Stäng",
+    items: [
+      {
+        q: "Adressen är vemsavad.promptagency.se. Betyder det att Prompt Agency sparar mina filer?",
+        a: [
+          "Nej. Adressen talar bara om varifrån själva appen hämtas: sidan, programkoden och ikonerna. Prompt Agency har byggt Vem sa vad? och står för driften, och därför ligger den under promptagency.se.",
+          "När sidan har laddats sker allt arbete i din webbläsare, på din egen dator. Ljudet och den färdiga texten skickas aldrig någonstans. Det finns ingen server som tar emot dem, och ingenting sparas hos Prompt Agency eller någon annan.",
+          "Det som hämtas över nätet är sidan (via Cloudflare, som levererar den), transkriberingsmodellen (från Hugging Face, första gången) och poddavsnitt om du använder poddfliken. Avsnitten hämtas via sidans egen server, eftersom poddar sällan tillåter direkt hämtning, men det är offentligt ljud och det transkriberas ändå på din dator. Som för alla webbplatser ser de här tjänsterna vanliga anslutningsuppgifter, till exempel din IP-adress, men aldrig dina filer eller din text.",
+        ],
+      },
+      {
+        q: "Hur kan jag själv kontrollera att inget laddas upp?",
+        a: [
+          "Det enklaste testet: transkribera en fil en gång, så att modellen hämtas. Stäng sedan av wifi och nätverk och transkribera igen. Det fungerar lika bra, och utan nätverk kan ingenting skickas.",
+          "Sidan har dessutom en säkerhetsregel (Content Security Policy) som hindrar webbläsaren från att kontakta andra adresser än sidan själv, Hugging Face (modellerna), jsDelivr (beräkningsmotorn) och Apples poddsökning. Källkoden är öppen, så vem som helst kan granska den.",
+        ],
+        link: { href: "https://github.com/promptagency/vem-sa-vad", label: "Källkoden på GitHub" },
+      },
+      {
+        q: "Vad sparas på min dator?",
+        a: [
+          "Dina inställningar, till exempel språk och filformat, sparas i webbläsaren. Modellerna sparas också där (100 MB–2 GB beroende på modell), så att de bara behöver hämtas en gång.",
+          "Färdiga transkriptioner sparas bara om du själv har valt det, och ligger då kvar i webbläsaren tills du tar bort dem. Ljudfilerna sparas aldrig. Sidan använder inga cookies och ingen spårning.",
+        ],
+      },
+      {
+        q: "Varför tar det tid första gången?",
+        a: [
+          "Första gången hämtas transkriberingsmodellen, ungefär 110 MB för standardmodellen. Den sparas sedan i webbläsaren, så nästa gång kommer du igång direkt, även utan nätverk.",
+          "En nyare dator med Chrome eller Edge transkriberar ofta flera gånger snabbare än realtid. Låt fliken vara öppen tills det är klart.",
+        ],
+      },
+      {
+        q: "Vilken dator och webbläsare behöver jag?",
+        a: [
+          "En någorlunda ny dator räcker. Chrome eller Edge rekommenderas, eftersom de kan använda datorns grafikkort och då går snabbast. Andra webbläsare fungerar också, men kan vara långsammare.",
+          "Mobiler rekommenderas inte: att transkribera kräver mer kraft och minne än en telefon har.",
+        ],
+      },
+      {
+        q: "Hur bra är talaruppdelningen?",
+        a: [
+          "Den är experimentell men fungerar bra på intervjuer och samtal. I vårt test på en verklig intervju med två personer hamnade 95,6 % av orden hos rätt talare.",
+          "Den klarar högst tre röster åt gången och inspelningar på upp till fyra timmar. Rader där modellen var osäker markeras, så att du snabbt kan kontrollera dem och byta talare för hand.",
+        ],
+      },
+      {
+        q: "Vilka språk fungerar?",
+        a: [
+          "Svenska fungerar bäst, med KB-Whisper från Kungliga biblioteket. Engelska har en egen modell, och omkring 100 andra språk fungerar med OpenAI:s Whisper. Välj språk i listan eller låt appen känna igen det.",
+        ],
+      },
+      {
+        q: "Kostar det något?",
+        a: [
+          "Nej. Vem sa vad? är gratis och har öppen källkod (MIT-licens). Den bygger på Bjarbys Transcriber av Anders Bjarby och utvecklas av Micke Quick på Prompt Agency.",
+        ],
+      },
+    ] as { q: string; a: string[]; link?: { href: string; label: string } }[],
+  },
   spokenLanguage: "Språk i inspelningen",
   otherLanguages: "Andra språk",
   tabs: { files: "Filer", mic: "Spela in", podcast: "Podd" },
@@ -284,6 +347,69 @@ const en: Strings = {
     share: "Share the link",
     copied: "Link copied",
     continue: "Continue on this phone anyway",
+  },
+  faq: {
+    badge: "FAQ",
+    title: "Frequently asked questions",
+    close: "Close",
+    items: [
+      {
+        q: "The address is vemsavad.promptagency.se. Does that mean Prompt Agency stores my files?",
+        a: [
+          "No. The address only says where the app itself is loaded from: the page, its code and its icons. Prompt Agency built Vem sa vad? and runs it, which is why it lives under promptagency.se.",
+          "Once the page has loaded, all the work happens in your browser, on your own computer. The audio and the finished text are never sent anywhere. There is no server that receives them, and nothing is stored by Prompt Agency or anyone else.",
+          "What does travel over the network is the page (via Cloudflare, which delivers it), the transcription model (from Hugging Face, the first time) and podcast episodes if you use the Podcast tab. Episodes are fetched through the site’s own server, because podcast hosts rarely allow direct downloads, but that is public audio and it is still transcribed on your computer. As with any website, these services see ordinary connection details such as your IP address, but never your files or your text.",
+        ],
+      },
+      {
+        q: "How can I check for myself that nothing is uploaded?",
+        a: [
+          "The simplest test: transcribe a file once, so the model is downloaded. Then turn off Wi-Fi and the network and transcribe again. It works just as well, and with no network nothing can be sent.",
+          "The page also carries a security rule (a Content Security Policy) that stops the browser from contacting any address other than the page itself, Hugging Face (the models), jsDelivr (the compute engine) and Apple’s podcast search. The source code is open, so anyone can review it.",
+        ],
+        link: { href: "https://github.com/promptagency/vem-sa-vad", label: "Source code on GitHub" },
+      },
+      {
+        q: "What is stored on my computer?",
+        a: [
+          "Your settings, such as language and file formats, are stored in the browser. So are the models (100 MB–2 GB depending on the model), so they only need to be downloaded once.",
+          "Finished transcripts are only kept if you choose to, and then stay in the browser until you delete them. Audio files are never stored. The site uses no cookies and no tracking.",
+        ],
+      },
+      {
+        q: "Why does it take a while the first time?",
+        a: [
+          "The first time, the transcription model is downloaded: about 110 MB for the default model. It is then kept in the browser, so next time you can start right away, even without a network.",
+          "A recent computer with Chrome or Edge often transcribes several times faster than real time. Keep the tab open until it is done.",
+        ],
+      },
+      {
+        q: "What computer and browser do I need?",
+        a: [
+          "A reasonably recent computer is enough. Chrome or Edge is recommended, as they can use the computer’s graphics card and are fastest. Other browsers work too, but can be slower.",
+          "Phones are not recommended: transcribing takes more power and memory than a phone has.",
+        ],
+      },
+      {
+        q: "How good is the speaker separation?",
+        a: [
+          "It is experimental but works well on interviews and conversations. In our test on a real two-person interview, 95.6% of the words were attributed to the right speaker.",
+          "It handles at most three voices at a time and recordings of up to four hours. Lines where the model was unsure are marked, so you can check them quickly and change the speaker by hand.",
+        ],
+      },
+      {
+        q: "Which languages work?",
+        a: [
+          "Swedish works best, with KB-Whisper from the National Library of Sweden. English has its own model, and about 100 other languages work with OpenAI’s Whisper. Pick the language in the list or let the app recognise it.",
+        ],
+      },
+      {
+        q: "Does it cost anything?",
+        a: [
+          "No. Vem sa vad? is free and open source (MIT licence). It is based on Bjarbys Transcriber by Anders Bjarby and developed by Micke Quick at Prompt Agency.",
+        ],
+      },
+    ],
   },
   spokenLanguage: "Language spoken",
   otherLanguages: "Other languages",
