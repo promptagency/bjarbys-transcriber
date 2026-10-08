@@ -116,6 +116,11 @@ const sv = {
   spokenLanguage: "Språk i inspelningen",
   otherLanguages: "Andra språk",
   tabs: { files: "Filer", mic: "Spela in", podcast: "Podd" },
+  tabHints: {
+    files: "Transkribera ljud- eller videofiler från din dator.",
+    mic: "Spela in med mikrofonen och transkribera direkt efteråt.",
+    podcast: "Sök upp en podd och transkribera de avsnitt du väljer.",
+  },
   model: {
     loading: (pct: number) => `laddar ${pct} %`,
     ready: "redo",
@@ -446,6 +451,11 @@ const en: Strings = {
   spokenLanguage: "Language spoken",
   otherLanguages: "Other languages",
   tabs: { files: "Files", mic: "Record", podcast: "Podcast" },
+  tabHints: {
+    files: "Transcribe audio or video files from your computer.",
+    mic: "Record with your microphone and transcribe it straight after.",
+    podcast: "Find a podcast and transcribe the episodes you pick.",
+  },
   model: {
     loading: (pct) => `loading ${pct}%`,
     ready: "ready",
