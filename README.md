@@ -105,8 +105,12 @@ Settings live in `wrangler.toml`: build `npm run build`, output `dist/`.
   search. The browser enforces it, so "nothing is uploaded" can be checked, not
   just trusted. Change it deliberately.
 - **`functions/proxy.php.ts`** answers `./proxy.php?url=` like `proxy.php`
-  does, but narrower for a public site: only requests from the app's own pages,
-  only feeds and media back (never web pages), no local or private hosts.
+  does, but only for podcast content: it checks the *bytes*, not the label —
+  an RSS/Atom feed or a recognised audio/video container (MP3, AAC, MP4/M4A,
+  Ogg/Opus, WebM, WAV, FLAC, AIFF) — and refuses everything else, so it can't
+  be used to fetch arbitrary files through the domain. What passes gets an
+  inert content type and headers that stop it from ever running as a page.
+  Only requests from the app's own pages; no local or private hosts.
 - **`public/manifest.webmanifest` + `public/sw.js`** make it installable and
   let it open offline after one visit (the service worker caches the app's own
   files; models are cached by Transformers.js).
