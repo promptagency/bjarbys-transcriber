@@ -688,18 +688,12 @@ export default function App() {
       {/* Header */}
       <header className="mb-8 text-center">
         <h1 className="mb-4 flex justify-center">
-          <Logo className="sm:h-16" />
+          <Logo className="sm:h-32" />
         </h1>
         <p className="mx-auto max-w-md text-base text-slate-400">
           {t.header.tagline}{" "}
           <span className="whitespace-nowrap">{t.header.nothingUploaded}</span>
         </p>
-        <div className="mt-4 flex justify-center">
-          <span className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
-            <ShieldCheck className="size-4" />
-            {t.header.onDevice}
-          </span>
-        </div>
       </header>
 
       {/* The recording's language — it also picks the model */}
@@ -708,6 +702,12 @@ export default function App() {
         onChange={setSpokenLanguage}
         disabled={state.status === "loading"}
       />
+      <div className="mt-3 flex justify-center">
+        <span className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
+          <ShieldCheck className="size-4" />
+          {t.header.onDevice}
+        </span>
+      </div>
 
       {/* Source tabs */}
       <div className="mt-4 grid grid-cols-3 gap-2">
@@ -862,8 +862,17 @@ export default function App() {
 
       <footer className="mt-12 border-t border-[var(--color-border)] pt-6 text-center text-xs text-slate-500">
         <p>
-          {t.footer.by}{" "}
-          <span className="font-medium text-slate-300">Micke Quick</span> ·{" "}
+          <strong className="font-semibold text-slate-300">Vem sa vad?</strong> {t.footer.by}{" "}
+          <span className="font-medium text-slate-300">Micke Quick</span>,{" "}
+          <a
+            href="https://promptagency.se"
+            className="font-medium text-slate-300 underline-offset-2 hover:underline"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Prompt Agency
+          </a>{" "}
+          ·{" "}
           <a
             href="https://github.com/promptagency/vem-sa-vad"
             className="text-slate-400 underline-offset-2 hover:underline"

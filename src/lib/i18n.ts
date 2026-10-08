@@ -23,8 +23,8 @@ const sv = {
   },
   uiLanguage: { label: "Språk", sv: "Svenska", en: "English" },
   header: {
-    tagline: "Gör tal till text — privat, direkt i webbläsaren.",
-    nothingUploaded: "Inget laddas upp ✨",
+    tagline: "Lokal transkribering i din webbläsare.",
+    nothingUploaded: "Inget laddas upp",
     onDevice: "100 % på din enhet",
   },
   phone: {
@@ -104,7 +104,7 @@ const sv = {
   saveFailed:
     "Webbläsaren vägrade spara en transkription (ett privat fönster, eller lagringen är full eller blockerad), så den kan saknas efter en omladdning. Ladda ned det du vill behålla.",
   footer: {
-    by: "Vem sa vad? av",
+    by: "av",
     source: "Källkod på GitHub",
     basedOn: "Bygger på",
     byAuthor: "av",
@@ -275,8 +275,8 @@ const en: Strings = {
   },
   uiLanguage: { label: "Language", sv: "Svenska", en: "English" },
   header: {
-    tagline: "Turn talking into text — privately, right in your browser.",
-    nothingUploaded: "Nothing is uploaded ✨",
+    tagline: "Local transcription in your browser.",
+    nothingUploaded: "Nothing is uploaded",
     onDevice: "100% on your device",
   },
   phone: {
@@ -355,7 +355,7 @@ const en: Strings = {
   saveFailed:
     "This browser refused to save a transcript (a private window, or storage is full or blocked), so it may be missing after a reload. Download anything you want to keep.",
   footer: {
-    by: "Vem sa vad? by",
+    by: "by",
     source: "Source on GitHub",
     basedOn: "Based on",
     byAuthor: "by",

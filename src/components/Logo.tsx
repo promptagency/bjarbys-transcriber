@@ -12,7 +12,7 @@ export function Logo({ className = "" }: { className?: string }) {
       alt="Vem sa vad?"
       width={935}
       height={324}
-      className={`h-14 w-auto min-w-[120px] ${className}`}
+      className={`h-28 w-auto min-w-[120px] ${className}`}
     />
   );
 }
