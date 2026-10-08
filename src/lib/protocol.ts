@@ -96,6 +96,9 @@ export type FromWorker =
       to: Backend;
       reason: string;
     }
+  // The worker removed downloaded files (cleanup after a load), so any list of
+  // stored models is out of date.
+  | { type: "storage-changed" }
   | { type: "transcribe-start"; jobId: string }
   | { type: "transcribe-progress"; jobId: string; progress: number }
   /** The text so far, while a file is still transcribing (approximate at window seams). */

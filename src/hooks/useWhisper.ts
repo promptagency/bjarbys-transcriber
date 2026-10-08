@@ -27,6 +27,8 @@ export interface ModelState {
   /** Aggregate download progress, 0..1. */
   overall: number;
   fellBackToWasm: boolean;
+  /** Bumped whenever the worker changes what's stored on disk. */
+  storageVersion: number;
 }
 
 const INITIAL: ModelState = {
@@ -38,6 +40,7 @@ const INITIAL: ModelState = {
   dtype: null,
   files: {},
   overall: 0,
+  storageVersion: 0,
   fellBackToWasm: false,
 };
 
@@ -74,6 +77,7 @@ export function useWhisper() {
         files: p.files,
         overall: p.overall,
         fellBackToWasm: p.fellBackToWasm,
+        storageVersion: p.storageVersion,
       }));
       load.current?.reject(new Error(e.message || "Worker crashed."));
       load.current = null;
@@ -122,6 +126,9 @@ export function useWhisper() {
         });
         break;
       }
+      case "storage-changed":
+        setState((prev) => ({ ...prev, storageVersion: prev.storageVersion + 1 }));
+        break;
       case "device-fallback":
         setState((prev) => ({ ...prev, device: msg.to, fellBackToWasm: true }));
         break;
@@ -180,14 +187,16 @@ export function useWhisper() {
     (modelId: string, dtype: Dtype, device: Backend) => {
       const worker = workerRef.current;
       if (!worker) return Promise.reject(new Error("Worker not ready"));
-      setState({
+      setState((prev) => ({
         ...INITIAL,
         status: "loading",
         device,
         requestedDevice: device,
         modelId,
         dtype,
-      });
+        // Keeps counting across loads, so a storage list never misses a change.
+        storageVersion: prev.storageVersion,
+      }));
       return new Promise<void>((resolve, reject) => {
         load.current = { resolve, reject };
         worker.postMessage({ type: "load", modelId, dtype, device });

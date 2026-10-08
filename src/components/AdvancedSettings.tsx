@@ -17,6 +17,7 @@ const isDocument = (f: ExportFormat) => f === "txt" || f === "md";
 const showLabel = (f: ExportFormat) => isDocument(f);
 import { type DeviceMode, type Settings, forModel } from "../lib/settings";
 import { Field, InfoTip, Select } from "./ui";
+import { ModelStorage } from "./ModelStorage";
 import { modelName, useT } from "../lib/i18n";
 
 export function AdvancedSettings({
@@ -26,6 +27,8 @@ export function AdvancedSettings({
   webgpuAvailable,
   gpuF16,
   disabled,
+  busy,
+  storageRefreshKey,
 }: {
   settings: Settings;
   onChange: (patch: Partial<Settings>) => void;
@@ -34,6 +37,10 @@ export function AdvancedSettings({
   /** Whether the GPU has `shader-f16` — decides what "Balanced (GPU)" downloads. */
   gpuF16: boolean;
   disabled?: boolean;
+  /** A model is loading or a job is running (removing downloaded models is locked). */
+  busy: boolean;
+  /** Changes whenever what's stored on disk may have changed. */
+  storageRefreshKey: string;
 }) {
   const t = useT();
   const model = findModel(settings.modelId)!;
@@ -100,8 +107,10 @@ export function AdvancedSettings({
       {/*
         Not a <Field>, because that renders a single <label> — wrapping a group
         of checkboxes in one label would misassociate every click.
+        Two rows tall on wide screens, so "Kör på" and "Uppgift" stack beside it
+        instead of leaving a gap under "Kör på".
       */}
-      <div>
+      <div className="sm:row-span-2">
         <div className="mb-1.5 flex items-baseline justify-between">
           <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-neutral-400">
             {t.settings.formats}
@@ -212,6 +221,12 @@ export function AdvancedSettings({
           {t.settings.keep} <InfoTip text={t.settings.tips.keep} />
         </span>
       </label>
+
+      <ModelStorage
+        currentModelId={settings.modelId}
+        busy={busy}
+        refreshKey={storageRefreshKey}
+      />
     </div>
   );
 }

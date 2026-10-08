@@ -76,7 +76,10 @@ encoder at 4 bits: it measured fine on Swedish but dropped speech after a langua
 needs transformers.js 4.x (3.x produced garbage). 8-bit decoders are CPU-only (~10× slower on WebGPU).
 Measurements: `docs/webgpu-quantization.md`. Transformers.js pins *development* builds of `onnxruntime-web`;
 `package.json` `overrides` forces the latest stable release instead — when upgrading Transformers.js, move
-the override to the stable ONNX Runtime closest to what it pins, and re-test GPU, CPU and speaker separation. A failed WebGPU load falls back to WASM with a CPU-safe dtype.
+the override to the stable ONNX Runtime closest to what it pins, and re-test GPU, CPU and speaker separation. A load is tried twice with the requested dtype before any fallback (fp32+q4 on the GPU, then WASM with a
+CPU-safe dtype): first-attempt failures were seen only intermittently and never reproduced under
+instrumentation. First downloads can be slow because Hugging Face's CDN serves cold files slowly (verified);
+after 10 s without progress the loading panel says the server is slow.
 
 **Speaker separation (`src/lib/diarize.ts`).** pyannote segmentation-3.0 (ONNX, ~1.5 MB, loaded lazily on
 WASM) emits a *powerset* over 3 local speakers — `decodeActivity` turns it into per-speaker spans where
@@ -87,6 +90,14 @@ it (`speaker_conf` = margin to the runner-up) — except a line under 1.5 s with
 which goes to the speaker whose speech is most contained in it (backchannels over someone else's turn), `smoothSpeakers` folds short low-confidence runs into their
 surroundings and renumbers speakers by first appearance. Hard limits: 3 speakers at once, 240 min per file.
 The README documents why word-level timestamps were measured and rejected — don't reintroduce them.
+
+**Downloaded models (`src/lib/modelStorage.ts`, `ModelStorage` in Settings).** Transformers.js keeps models
+and the ONNX runtime in Cache Storage (`transformers-cache`), keyed by their Hugging Face / jsDelivr URLs, each
+with a `content-length`. Settings › Lagring lists them per model with sizes and removes one or all (locked while
+a model loads or a job runs; never touches settings or IndexedDB). After a load that used the dtype first asked
+for, the worker prunes the model's other quantizations — keeping both the loaded set and the other backend's
+default (GPU fp16/q4f16 and fp32/q4, or CPU q8), since "Auto" can switch backends — and other ONNX runtime
+versions (`pruneAfterLoad`), then posts `storage-changed`; after a fallback it prunes nothing.
 
 **Visit counting (`src/lib/analytics.ts`).** `countVisit()` in `main.tsx` POSTs one page view to Prompt
 Agency's Plausible (`plausible.app.promptagency.se`, allowed in the CSP's `connect-src`) — our own code, not

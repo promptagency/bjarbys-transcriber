@@ -82,7 +82,7 @@ const sv = {
       {
         q: "Vad sparas på min dator?",
         a: [
-          "Dina inställningar, till exempel språk och filformat, sparas i webbläsaren. Modellerna sparas också där (100 MB–2 GB beroende på modell), så att de bara behöver hämtas en gång.",
+          "Dina inställningar, till exempel språk och filformat, sparas i webbläsaren. Modellerna sparas också där (100 MB–2 GB beroende på modell), så att de bara behöver hämtas en gång. Under Inställningar › Lagring ser du hur mycket plats de tar och kan ta bort dem. När en modell har laddats städas andra versioner av den bort automatiskt, men versionerna för grafikkort och processor sparas båda.",
           "Genomförda transkriptioner sparas bara om du själv har valt det, och ligger då kvar i webbläsaren tills du tar bort dem. Ljudfilerna sparas aldrig. Sidan använder inga cookies, och besöksräkningen sparar ingenting på din dator.",
         ],
       },
@@ -197,6 +197,23 @@ const sv = {
       "Dela upp på talare (experimentellt — märker varje rad ”Talare 1”, ”Talare 2” osv.)",
     keep: "Spara genomförda transkriptioner i den här webbläsaren efter en omladdning",
   },
+  storage: {
+    title: "Lagring",
+    tip: "Modellerna sparas i webbläsaren så att de bara behöver laddas ned en gång. Här ser du hur mycket plats de tar och kan ta bort dem; en borttagen modell laddas ned igen när den behövs. Inställningar och sparade transkriptioner påverkas inte.",
+    total: (size: string) => `Totalt ${size}`,
+    inUse: "används",
+    speakers: "Talaruppdelning",
+    runtime: "Beräkningsmotor",
+    remove: "Ta bort",
+    removeOne: (name: string) => `Ta bort ${name}`,
+    removeAll: "Ta bort alla",
+    confirmAll: "Ja, ta bort alla",
+    cancel: "Avbryt",
+    busy: "Går inte medan en modell laddas eller en transkribering pågår.",
+    failed: "Det gick inte att ta bort allt – webbläsaren nekade. Listan visar vad som finns kvar.",
+    empty: "Inga modeller är nedladdade ännu.",
+    unavailable: "Webbläsaren låter inte sidan läsa sin lagring här.",
+  },
   saveFailed:
     "Webbläsaren vägrade spara en transkription (ett privat fönster, eller lagringen är full eller blockerad), så den kan saknas efter en omladdning. Ladda ned det du vill behålla.",
   footer: {
@@ -205,7 +222,6 @@ const sv = {
     basedOn: "Bygger på",
     byAuthor: "av",
     poweredBy: "Drivs av",
-    cached: "modellerna laddas ned en gång och sparas i webbläsaren.",
   },
   dropzone: {
     drop: "Släpp ljud eller video här",
@@ -253,6 +269,8 @@ const sv = {
     ringSpeakers: "talare",
     downloadingModel: "Laddar ned modellen",
     cachedAfter: (pct: number) => `${pct} % · sparas i webbläsaren efter första gången`,
+    slowServer:
+      "Servern är långsam just nu – nedladdningen fortsätter. Första gången en modell hämtas kan det ta en stund.",
     preparing: (device: string) => `Förbereder körning på ${device}`,
     queueProgress: "Förlopp i kön",
     done: (done: number, total: number) => `${done} av ${total} klara`,
@@ -429,7 +447,7 @@ const en: Strings = {
       {
         q: "What is stored on my computer?",
         a: [
-          "Your settings, such as language and file formats, are stored in the browser. So are the models (100 MB–2 GB depending on the model), so they only need to be downloaded once.",
+          "Your settings, such as language and file formats, are stored in the browser. So are the models (100 MB–2 GB depending on the model), so they only need to be downloaded once. Under Settings › Storage you can see how much space they take and remove them. Once a model has loaded, other versions of it are cleaned up automatically, but the versions for the graphics card and the processor are both kept.",
           "Finished transcripts are only kept if you choose to, and then stay in the browser until you delete them. Audio files are never stored. The site uses no cookies, and the visit count stores nothing on your computer.",
         ],
       },
@@ -543,6 +561,23 @@ const en: Strings = {
       "Separate speakers (experimental — labels each line “Speaker 1”, “Speaker 2”, etc.)",
     keep: "Keep finished transcripts in this browser after a reload",
   },
+  storage: {
+    title: "Storage",
+    tip: "Models are kept in the browser so they only need to be downloaded once. Here you can see how much space they take and remove them; a removed model is downloaded again when it’s needed. Settings and saved transcripts are not affected.",
+    total: (size) => `${size} in total`,
+    inUse: "in use",
+    speakers: "Speaker separation",
+    runtime: "Compute engine",
+    remove: "Remove",
+    removeOne: (name) => `Remove ${name}`,
+    removeAll: "Remove all",
+    confirmAll: "Yes, remove all",
+    cancel: "Cancel",
+    busy: "Not possible while a model is loading or a transcription is running.",
+    failed: "Not everything could be removed – the browser refused. The list shows what’s left.",
+    empty: "No models have been downloaded yet.",
+    unavailable: "This browser doesn’t let the page read its storage here.",
+  },
   saveFailed:
     "This browser refused to save a transcript (a private window, or storage is full or blocked), so it may be missing after a reload. Download anything you want to keep.",
   footer: {
@@ -551,7 +586,6 @@ const en: Strings = {
     basedOn: "Based on",
     byAuthor: "by",
     poweredBy: "Powered by",
-    cached: "models download once and cache in your browser.",
   },
   dropzone: {
     drop: "Drop audio or video here",
@@ -599,6 +633,8 @@ const en: Strings = {
     ringSpeakers: "speakers",
     downloadingModel: "Downloading model",
     cachedAfter: (pct) => `${pct}% · cached in your browser after the first time`,
+    slowServer:
+      "The server is slow right now – the download continues. The first download of a model can take a while.",
     preparing: (device) => `Preparing ${device} runtime`,
     queueProgress: "Queue progress",
     done: (done, total) => `${done} / ${total} done`,
