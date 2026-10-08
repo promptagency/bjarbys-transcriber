@@ -713,7 +713,7 @@ export default function App() {
       </div>
 
       {/* Source tabs */}
-      <div className="mt-4 grid grid-cols-3 gap-2">
+      <div className="mt-6 grid grid-cols-3 gap-2">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const active = activeTab === tab.id;
@@ -745,7 +745,7 @@ export default function App() {
       </div>
 
       {/* Source area */}
-      <div className="mt-3">
+      <div className="mt-4.5">
         {activeTab === "files" && <Dropzone onFiles={onFiles} />}
         {activeTab === "mic" && (
           <Card className="p-4">
