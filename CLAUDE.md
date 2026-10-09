@@ -97,7 +97,10 @@ with a `content-length`. Settings › Lagring lists them per model with sizes an
 a model loads or a job runs; never touches settings or IndexedDB). After a load that used the dtype first asked
 for, the worker prunes the model's other quantizations — keeping both the loaded set and the other backend's
 default (GPU fp16/q4f16 and fp32/q4, or CPU q8), since "Auto" can switch backends — and other ONNX runtime
-versions (`pruneAfterLoad`), then posts `storage-changed`; after a fallback it prunes nothing.
+versions (`pruneAfterLoad`), then posts `storage-changed`; after a fallback it prunes nothing. The worker sets
+`env.cacheKey` to `MODEL_CACHE` itself (so a changed Transformers.js default can't split the two) and prunes only
+when files really go to that Cache Storage. Removals and prunes are announced on a `BroadcastChannel`, so every
+open tab's list stays current; a tab that loads while another removes simply downloads again.
 
 **Visit counting (`src/lib/analytics.ts`).** `countVisit()` in `main.tsx` POSTs one page view to Prompt
 Agency's Plausible (`plausible.app.promptagency.se`, allowed in the CSP's `connect-src`) — our own code, not
