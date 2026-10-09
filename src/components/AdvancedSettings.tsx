@@ -16,6 +16,7 @@ const isDocument = (f: ExportFormat) => f === "txt" || f === "md";
 // The documents show their name rather than just the extension.
 const showLabel = (f: ExportFormat) => isDocument(f);
 import { type DeviceMode, type Settings, forModel } from "../lib/settings";
+import { glossaryTerms } from "../lib/glossary";
 import { Field, InfoTip, Select } from "./ui";
 import { ModelStorage } from "./ModelStorage";
 import { modelName, useT } from "../lib/i18n";
@@ -29,6 +30,7 @@ export function AdvancedSettings({
   disabled,
   busy,
   storageRefreshKey,
+  onOpenGlossary,
 }: {
   settings: Settings;
   onChange: (patch: Partial<Settings>) => void;
@@ -41,12 +43,15 @@ export function AdvancedSettings({
   busy: boolean;
   /** Changes whenever what's stored on disk may have changed. */
   storageRefreshKey: string;
+  /** Opens the word list's dialog. */
+  onOpenGlossary: () => void;
 }) {
   const t = useT();
   const model = findModel(settings.modelId)!;
   const tiers = availableTiers(model, resolvedDevice);
   const englishOnly = isEnglishOnly(settings.modelId);
   const currentTier = tiers.find((t) => t.dtype === settings.dtype) ?? tiers[0];
+  const glossaryCount = glossaryTerms(settings.glossary).length;
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -181,6 +186,29 @@ export function AdvancedSettings({
           <option value="translate">{t.settings.translate}</option>
         </Select>
       </Field>
+
+      {/* The list itself is edited in a dialog: it grows past what a field here could show. */}
+      <div className="sm:col-span-2">
+        <div className="mb-1.5 flex items-baseline justify-between">
+          <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-neutral-400">
+            {t.settings.glossary}
+            <InfoTip text={t.settings.tips.glossary} />
+          </span>
+        </div>
+        <div className="flex items-center gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2">
+          <span className={`min-w-0 flex-1 truncate text-sm ${glossaryCount ? "text-neutral-200" : "text-neutral-500"}`}>
+            {glossaryCount ? t.settings.glossaryCount(glossaryCount) : t.settings.glossaryEmpty}
+          </span>
+          <button
+            type="button"
+            onClick={onOpenGlossary}
+            aria-haspopup="dialog"
+            className="shrink-0 rounded-md border border-lavender-300/40 px-2.5 py-1 text-xs font-medium text-lavender-200 hover:bg-lavender-300/10"
+          >
+            {t.settings.glossaryEdit}
+          </button>
+        </div>
+      </div>
 
       <label className="flex cursor-pointer items-center gap-2.5 text-sm text-neutral-300 sm:col-span-2">
         <input

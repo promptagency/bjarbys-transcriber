@@ -30,7 +30,16 @@ export interface Settings {
   documentTimestamps: boolean;
   /** The interface language — also used for the text inside downloads. */
   uiLanguage: Lang;
+  /**
+   * The word list (Ordlista): names and terms, one per line, as the user typed
+   * them. Finished transcripts get suggestions where something sounds like one
+   * (see ../lib/glossary). Kept only in this browser, like every setting.
+   */
+  glossary: string;
 }
+
+/** A word list longer than this is cut when restored — it's a list of names, not a document. */
+export const MAX_GLOSSARY_LENGTH = 30_000;
 
 // The labels are for the developer benchmark page; the app names languages in
 // the interface language (see languageName in ./i18n).
@@ -97,6 +106,7 @@ export const DEFAULT_SETTINGS: Settings = {
   keepTranscriptsAsked: false,
   documentTimestamps: true,
   uiLanguage: DEFAULT_LANG,
+  glossary: "",
 };
 
 /**
@@ -150,6 +160,7 @@ export function restoreSettings(raw: Record<string, unknown> | null): Settings {
       (v): v is Lang => LANGS.includes(v as Lang),
       d.uiLanguage,
     ),
+    glossary: isString(raw.glossary) ? raw.glossary.slice(0, MAX_GLOSSARY_LENGTH) : d.glossary,
   };
   // Older saves could pair KB-Whisper with another language.
   return { ...restored, ...forModel(restored.modelId) };

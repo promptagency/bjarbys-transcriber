@@ -72,6 +72,7 @@ import {
   fetchEpisodeAudio,
 } from "./lib/podcasts";
 import { createZip } from "./lib/zip";
+import { addTerms, glossaryTerms } from "./lib/glossary";
 import type { TranscriptChunk, TranscriptResult } from "./lib/protocol";
 import { useWhisper } from "./hooks/useWhisper";
 import { RecordingLanguage } from "./components/RecordingLanguage";
@@ -79,6 +80,7 @@ import { LanguageSwitch } from "./components/LanguageSwitch";
 import { Logo } from "./components/Logo";
 import { Faq } from "./components/Faq";
 import { AdvancedSettings } from "./components/AdvancedSettings";
+import { GlossaryDialog } from "./components/GlossaryDialog";
 import { Dropzone } from "./components/Dropzone";
 import { Recorder } from "./components/Recorder";
 import { PodcastPanel } from "./components/PodcastPanel";
@@ -170,6 +172,16 @@ export default function App() {
     };
   }, []);
 
+  // Parsed once per change, so the review view's suggestions don't recompute on every render.
+  const glossary = useMemo(() => glossaryTerms(settings.glossary), [settings.glossary]);
+  const [glossaryOpen, setGlossaryOpen] = useState(false);
+  const openGlossary = useCallback(() => setGlossaryOpen(true), []);
+  // From the review view: a name the user just corrected. Applied to the latest
+  // list (not the one this render saw), so two quick additions both land.
+  const onAddGlossaryTerms = useCallback(
+    (terms: string[]) => setSettings((s) => ({ ...s, glossary: addTerms(s.glossary, terms).text })),
+    [],
+  );
   const resolvedDevice: Backend = useMemo(
     () =>
       settings.deviceMode === "auto"
@@ -825,6 +837,7 @@ export default function App() {
             disabled={state.status === "loading"}
             busy={busy}
             storageRefreshKey={`${state.status}|${state.storageVersion}|${processed}`}
+            onOpenGlossary={openGlossary}
           />
           {state.status === "ready" && !loadedForModel && (
             <button
@@ -862,6 +875,9 @@ export default function App() {
           onEditChunk={onEditChunk}
           onRevertChunk={onRevertChunk}
           onReplaceChunks={onReplaceChunks}
+          glossary={glossary}
+          onOpenGlossary={openGlossary}
+          onAddGlossaryTerms={onAddGlossaryTerms}
           onRemove={onRemove}
           onClearCompleted={onClearCompleted}
           keepTranscripts={settings.keepTranscripts}
@@ -946,6 +962,13 @@ export default function App() {
           </a>
         </p>
       </footer>
+
+      <GlossaryDialog
+        open={glossaryOpen}
+        onClose={() => setGlossaryOpen(false)}
+        value={settings.glossary}
+        onChange={(glossary) => patchSettings({ glossary })}
+      />
     </div>
     </I18nContext.Provider>
   );
