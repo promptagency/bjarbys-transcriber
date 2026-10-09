@@ -35,8 +35,8 @@ node --experimental-strip-types scripts/eval-word-timestamps.mjs <fixture-dir> [
 
 The fixture (`excerpt.wav` + `labels.csv`/`labels_TOFILL.csv`) lives **outside the repo** and is confidential
 client audio: never copy it into the repo, and don't quote its transcript in commits, PRs or READMEs. Figures
-quoted in the README (e.g. 95.6% word accuracy) come from `eval-diarization.mjs`; re-run it and update the
-README when diarization logic or scoring changes.
+quoted in the README and `docs/speaker-separation.md` (e.g. 95.6% word accuracy) come from
+`eval-diarization.mjs`; re-run it and update both (and the FAQ) when diarization logic or scoring changes.
 
 ## Architecture
 
@@ -89,7 +89,7 @@ halves the window and retries. `assignSpeakers` gives each Whisper chunk to whoe
 it (`speaker_conf` = margin to the runner-up) — except a line under 1.5 s with a clearly active second voice,
 which goes to the speaker whose speech is most contained in it (backchannels over someone else's turn), `smoothSpeakers` folds short low-confidence runs into their
 surroundings and renumbers speakers by first appearance. Hard limits: 3 speakers at once, 240 min per file.
-The README documents why word-level timestamps were measured and rejected — don't reintroduce them.
+`docs/word-timestamps.md` documents why word-level timestamps were measured and rejected — don't reintroduce them.
 
 **Downloaded models (`src/lib/modelStorage.ts`, `ModelStorage` in Settings).** Transformers.js keeps models
 and the ONNX runtime in Cache Storage (`transformers-cache`), keyed by their Hugging Face / jsDelivr URLs, each
@@ -202,6 +202,9 @@ for errors and amber for unsure lines stay. Use these tokens rather than Tailwin
   `speaker-separation` branch, which was rebuilt by hand from upstream `main` — so syncing upstream into this
   fork needs care (`git merge -s ours` only if upstream equals the merged PR exactly).
 - Keep Anders Bjarby's credit visible (README intro, app footer, `LICENSE`) — MIT requires the notice.
+- The README is for users first, then self-hosters and developers: features, privacy, getting started and
+  short summaries. Technical detail goes in `docs/` (`hosting.md`, `speaker-separation.md`,
+  `architecture.md`, `benchmark.md`, …), linked from the README.
 - Parked work lives on branches: `feature/pianissimo` (Klang AI's Pianissimo model, WebGPU-only, self-hosted
   765 MB), `spike/pianissimo` (its benchmark harness and findings) and `spike/multi-speaker` (more than 3
   speakers: segmentation windows + WeSpeaker fingerprints + clustering; no gain on a labelled 4-speaker

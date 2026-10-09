@@ -2,80 +2,63 @@
   <img src="src/assets/vem-sa-vad-farg.svg" alt="Vem sa vad?" width="360">
 </h1>
 
-Private, **in-browser** audio &amp; video transcription that also tells you
-**who said what**. The Whisper model runs entirely on the user's machine via
-[Transformers.js](https://github.com/huggingface/transformers.js) (WebGPU, with
-a WASM/CPU fallback). **Nothing is uploaded** and **nothing needs to be
-installed** — just open the page.
+Private audio and video transcription that runs **in your browser** and tells you **who said what**.
+Nothing is uploaded and nothing needs to be installed — just open the page.
 
-**Use it now: [vemsavad.promptagency.se](https://vemsavad.promptagency.se)** — open
-it in Chrome or Edge and drop in a file. Click *Install* in the address bar to
-get it as an app with its own window, which also opens without a network.
+**Use it now: [vemsavad.promptagency.se](https://vemsavad.promptagency.se)** — open it in Chrome or
+Edge and drop in a file. Click *Install* in the address bar to get it as an app with its own window,
+which also opens without a network.
 
 <p align="center">
   <img src="docs/images/screenshot.png" alt="The start page of Vem sa vad?: the logo, a language picker, tabs for files, recording and podcasts, and a drop area for audio or video" width="720">
 </p>
 
-Vem sa vad? is built on [Bjarbys Transcriber](https://github.com/fltman/bjarbys-transcriber)
-by Anders Bjarby, and adds speaker separation and a few other features on top.
-If you find it useful, consider
-[supporting him on Patreon](https://www.patreon.com/AndersBjarby).
+Vem sa vad? is built on [Bjarbys Transcriber](https://github.com/fltman/bjarbys-transcriber) by
+Anders Bjarby, and adds speaker separation and a few other features on top. If you find it useful,
+consider [supporting him on Patreon](https://www.patreon.com/AndersBjarby).
 
 ## Features
 
-- 🎙️ **Three sources, one queue** — drop **multiple audio/video files**, record
-  from the **microphone**, or search a **podcast** by name and pick episodes.
-  Everything feeds a single queue that transcribes sequentially and (optionally)
-  **auto-downloads** each transcript.
-- 👀 **Read along as it transcribes** — the running job shows the transcript
-  growing in a live preview, so you can start reading a long recording long
-  before it's finished.
-- 🇸🇪 **Swedish that actually works** — choose **KB-Whisper** (KBLab / National
-  Library of Sweden) tiny → large, alongside standard multilingual and
-  English-only Whisper models. The multilingual models **detect the language**
-  themselves and show which one they heard.
-- 🗣️ **In Swedish or English** — the interface is Swedish by default, with an
-  SV/EN switch in the corner. Downloads follow it too ("Talare 1" / "Speaker 1").
-- 💻 **Made for computers** — phones get a short page asking to open it on a
-  computer (with a share button to send yourself the link) and a way past it.
-- ⚡ **Fast** — on a 2021 MacBook Pro (M1 Pro), 25 minutes of Swedish
-  transcribes in under 3 minutes with the default model, about 9× real time
-  ([benchmark](#speed-and-accuracy); 7% word error on clean synthetic speech).
-- 🎚️ **Pick your model & size** — every model offers quantization tiers with the
-  real download size shown; backend-aware so you can't pick a broken combo.
-- 🎬 **Audio _and_ video** — MP3, WAV, M4A, OGG, FLAC and MP4 / MOV / WebM
-  (the browser extracts the audio track).
-- 📄 **Readable documents** (the default) — `.txt` or `.md`: one paragraph per
-  speaker turn (a new one after a pause of 4 s or more), the speaker named
-  once, a header with title, date, length and speakers, and optional `[mm:ss]`
-  timestamps.
-- 📝 **More formats** — `.srt` and `.vtt` subtitles and `.json` (with
-  timestamps); **Copy** gives the raw text, one Whisper fragment per line. Tick as
-  many as you like; the audio is only analysed once and every
-  format is rendered from that same result. Several are saved as one `.zip`.
-- 🗣️ **Speaker separation** (optional, experimental) — labels each line
-  `Speaker 1`, `Speaker 2`, … via
-  [pyannote](https://huggingface.co/pyannote/segmentation-3.0), and lets you
-  **name the speakers** ("Anna", "Erik") in the transcript view; the names
-  carry into Copy and every download. Off by default; see
-  [the caveats](#speaker-separation) before relying on it.
-- 🔒 **Private by design** — transcription is 100% local; models download once
-  from the Hugging Face CDN and cache in your browser.
-- 💾 **Pick up where you left off — if you choose to** — your settings are
-  remembered, and you can **opt in** to keeping finished transcripts (with
-  speaker names and corrections) in this browser across reloads. It's off by
-  default: when your first transcript finishes, the app asks, and explains
-  that kept transcripts **stay until you delete them** (✕ on each, or *Delete
-  all finished*) and that anyone using the browser could open them. Change it
-  any time in Settings; turning it off deletes the saved copies. The original
-  audio is never kept, so restored transcripts can be edited and exported but
-  not played back.
+- 🎙️ **Files, microphone or podcasts** — drop several audio or video files (MP3, WAV, M4A, OGG, FLAC,
+  MP4, MOV, WebM), record from the microphone, or search for a podcast and pick episodes. Everything
+  goes into one queue.
+- 👀 **Read along** — the transcript grows in a live preview while it's being made.
+- 🇸🇪 **Swedish that actually works** — [KB-Whisper](https://huggingface.co/KBLab) from the National
+  Library of Sweden, plus multilingual and English Whisper models. The multilingual ones detect the
+  language themselves.
+- 🗣️ **Who said what** (optional) — lines are marked *Talare 1*, *Talare 2*… and you can give the
+  speakers names. Works for up to three voices at a time.
+- ✏️ **Check and correct** — play any line, see the lines the app is unsure of, fix text and speakers,
+  and use find & replace for names it keeps getting wrong.
+- 📄 **Readable documents** — `.txt` or `.md` with a paragraph per speaker turn and optional
+  timestamps, or subtitles (`.srt`, `.vtt`) and `.json`. Pick several and get them in one `.zip`;
+  downloads can start by themselves as each transcript finishes.
+- ⚡ **Fast** — 25 minutes of Swedish in under 3 minutes on a 2021 MacBook Pro.
+- 🔒 **Private by design** — see [below](#privacy).
+- 💾 **Your choice what's kept** — settings are remembered; finished transcripts are kept in the
+  browser only if you say so, until you delete them. Audio is never stored. Downloaded models can be
+  removed under Settings › Lagring.
+- 🌐 **Swedish or English** interface, with answers to common questions under *Vanliga frågor* (FAQ).
+
+It's made for computers: phones get a page suggesting a computer instead.
+
+## Privacy
+
+The audio and the text never leave your computer. What goes over the network:
+
+- the page itself (from Cloudflare);
+- the first time, the transcription model (from Hugging Face) and the compute engine (from jsDelivr) —
+  both are then kept in the browser;
+- with the Podcast tab, your search term goes to Apple's podcast directory (which also supplies the
+  cover images), and feeds and episodes are fetched through the site's own proxy;
+- one anonymous visit count to Prompt Agency's own Plausible server in Finland (no cookies; skipped with
+  Global Privacy Control or Do Not Track).
+
+The page's Content-Security-Policy stops the browser from contacting anything else, so this can be
+checked, not just trusted. The simplest test: transcribe once, turn off the network, and transcribe
+again.
 
 ## Run it yourself
-
-Vem sa vad? is a fork of [fltman/bjarbys-transcriber](https://github.com/fltman/bjarbys-transcriber)
-that adds [speaker separation](#speaker-separation). Everything runs locally —
-there is no server to set up.
 
 You need [Node.js](https://nodejs.org) 20.19+ or 22.12+ and git.
 
@@ -86,292 +69,49 @@ npm install
 npm run dev      # open http://localhost:5173
 ```
 
-- **Use a browser with WebGPU** (Chrome or Edge are the safe choice): the
-  models then run on the GPU. Without WebGPU the app falls back to the CPU. In
-  `npm run dev` that runs multithreaded and, for the default model, about as
-  fast as the GPU but a little less accurate; on a server without the
-  cross-origin isolation headers (see below) it is single-threaded and much
-  slower.
-- **The first transcription downloads the model** (about 110 MB for the
-  default, KB-Whisper Base, on a GPU; about 180 MB on CPU) from Hugging Face. The browser caches it, so later runs
-  start straight away.
-- **Podcasts work in `npm run dev`:** the dev server includes a stand-in for
-  `proxy.php` (see [below](#podcasts--proxyphp)). `npm run preview` doesn't
-  include it, so use `dev` locally.
-- `localhost` counts as a secure origin, so the microphone and WebGPU work
-  without HTTPS.
+- **Use Chrome or Edge** so the models run on the graphics card (WebGPU). Without it the app falls back
+  to the processor, which works but is slower.
+- **The first transcription downloads the model** (about 110 MB for the default, KB-Whisper Base; about
+  180 MB on the processor). After that it starts straight away.
+- **`localhost` counts as secure**, so the microphone and WebGPU work without HTTPS.
+- **Podcasts work in `npm run dev`**, which includes a stand-in for the podcast proxy;
+  `npm run preview` doesn't.
 
-To serve it for others instead, see the next section.
-
-## Hosting on Cloudflare Pages
-
-The public site runs on [Cloudflare Pages](https://pages.cloudflare.com/),
-built from `main` on every merge (feature branches get preview addresses).
-Settings live in `wrangler.toml`: build `npm run build`, output `dist/`.
-Pages rejects files over 25 MiB; the build leaves out the ONNX Runtime `.wasm`
-Vite would otherwise copy in, since the runtime is loaded from jsDelivr.
-
-- **`public/_headers`** sends cross-origin isolation (multithreaded CPU path)
-  and a strict **Content-Security-Policy**: the page may only connect to itself,
-  Hugging Face (models), jsDelivr (the ONNX runtime), Apple's podcast
-  search and Prompt Agency's Plausible. The browser enforces it, so "nothing is
-  uploaded" can be checked, not just trusted. Change it deliberately.
-- **Visit counting** (`src/lib/analytics.ts`): one anonymous page view per load
-  to Prompt Agency's self-hosted Plausible (Hetzner, Finland), sent by our own
-  few lines rather than Plausible's script — page address with only `utm_*`
-  kept, the referring page's origin and path, site name; no cookies, nothing stored. Only on
-  `vemsavad.promptagency.se` (never previews, localhost or your own copy), and
-  not when the browser sends Global Privacy Control or Do Not Track. To leave
-  your own browser out, open the site once with `?plausible_ignore=true`
-  (`=false` undoes it).
-- **`functions/proxy.php.ts`** answers `./proxy.php?url=` like `proxy.php`
-  does, but only for podcast content: it checks the *bytes*, not the label —
-  an RSS/Atom feed or a recognised audio/video container (MP3, AAC, MP4/M4A,
-  Ogg/Opus, WebM, WAV, FLAC, AIFF) — and refuses everything else, so it can't
-  be used to fetch arbitrary files through the domain. What passes gets an
-  inert content type and headers that stop it from ever running as a page.
-  Requests from other sites' pages are refused, and every redirect is
-  re-checked against local or private hosts.
-- **`public/site.webmanifest` + `public/sw.js`** make it installable and
-  let it open offline after one visit (the service worker caches the app's own
-  files; models are cached by Transformers.js).
-- Check the hosted setup locally with `npm run build && npx wrangler pages dev dist`.
-- The custom domain is a CNAME at the domain's DNS provider pointing to the
-  project's `pages.dev` address, added in the Pages dashboard *first* —
-  creating the CNAME before that gives a 522 error.
-
-## Build & deploy to a LAMP server
-
-```bash
-npm run build    # outputs static files to dist/
-```
-
-Copy the **contents of `dist/`** into your Apache web root (or a subfolder).
-A ready-to-use **`.htaccess`** and the podcast **`proxy.php`** are included in
-`public/` and are emitted into `dist/` by the build.
-
-- **HTTPS is required** for the microphone (`getUserMedia`) and WebGPU. The
-  `.htaccess` force-redirects to HTTPS (localhost is exempt).
-- **No COOP/COEP headers needed** for WebGPU or single-threaded WASM — they're
-  left commented out in `.htaccess`. Enabling them (as `npm run dev` does)
-  makes the CPU fallback multithreaded, which matters for visitors without
-  WebGPU; that setup has not been tested on a deployed server.
-- **Serving from a subfolder** needs no rebuild: the build uses relative paths
-  (`base: './'` in `vite.config.ts`). If Apache's fallback misbehaves there,
-  add a `RewriteBase` to `.htaccess`.
-
-### Podcasts &amp; `proxy.php`
-
-Searching uses Apple's iTunes API (CORS-enabled, direct). Most podcast hosts,
-however, block cross-origin reads of their RSS/audio, so the app fetches feeds
-and episodes through a **same-origin proxy** — `proxy.php` — which your own
-server fetches through, and falls back to a direct fetch where no proxy runs.
-This keeps it private to your server (no third-party CORS proxy).
-
-`proxy.php` needs PHP with cURL and follows the same rules as the hosted site's
-proxy: requests from other sites' pages are refused, no private or reserved
-addresses (re-checked on every redirect, with the connection pinned to the
-checked address), and only podcast content — it checks the first bytes and passes an
-RSS/Atom feed or a recognised audio/video file, refusing anything else, so it
-can't be used to fetch arbitrary files through your server. What passes gets
-an inert content type and headers that stop it from running as a page.
-
-If you don't deploy `proxy.php`, file and microphone transcription still work,
-and podcasts work for any host that happens to send CORS headers.
+**To host it for others**, `npm run build` gives static files in `dist/` that can be served from any
+folder. [docs/hosting.md](docs/hosting.md) covers Cloudflare Pages (what the public site uses), Apache,
+the podcast proxy and the security headers.
 
 ## Models
 
 | Group | Models | Notes |
 |---|---|---|
 | **Swedish — KB-Whisper** | tiny · base · small · medium · large | Best Swedish accuracy. `large`/`medium` are big — use WebGPU. |
-| **Multilingual — Whisper** | tiny · base · small · large-v3-turbo | ~100 languages, detected automatically from the first 30 s (shown as "Detected language"). Turbo is the fast flagship (WebGPU). |
+| **Multilingual — Whisper** | tiny · base · small · large-v3-turbo | ~100 languages, detected automatically from the first 30 s. Turbo is the fast flagship (WebGPU). |
 | **English — Whisper** | tiny · base · small (`.en`) | Slightly better on English. |
 
-Quantization: **Balanced (GPU)** is the default on **WebGPU** — a 16-bit encoder
-with a 4-bit decoder, about half the download of full precision with the same
-accuracy in our tests (GPUs without 16-bit support get a 32-bit encoder instead).
-**8-bit (q8)** is the default on **CPU/WASM** (an 8-bit *decoder* is ~10× slower
-on WebGPU, so it's offered only on CPU); **full (fp32)** is available for the
-smaller models. The measurements behind these choices are in
-[`docs/webgpu-quantization.md`](docs/webgpu-quantization.md).
+Each model comes in a few quality levels, with the real download size shown. The defaults are chosen
+for your computer; the details are in [docs/architecture.md](docs/architecture.md#quantization).
 
-### Speaker separation
+## Speaker separation
 
-Ticking **Separate speakers** additionally loads
-[`onnx-community/pyannote-segmentation-3.0`](https://huggingface.co/onnx-community/pyannote-segmentation-3.0)
-— an ONNX build of [pyannote/segmentation-3.0](https://huggingface.co/pyannote/segmentation-3.0),
-about 1.5 MB, MIT. It runs on WASM alongside Whisper and needs no extra
-dependency. Each chunk in the `.json` export then carries `speaker` and
-`speaker_conf`, and the other formats prefix each line with `Talare N:` (or
-`Speaker N:` with the interface in English).
+Speaker separation uses [pyannote](https://huggingface.co/pyannote/segmentation-3.0) (about 1.5 MB) and
+is off by default. On a hand-labelled 12-minute interview between two people, **95.6%** of the words
+went to the right speaker.
 
-Open a finished transcript to **name the speakers**: one field per detected
-speaker, applied immediately to the transcript, Copy and downloads. Names are
-per transcript, since "Talare 1" is a different person in every recording.
-In the documents, `.srt`/`.vtt` and Copy the name replaces `Talare N`; in `.json` the chunks
-keep their numeric `speaker` and a top-level `speakers` object maps each
-number to its name. An automatic download happens before you've named
-anyone, so download again after naming.
+Worth knowing before you rely on it:
 
-The open transcript is also a **review view** for checking and correcting it
-line by line:
+- **At most three voices at a time.**
+- **Short interjections** ("Just det.") said over someone else are the most common mistake. The app
+  marks lines it's unsure of, so they're quick to check.
+- **Very long recordings** are processed in overlapping parts, which can occasionally produce an extra
+  speaker. Files over four hours aren't separated.
 
-- **▶ plays that line** from the original file, stopping at its end.
-- **Unsure lines are highlighted** in amber — where the model's margin between
-  the top two speakers is low, or it found no speaker — and *Only unsure
-  lines* filters to them. In testing, these were the lines where two voices
-  overlapped.
-- **Change a line's speaker** (including *New speaker* or *No speaker*) or
-  **click its text to edit it**. Enter or clicking elsewhere saves, Esc
-  cancels; text is kept on one line so subtitle cues stay valid.
-- **Revert** undoes your changes to a line.
-- **Find & replace** fixes a name or term Whisper mishears the same way every
-  time, in one go: matches are highlighted and counted as you type, *Only
-  lines with matches* shows just those lines, and **Replace all** changes them
-  (each changed line can still be reverted on its own). **Undo** takes back
-  the whole replacement, leaving any line you changed since alone. Whole words
-  and ignore-case are on by default, å/ä/ö count as letters, and the text you
-  type is matched literally. An empty replacement deletes the word and tidies
-  up the punctuation around it ("Ja, eh, det" → "Ja, det").
-
-Corrections flow into Copy and every export; corrected chunks carry
-`"edited": true` in `.json`, and a speaker you set has `speaker_conf` 1 (0 for
-*No speaker*). If you've opted in to keeping transcripts, edits and names are
-kept with them across reloads.
-
-**Measured accuracy: 95.6%** of words attributed to the correct speaker, on a
-hand-labelled 12-minute two-person Swedish interview (231 utterances, 2116
-words). Lines where no speaker was detected count as wrong. Reproduce with `scripts/eval-diarization.mjs` — see
-[Evaluating speaker separation](#evaluating-speaker-separation).
-
-That figure is for a clean recording of two people. Known limits:
-
-- **At most 3 speakers.** The model reports speaker activity as a *powerset*
-  over three local speakers, so a fourth voice cannot be represented at all.
-- **Long recordings are stitched, not seamless.** A single pass eventually
-  exhausts the browser's WASM memory, so audio is diarized in windows that
-  overlap by two minutes, and speakers are matched across each seam by who is
-  talking at the same moments. How much fits in one pass depends on the device
-  and on how much the chosen Whisper model has already claimed, so the window
-  starts at 25 minutes and halves on retry if a pass runs out of memory. A 67-minute two-person interview comes
-  out as 2 speakers. But someone who stays silent through an entire overlap
-  cannot be matched and is given a fresh label rather than a guessed one, so
-  very long or very lopsided recordings may still show extra speakers.
-- **Short interjections are still the main error.** A backchannel ("Just det.")
-  spoken over someone still talking sits in a chunk whose audio is dominated by
-  the other speaker, so "who talks longest" gets it wrong. For lines under
-  1.5 s where a second voice is clearly active, the speaker whose speech is most
-  *contained* in the line now wins instead — an interjection starts and ends
-  with it, while the other person talks straight through. That took the
-  interview from 94.7% to 95.6% (22 → 21 wrong lines, 14 → 12 of 34 short lines
-  wrong) and a synthetic dialogue full of backchannels from 95.7% to 99.8%
-  (`scripts/make-dialogue-fixture.sh`; details in `docs/benchmark.md`). Most of
-  the remaining wrong words are still in short lines. See
-  [Why not word-level timestamps?](#why-not-word-level-timestamps) — the
-  obvious fix was measured and makes attribution worse, not better.
-- **`speaker_conf`** is the margin between the top two speakers' talk time
-  within a chunk. Low values mean overlapping speech rather than a wrong
-  answer; `speaker` is `null` where no speech was detected at all. For a short
-  line decided by containment it is the margin in containment instead. About
-  40% of the remaining errors are flagged this way.
-
-### Why not word-level timestamps?
-
-The natural fix for the interjection errors above looks like attributing
-*words* rather than phrase chunks: `return_timestamps: 'word'` gives spans
-around 0.2 s against ~2 s for phrase chunks, easily fine enough to isolate a
-half-second "Just det." It was tried, measured, and **it makes attribution
-worse.**
-
-Transcribing the fixture twice with the same model and diarizing both, so
-granularity is the only variable (`scripts/eval-word-timestamps.mjs`):
-
-| attribution | units | median span | word accuracy |
-|---|---|---|---|
-| phrase-level (what ships) | 288 | 1.94 s | **98.4%** |
-| word-level | 1996 | 0.20 s | 94.7% (−3.7 pp) |
-| words regrouped into sentences | 201 | 2.80 s | 97.7% (−0.7 pp) |
-
-The padding really does cause the interjection errors — but it also does
-useful work everywhere else. A two-second span covers roughly 120 diarization
-frames and averages out noise; a 0.2 s word covers about 12 and can land
-entirely on a glitch. Removing the padding loses more than it recovers, so
-phrase-sized units are the right granularity and the errors above are the
-price of it.
-
-(Those percentages are not comparable to the 95.6% quoted earlier: this
-experiment uses a different ASR model and scores against time intervals rather
-than per labelled utterance. Only the three rows are comparable to each other.)
-
-The availability problem below is therefore moot — but it is recorded because
-it took a while to establish, and "just use word timestamps" is an obvious
-thing to suggest.
-
-Word timestamps are derived from the decoder's **cross-attentions**, and the
-ONNX models this app loads are not exported with them:
-
-```
-Model outputs must contain cross attentions to extract timestamps.
-This is most likely because the model was not exported with `output_attentions=True`.
-```
-
-Having `alignment_heads` in `generation_config.json` is not sufficient — every
-model here declares it and still fails. What the export needs is the
-cross-attentions themselves, and each candidate was checked:
-
-| build | word timestamps |
-|---|---|
-| `KBLab/kb-whisper-*` | ✗ no cross-attentions |
-| `onnx-community/kb-whisper-*-ONNX` | ✗ no cross-attentions |
-| `pappa1337/kb-whisper-{tiny,small}-onnx-words` | ✗ won't load — transformers.js reports `Unsupported model type: whisper` |
-| `onnx-community/whisper-*_timestamped` (13 of them) | ✓ works, verified |
-
-So the blocker is specific: **no working KB-Whisper build exposes
-cross-attentions.** The `_timestamped` variants that do work include
-multilingual ones, and those *can* transcribe Swedish — this is a real option,
-not an impossibility. It just means giving up KB-Whisper's Swedish accuracy for
-generic Whisper, plus re-downloading a different model. Whether better speaker
-attribution outweighs worse transcription has not been measured.
-
-Exporting KB-Whisper with `output_attentions=True` would remove that
-obstacle — but the measurement above says it would not be worth doing, since
-finer spans attribute worse. The containment rule for short lines (above) and
-`speaker_conf`, which flags about 40% of the remaining errors, are the
-mitigations instead.
-
-### Evaluating speaker separation
-
-`scripts/eval-diarization.mjs` scores the shipping code against a hand-labelled
-fixture, so changes to diarization can be measured instead of eyeballed.
-
-```bash
-node --experimental-strip-types scripts/eval-diarization.mjs <fixture-dir> [windowMinutes]
-```
-
-The fixture lives outside the repo — real recordings are usually confidential —
-and the directory needs two files:
-
-| file | contents |
-|---|---|
-| `labels.csv` | `idx;time_in_clip;speaker;text;dur_s;rel_start;rel_end;…`, one row per utterance, `speaker` hand-filled (`,` or `;` separated) |
-| `excerpt.wav` | the same audio, 16 kHz mono |
-
-It reports word-level accuracy, the number of distinct speakers, speaker changes
-landing on a window boundary, and duplicated spans. Pass `windowMinutes` to force
-the windowed path on a short clip — handy for exercising boundary behaviour
-without labelling hours of audio.
+How it works, the review view, the export fields and how accuracy is measured:
+[docs/speaker-separation.md](docs/speaker-separation.md).
 
 ## Speed and accuracy
 
-Changes that claim to make transcription faster or more accurate are measured,
-not eyeballed. `npm run dev` serves a benchmark page at
-`http://localhost:5173/bench.html` that runs the app's own worker on any local
-file and reports time, × real time and word error rate against a reference
-text; `scripts/make-bench-audio.sh` builds a reproducible Swedish recording with
-a known script (public-domain Lagerlöf read by the macOS voice Alva). Results
-and decisions are kept in [`docs/benchmark.md`](docs/benchmark.md).
-
-On a 25-minute recording (M1 Pro, Chrome, KB-Whisper Base on WebGPU):
+On a 25-minute Swedish recording (M1 Pro, Chrome, KB-Whisper Base on WebGPU):
 
 | | Before | Now |
 |---|---|---|
@@ -380,49 +120,14 @@ On a 25-minute recording (M1 Pro, Chrome, KB-Whisper Base on WebGPU):
 | Model download | ~206 MB | **~110 MB** |
 | Speaker accuracy (real interview) | 94.7% | **95.6%** |
 
-What changed: Transformers.js 4 with a 16-bit encoder and 4-bit decoder on the
-GPU; half the overlap between Whisper's 30-second windows, which had been
-repeating whole sentences at the seams; real language detection for "Any
-language", which had silently assumed English; and short interjections
-attributed to the person who says them. Measured and deliberately *not*
-changed: preferring the CPU, skipping silence before Whisper, and KB-Whisper's
-"strict"/"subtitle" styles, whose browser builds are not actually published —
-see the benchmark notes for why.
-
-## How it works
-
-`src/worker.ts` runs the Transformers.js ASR pipeline in a Web Worker. Audio is
-decoded to mono 16 kHz PCM on the main thread (`src/lib/audio.ts`) and
-transferred to the worker. When the language is left on auto-detect, the
-worker asks Whisper which language token it predicts for the first 30 s and
-transcribes the whole file in that language (Transformers.js itself would
-assume English). Long audio is chunked (`chunk_length_s: 30`) with a
-2.5 s overlap on each side — the library's default of 5 s repeated whole
-sentences at the seams (see `docs/benchmark.md`). See `src/lib/models.ts` for the model catalog.
-
-Progress comes from a `WhisperTextStreamer`: its chunk callbacks report
-timestamps within Whisper's current 30 s window, and the worker reconstructs a
-whole-file position from them. The same streamer feeds the **live preview**:
-after each window the worker merges the finished windows' tokens with
-Transformers.js's own `_decode_asr` — exactly how the final result is merged —
-and appends the window in progress as provisional text. On a 5-minute test the
-last preview was identical to the finished transcript.
-
-With speaker separation on, the worker runs the pyannote model over the same
-PCM and decodes its powerset output into per-speaker activity spans — silence
-and simultaneous speech are *not* speakers, which is easy to get wrong.
-`src/lib/diarize.ts` then attributes each Whisper chunk to whoever holds the
-floor longest across it — except a short line with a second voice active,
-which goes to the speaker whose speech is most contained in it — and merges
-away brief low-confidence blips.
+Changes that claim to make things faster or more accurate are measured, not eyeballed — see
+[docs/benchmark.md](docs/benchmark.md) for the method and the results, and
+[docs/architecture.md](docs/architecture.md) for how the app works inside.
 
 ## License
 
-[MIT](LICENSE) © 2026 Anders Bjarby. The models are downloaded at runtime from
-Hugging Face and carry their own licenses (OpenAI Whisper and KB-Whisper are
-both Apache-2.0).
-
-Vem sa vad?'s additions are released under the same MIT license. Speaker
-separation also downloads the
-[pyannote segmentation](https://huggingface.co/onnx-community/pyannote-segmentation-3.0)
-model, which is MIT-licensed.
+[MIT](LICENSE) © 2026 Anders Bjarby. Vem sa vad?'s additions are released under the same MIT license.
+The models are downloaded at runtime from Hugging Face and carry their own licenses: OpenAI Whisper and
+KB-Whisper are Apache-2.0, and the
+[pyannote segmentation](https://huggingface.co/onnx-community/pyannote-segmentation-3.0) model used for
+speaker separation is MIT.
