@@ -200,4 +200,7 @@ for errors and amber for unsure lines stay. Use these tokens rather than Tailwin
   fork needs care (`git merge -s ours` only if upstream equals the merged PR exactly).
 - Keep Anders Bjarby's credit visible (README intro, app footer, `LICENSE`) — MIT requires the notice.
 - Parked work lives on branches: `feature/pianissimo` (Klang AI's Pianissimo model, WebGPU-only, self-hosted
-  765 MB) and `spike/pianissimo` (its benchmark harness and findings).
+  765 MB), `spike/pianissimo` (its benchmark harness and findings) and `spike/multi-speaker` (more than 3
+  speakers: segmentation windows + WeSpeaker fingerprints + clustering; no gain on a labelled 4-speaker
+  recording because the fingerprints couldn't tell two similar voices apart — a stronger voice model is the
+  next thing to try, measured with `src/spike/eval-multi.mjs`).
