@@ -127,6 +127,94 @@ export function cluster(embeddings, { threshold = 0.6, numSpeakers = null, minCl
 }
 
 /**
+ * Spectral clustering: a k-nearest-neighbour similarity graph, the top
+ * eigenvectors of its normalised affinity, then k-means on those. Follows
+ * local neighbourhoods, so it can split two voices whose fingerprints are
+ * close on average but each other's nearest neighbours. Without
+ * `numSpeakers`, the count comes from the largest eigengap (2…maxSpeakers).
+ */
+export function spectralCluster(embeddings, { numSpeakers = null, neighbours = 10, maxSpeakers = 8 } = {}) {
+  const n = embeddings.length;
+  const unit = embeddings.map((v) => {
+    const norm = Math.sqrt(v.reduce((a, x) => a + x * x, 0));
+    return v.map((x) => x / norm);
+  });
+  const sim = unit.map((a) => unit.map((b) => {
+    let d = 0;
+    for (let i = 0; i < a.length; i++) d += a[i] * b[i];
+    return d;
+  }));
+  // Keep each row's `neighbours` strongest similarities, then symmetrise.
+  const A = Array.from({ length: n }, () => new Float64Array(n));
+  for (let i = 0; i < n; i++) {
+    const order = [...sim[i].keys()].filter((j) => j !== i).sort((x, y) => sim[i][y] - sim[i][x]);
+    for (const j of order.slice(0, neighbours)) A[i][j] = Math.max(0, sim[i][j]);
+  }
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) A[i][j] = A[j][i] = (A[i][j] + A[j][i]) / 2;
+  // M = (I + D^-1/2 A D^-1/2) / 2 — eigenvalues in [0, 1], clusters at the top.
+  const deg = A.map((row) => row.reduce((a, x) => a + x, 0) || 1e-9);
+  const M = A.map((row, i) => row.map((x, j) => (x / Math.sqrt(deg[i] * deg[j]) + (i === j ? 1 : 0)) / 2));
+  const m = Math.min(n, maxSpeakers + 1);
+  // Subspace iteration for the top m eigenvectors.
+  let V = Array.from({ length: m }, (_, c) => Float64Array.from({ length: n }, (_, i) => Math.sin(1 + i * (c + 1) * 0.37)));
+  const orthonormalise = (vs) => {
+    for (let c = 0; c < vs.length; c++) {
+      for (let d = 0; d < c; d++) {
+        let dot = 0;
+        for (let i = 0; i < n; i++) dot += vs[c][i] * vs[d][i];
+        for (let i = 0; i < n; i++) vs[c][i] -= dot * vs[d][i];
+      }
+      const norm = Math.sqrt(vs[c].reduce((a, x) => a + x * x, 0)) || 1;
+      for (let i = 0; i < n; i++) vs[c][i] /= norm;
+    }
+    return vs;
+  };
+  const mul = (v) => {
+    const out = new Float64Array(n);
+    for (let i = 0; i < n; i++) { let s = 0; const row = M[i]; for (let j = 0; j < n; j++) s += row[j] * v[j]; out[i] = s; }
+    return out;
+  };
+  V = orthonormalise(V);
+  for (let it = 0; it < 300; it++) V = orthonormalise(V.map(mul));
+  const eig = V.map((v) => { const w = mul(v); let s = 0; for (let i = 0; i < n; i++) s += v[i] * w[i]; return s; });
+  let k = numSpeakers;
+  if (!k) {
+    let gap = -1;
+    for (let c = 1; c < m; c++) if (eig[c - 1] - eig[c] > gap && c >= 2) { gap = eig[c - 1] - eig[c]; k = c; }
+  }
+  // Rows of the top-k eigenvectors, normalised, into k-means (best of several starts).
+  const rows = Array.from({ length: n }, (_, i) => {
+    const r = V.slice(0, k).map((v) => v[i]);
+    const norm = Math.sqrt(r.reduce((a, x) => a + x * x, 0)) || 1;
+    return r.map((x) => x / norm);
+  });
+  const d2 = (a, b) => a.reduce((s, x, i) => s + (x - b[i]) ** 2, 0);
+  let seed = 1;
+  const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  let best = { inertia: Infinity, label: null };
+  for (let start = 0; start < 20; start++) {
+    const centres = [rows[Math.floor(rand() * n)]];
+    while (centres.length < k) {
+      const dist = rows.map((r) => Math.min(...centres.map((c) => d2(r, c))));
+      let pick = rand() * dist.reduce((a, x) => a + x, 0), i = 0;
+      while ((pick -= dist[i]) > 0 && i < n - 1) i++;
+      centres.push(rows[i]);
+    }
+    let label = new Array(n).fill(0);
+    for (let it = 0; it < 100; it++) {
+      label = rows.map((r) => { let bi = 0, bd = Infinity; centres.forEach((c, j) => { const d = d2(r, c); if (d < bd) { bd = d; bi = j; } }); return bi; });
+      for (let j = 0; j < k; j++) {
+        const members = rows.filter((_, i) => label[i] === j);
+        if (members.length) centres[j] = members[0].map((_, c) => members.reduce((a, r) => a + r[c], 0) / members.length);
+      }
+    }
+    const inertia = rows.reduce((a, r, i) => a + d2(r, centres[label[i]]), 0);
+    if (inertia < best.inertia) best = { inertia, label };
+  }
+  return { label: best.label, eigenvalues: eig, k };
+}
+
+/**
  * Run the whole chain on 16 kHz mono `audio`. Returns { activity, stats }.
  * Options: windowSec (10), stepSec (5), minSpeechSec (1.0) for an embedding,
  * threshold / numSpeakers for clustering.
@@ -176,7 +264,12 @@ export async function diarizeMulti(audio, models, opts = {}) {
 
   // 3. Cluster all embeddings.
   const t2 = Date.now();
-  const labels = cluster(embedded.map((x) => x.vector), opts);
+  const vectors = embedded.map((x) => Array.from(x.vector));
+  let labels, spectral = null;
+  if (opts.method === "spectral") {
+    spectral = spectralCluster(vectors, opts);
+    labels = spectral.label;
+  } else labels = cluster(embedded.map((x) => x.vector), opts);
   const clusterMs = Date.now() - t2;
 
   // 4. Relabel local spans with their cluster; union per global speaker.
@@ -192,6 +285,7 @@ export async function diarizeMulti(audio, models, opts = {}) {
 
   return {
     activity,
+    embedded,
     stats: {
       windows: w + 1,
       localSpeakers: locals.length,
@@ -201,6 +295,7 @@ export async function diarizeMulti(audio, models, opts = {}) {
       segSec: +(segMs / 1000).toFixed(1),
       embSec: +(embMs / 1000).toFixed(1),
       clusterSec: +(clusterMs / 1000).toFixed(1),
+      ...(spectral && { k: spectral.k, eigenvalues: spectral.eigenvalues.map((x) => +x.toFixed(3)) }),
     },
   };
 }
