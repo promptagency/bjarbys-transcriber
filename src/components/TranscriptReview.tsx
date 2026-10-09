@@ -191,7 +191,9 @@ export function TranscriptReview({
     ({ chunk, index }) =>
       (!(onlyUnsure && hasSpeakers) || isUnsure(chunk, hasSpeakers)) &&
       (!(onlyMatches && pattern) || matchesIn(chunk) > 0) &&
-      (!(onlySuggestions && glossaryOpen) || suggestionsIn(index).length > 0),
+      // Like the others, only while its checkbox is visible: once the last
+      // suggestion is accepted or ignored the box goes, and must not leave every line hidden.
+      (!(onlySuggestions && glossaryOpen && groups.length > 0) || suggestionsIn(index).length > 0),
   );
 
   /** What to mark in a line's (trimmed) text: search matches, or suggestions while the word list is open. */
@@ -523,7 +525,7 @@ export function TranscriptReview({
         <p className="py-4 text-center text-sm text-neutral-500">
           {onlyMatches && pattern
             ? r.noMatches
-            : onlySuggestions && glossaryOpen
+            : onlySuggestions && glossaryOpen && groups.length > 0
               ? r.noSuggestionLines
               : onlyUnsure
                 ? r.noUnsure
