@@ -18,7 +18,7 @@ import {
   stitchWindows,
 } from "./lib/diarize";
 import { isEnglishOnly, type Backend, type Dtype } from "./lib/models";
-import { pruneAfterLoad } from "./lib/modelStorage";
+import { MODEL_CACHE, announceStorageChanged, pruneAfterLoad } from "./lib/modelStorage";
 import type {
   FileProgress,
   FromWorker,
@@ -29,6 +29,13 @@ import type {
 
 // Only ever fetch models from the Hugging Face Hub (avoids spurious local 404s).
 env.allowLocalModels = false;
+// Name the model cache ourselves rather than rely on Transformers.js's default:
+// Settings › Storage and the cleanup after a load read this cache by name, so a
+// changed default in an upgrade would otherwise leave them looking at nothing.
+env.cacheKey = MODEL_CACHE;
+/** Files go to the browser's Cache Storage under MODEL_CACHE — what the cleanup knows how to tidy. */
+const usesModelCache = () =>
+  env.useBrowserCache && !env.useCustomCache && !env.experimental_useCrossOriginStorage && env.cacheKey === MODEL_CACHE;
 
 let pipe: AutomaticSpeechRecognitionPipeline | null = null;
 /** Hub id of the loaded model — English-only models take no language or task. */
@@ -422,9 +429,13 @@ async function ensurePipeline(
         device === "webgpu"
           ? [dtypeArg, "q8"]
           : [dtypeArg, { encoder_model: "fp16", decoder_model_merged: "q4f16" }, GPU_NO_F16];
-      void pruneAfterLoad(modelId, keep, env.backends.onnx?.versions?.web)
-        .then(() => post({ type: "storage-changed" }))
-        .catch(() => {});
+      if (usesModelCache())
+        void pruneAfterLoad(modelId, keep, env.backends.onnx?.versions?.web)
+          .then(() => {
+            post({ type: "storage-changed" });
+            announceStorageChanged(); // other open tabs' lists
+          })
+          .catch(() => {});
       return pipe;
     } catch (err) {
       firstError ??= err;

@@ -9,6 +9,8 @@ import {
   deleteAllStored,
   deleteStored,
   listStored,
+  announceStorageChanged,
+  onStorageChanged,
 } from "../lib/modelStorage";
 import { InfoTip } from "./ui";
 
@@ -61,6 +63,21 @@ export function ModelStorage({
   useEffect(() => {
     void refresh();
   }, [refresh, refreshKey]);
+  // Another tab removed something, or its worker tidied up after a load.
+  useEffect(() => onStorageChanged(() => void refresh()), [refresh]);
+
+  // Removing while offline is allowed, but what's removed can't come back until
+  // the connection does — say so rather than let a later load fail unexplained.
+  const [online, setOnline] = useState(() => navigator.onLine);
+  useEffect(() => {
+    const update = () => setOnline(navigator.onLine);
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => {
+      window.removeEventListener("online", update);
+      window.removeEventListener("offline", update);
+    };
+  }, []);
 
   async function remove(action: () => Promise<void>) {
     setWorking(true);
@@ -72,6 +89,7 @@ export function ModelStorage({
     } finally {
       setConfirmAll(false);
       setWorking(false);
+      announceStorageChanged();
       await refresh();
     }
   }
@@ -127,7 +145,11 @@ export function ModelStorage({
             </ul>
             <div className="mt-1.5 flex items-center justify-end gap-2 border-t border-[var(--color-border)] pt-2">
               {/* Visible text, not a tooltip on a disabled button (which can't take focus). */}
-              {busy && <p className="mr-auto text-xs text-neutral-500">{t.storage.busy}</p>}
+              {busy ? (
+                <p className="mr-auto text-xs text-neutral-500">{t.storage.busy}</p>
+              ) : (
+                !online && <p className="mr-auto text-xs text-amber-300">{t.storage.offline}</p>
+              )}
               {failed && (
                 <p role="alert" className="mr-auto text-xs text-red-300">
                   {t.storage.failed}

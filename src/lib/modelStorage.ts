@@ -11,6 +11,27 @@
 
 export const MODEL_CACHE = "transformers-cache";
 
+/**
+ * Tells this page's other tabs (and windows, and this tab's own worker or
+ * page) that stored files changed, so their Storage lists don't go stale.
+ */
+const CHANNEL = "vem-sa-vad-model-storage";
+
+export function announceStorageChanged(): void {
+  if (typeof BroadcastChannel === "undefined") return;
+  const channel = new BroadcastChannel(CHANNEL);
+  channel.postMessage("changed");
+  channel.close();
+}
+
+/** Calls `listener` whenever another tab, window or worker announces a change. Returns an unsubscribe. */
+export function onStorageChanged(listener: () => void): () => void {
+  if (typeof BroadcastChannel === "undefined") return () => {};
+  const channel = new BroadcastChannel(CHANNEL);
+  channel.onmessage = () => listener();
+  return () => channel.close();
+}
+
 const HF_FILE = /^https:\/\/huggingface\.co\/([^/]+\/[^/]+)\/resolve\/[^/]+\/(.+)$/;
 const RUNTIME_FILE = /^https:\/\/cdn\.jsdelivr\.net\/npm\/onnxruntime-web@([^/]+)\//;
 
