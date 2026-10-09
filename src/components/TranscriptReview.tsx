@@ -10,6 +10,7 @@ import {
   applySuggestions,
   findSuggestions,
   groupKey,
+  MAX_TERMS,
   hasTerm,
   newTermsIn,
 } from "../lib/glossary";
@@ -77,6 +78,8 @@ interface GlossaryOffer {
   index: number | null;
   terms: string[];
   added: string[];
+  /** The list was full, so the last click added nothing. */
+  full?: boolean;
 }
 
 /** A chunk with no end timestamp plays up to the next chunk, or this long. */
@@ -241,6 +244,7 @@ export function TranscriptReview({
             </button>
           ),
         )}
+        {o.full && <span className="text-amber-300">{t.glossaryDialog.full(MAX_TERMS)}</span>}
         {o.added.length < o.terms.length && (
           <button
             type="button"
@@ -277,6 +281,11 @@ export function TranscriptReview({
   const [offer, setOffer] = useState<GlossaryOffer | null>(null);
 
   function addOffered(term: string) {
+    // A full list takes nothing more: say so rather than claim it was added.
+    if (glossary.length >= MAX_TERMS && !hasTerm(glossary, term)) {
+      setOffer((o) => (o ? { ...o, full: true } : o));
+      return;
+    }
     onAddGlossaryTerms([term]);
     setOffer((o) => (o ? { ...o, added: [...o.added, term] } : o));
   }
@@ -322,6 +331,8 @@ export function TranscriptReview({
     }
     onReplace(job, restore);
     setLastReplace(null);
+    // The replacement is gone again, so is the offer to remember it.
+    setOffer((o) => (o?.index === null ? null : o));
     setReplaceNote(() => (t: Strings) => (kept ? t.review.undoneKept(kept) : t.review.undone));
   }
 

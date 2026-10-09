@@ -68,14 +68,17 @@ export function removeTerm(text: string, term: string): string {
 }
 
 /**
- * Whether a word reads like a name or term rather than ordinary text: it has
- * a digit, inner punctuation ("KB-Whisper", "Transformers.js"), a capital
- * after its first letter ("iPhone"), or a capital first letter where a
- * sentence doesn't start.
+ * Whether a word reads like a name or term rather than ordinary text: a
+ * capital after its first letter ("iPhone", "KB-Whisper"), letters mixed with
+ * digits ("GPT4"), a dotted name ("Transformers.js"), or a capital first letter
+ * where a sentence doesn't start. Plain numbers ("2024", "14.30"), short
+ * abbreviations ("t.ex", "bl.a") and lower-case compounds ("e-post") are not.
  */
 function looksLikeTerm(word: string, sentenceStart: boolean): boolean {
-  if (/\p{N}/u.test(word) || /[\p{L}\p{N}][.'’-][\p{L}\p{N}]/u.test(word)) return true;
+  if (!/\p{L}/u.test(word)) return false;
   if (/^.+\p{Lu}/u.test(word)) return true;
+  if (/\p{N}/u.test(word)) return true;
+  if (/\p{L}\.\p{L}/u.test(word) && !/^(\p{L}{1,3}\.)+\p{L}{1,3}$/u.test(word)) return true;
   return /^\p{Lu}/u.test(word) && !sentenceStart;
 }
 
@@ -86,7 +89,23 @@ function looksLikeTerm(word: string, sentenceStart: boolean): boolean {
  * "Micke Quick", not just "Quick"). Not already listed in `terms`.
  */
 export function newTermsIn(before: string, after: string, terms: string[]): string[] {
-  const old = new Set([...before.matchAll(WORD)].map((m) => m[0]));
+  const oldWords = [...before.matchAll(WORD)];
+  const old = new Set(oldWords.map((m) => m[0]));
+  // Capitalised words that were followed by another capitalised word: the
+  // first half of a name ("Micke" in "Micke Kvick"), even at a sentence start.
+  const nameStarts = new Set(
+    oldWords
+      .filter((m, k) => {
+        const next = oldWords[k + 1];
+        return (
+          next &&
+          /^\p{Lu}/u.test(m[0]) &&
+          /^\p{Lu}/u.test(next[0]) &&
+          /^ +$/.test(before.slice(m.index! + m[0].length, next.index!))
+        );
+      })
+      .map((m) => m[0]),
+  );
   const words = [...after.matchAll(WORD)].map((m) => {
     const start = m.index!;
     // At the start of the line or after a full stop, a capital says nothing.
@@ -106,8 +125,14 @@ export function newTermsIn(before: string, after: string, terms: string[]): stri
       continue;
     }
     // A run of name-like words, separated only by spaces.
+    const spaced = (a: number, b: number) => /^ +$/.test(after.slice(words[a].end, words[b].start));
     let j = i;
-    while (j + 1 < words.length && words[j + 1].termLike && /^ +$/.test(after.slice(words[j].end, words[j + 1].start))) j++;
+    while (j + 1 < words.length && words[j + 1].termLike && spaced(j, j + 1)) j++;
+    // A capitalised word just before it, at the start of a sentence, belongs to
+    // the name if it's new or began a name before ("Micke Kvick sa" → "Micke
+    // Quick sa"); otherwise it's just the sentence's first word.
+    const prev = words[i - 1];
+    if (prev && /^\p{Lu}/u.test(prev.text) && spaced(i - 1, i) && (prev.isNew || nameStarts.has(prev.text))) i--;
     if (words.slice(i, j + 1).some((w) => w.isNew)) {
       const term = after.slice(words[i].start, words[j].end);
       if (!hasTerm(terms, term) && !found.includes(term)) found.push(term);
