@@ -44,6 +44,15 @@ The open transcript is also a view for checking and correcting it line by line:
   default, å/ä/ö count as letters, and the text you type is matched literally. An empty replacement
   deletes the word and tidies up the punctuation around it ("Ja, eh, det" → "Ja, det").
 
+- **Word list** (*Ordlista*): names and terms entered under Settings are looked for in the finished
+  transcript by sound rather than spelling (`src/lib/glossary.ts`: w≈v, qu≈kv, z≈s, c≈k/s, doubled
+  letters as one, spaces ignored), so "Hedsner" suggests Hetzner and "Pya Notte" pyannote. Suggestions
+  are grouped by the misheard words, highlighted in the lines, and only applied when accepted (one
+  group, or all); they share Find & replace's Undo. On synthetic Swedish speech it caught 10–11 misheard
+  terms per transcript, with no false suggestion in 4,200 words of ordinary prose; a looser threshold
+  turned "ville", "vit" and "visste" into "Vite". Giving Whisper the list as a prompt was also tried and
+  helped far less, while making some words worse.
+
 Corrections flow into Copy and every export; corrected chunks carry `"edited": true` in `.json`, and a
 speaker you set has `speaker_conf` 1 (0 for *No speaker*). If you've opted in to keeping transcripts,
 edits and names are kept with them across reloads.

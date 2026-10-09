@@ -72,6 +72,7 @@ import {
   fetchEpisodeAudio,
 } from "./lib/podcasts";
 import { createZip } from "./lib/zip";
+import { glossaryTerms } from "./lib/glossary";
 import type { TranscriptChunk, TranscriptResult } from "./lib/protocol";
 import { useWhisper } from "./hooks/useWhisper";
 import { RecordingLanguage } from "./components/RecordingLanguage";
@@ -170,6 +171,8 @@ export default function App() {
     };
   }, []);
 
+  // Parsed once per change, so the review view's suggestions don't recompute on every render.
+  const glossary = useMemo(() => glossaryTerms(settings.glossary), [settings.glossary]);
   const resolvedDevice: Backend = useMemo(
     () =>
       settings.deviceMode === "auto"
@@ -862,6 +865,7 @@ export default function App() {
           onEditChunk={onEditChunk}
           onRevertChunk={onRevertChunk}
           onReplaceChunks={onReplaceChunks}
+          glossary={glossary}
           onRemove={onRemove}
           onClearCompleted={onClearCompleted}
           keepTranscripts={settings.keepTranscripts}

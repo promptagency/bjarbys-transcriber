@@ -123,6 +123,7 @@ export function JobQueue({
   onEditChunk,
   onRevertChunk,
   onReplaceChunks,
+  glossary,
   keepTranscripts,
   askKeepTranscripts,
   onChooseKeepTranscripts,
@@ -135,6 +136,8 @@ export function JobQueue({
   onEditChunk: (job: Job, index: number, patch: Partial<TranscriptChunk>) => void;
   onRevertChunk: (job: Job, index: number) => void;
   onReplaceChunks: (job: Job, changes: Map<number, TranscriptChunk>) => void;
+  /** The terms in the word list, for suggestions in the review view. */
+  glossary: string[];
   /** The user opted in to keeping finished transcripts across reloads. */
   keepTranscripts: boolean;
   /** Show the one-time question about keeping transcripts. */
@@ -342,6 +345,7 @@ export function JobQueue({
                     onEdit={onEditChunk}
                     onRevert={onRevertChunk}
                     onReplace={onReplaceChunks}
+                    glossary={glossary}
                   />
                 </div>
               )}

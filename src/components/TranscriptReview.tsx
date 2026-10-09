@@ -1,24 +1,42 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Play, RotateCcw, Search, Square } from "lucide-react";
+import { BookA, Play, RotateCcw, Search, Square } from "lucide-react";
 import type { Job } from "../lib/jobs";
 import type { TranscriptChunk } from "../lib/protocol";
 import { LOW_CONFIDENCE } from "../lib/diarize";
 import { speakerLabel, speakersIn } from "../lib/exporters";
 import { changingMatches, findPattern, matchRanges, replaceInChunks } from "../lib/replace";
+import { type Suggestion, applySuggestions, findSuggestions, groupKey } from "../lib/glossary";
 import { type Strings, languageName, useT } from "../lib/i18n";
 
-/** `text` with every match of `pattern` marked. React escapes the text itself. */
-function Highlighted({ text, pattern }: { text: string; pattern: RegExp | null }) {
-  const ranges = pattern ? matchRanges(text, pattern) : [];
-  if (ranges.length === 0) return <>{text}</>;
+/** A stretch of a line to mark: a search match, or a word-list suggestion (with its term). */
+interface Mark {
+  start: number;
+  end: number;
+  term?: string;
+}
+
+/** `text` with `marks` highlighted. React escapes the text itself. */
+function Highlighted({ text, marks }: { text: string; marks: Mark[] }) {
+  if (marks.length === 0) return <>{text}</>;
   const parts: React.ReactNode[] = [];
   let at = 0;
-  for (const [start, end] of ranges) {
+  for (const { start, end, term } of marks) {
     parts.push(text.slice(at, start));
     parts.push(
-      <mark key={start} className="rounded bg-brand-400/30 px-0.5 text-inherit">
-        {text.slice(start, end)}
-      </mark>,
+      term ? (
+        // A suggestion: dotted, in the word list's colour, with the term on hover.
+        <mark
+          key={start}
+          title={`→ ${term}`}
+          className="rounded bg-lavender-300/20 px-0.5 text-inherit underline decoration-lavender-300 decoration-dotted underline-offset-2"
+        >
+          {text.slice(start, end)}
+        </mark>
+      ) : (
+        <mark key={start} className="rounded bg-brand-400/30 px-0.5 text-inherit">
+          {text.slice(start, end)}
+        </mark>
+      ),
     );
     at = end;
   }
@@ -74,11 +92,14 @@ export function TranscriptReview({
   onEdit,
   onRevert,
   onReplace,
+  glossary,
 }: {
   job: Job;
   onEdit: (job: Job, index: number, patch: Partial<TranscriptChunk>) => void;
   onRevert: (job: Job, index: number) => void;
   onReplace: (job: Job, changes: Map<number, TranscriptChunk>) => void;
+  /** The terms in the user's word list (Settings › Ordlista); empty for none. */
+  glossary: string[];
 }) {
   const t = useT();
   const r = t.review;
@@ -94,7 +115,11 @@ export function TranscriptReview({
   const [playing, setPlaying] = useState<number | null>(null);
   const [playbackError, setPlaybackError] = useState(false);
 
-  const [findOpen, setFindOpen] = useState(false);
+  // Find & replace and the word list share the space above the lines: one at a time.
+  const [panel, setPanel] = useState<"find" | "glossary" | null>(null);
+  const findOpen = panel === "find";
+  // Emptying the word list in Settings closes its panel (its button goes away too).
+  const glossaryOpen = panel === "glossary" && glossary.length > 0;
   const [query, setQuery] = useState("");
   const [replacement, setReplacement] = useState("");
   const [matchCase, setMatchCase] = useState(false);
@@ -107,6 +132,31 @@ export function TranscriptReview({
     () => (findOpen ? findPattern(query, { matchCase, wholeWords }) : null),
     [findOpen, query, matchCase, wholeWords],
   );
+
+  // Word-list suggestions follow the lines: accepting one, or editing a line by
+  // hand, recomputes them, so what's done disappears from the list.
+  const [onlySuggestions, setOnlySuggestions] = useState(false);
+  const [ignored, setIgnored] = useState<Set<string>>(() => new Set());
+  const suggestions = useMemo(
+    () => (glossary.length ? findSuggestions(chunks, glossary) : []),
+    [chunks, glossary],
+  ).filter((s) => !ignored.has(groupKey(s)));
+  // The same misheard words → the same term, in order of first appearance.
+  const groups: Suggestion[][] = [];
+  {
+    const byKey = new Map<string, Suggestion[]>();
+    for (const s of suggestions) {
+      const key = groupKey(s);
+      const group = byKey.get(key);
+      if (group) group.push(s);
+      else {
+        const fresh = [s];
+        byKey.set(key, fresh);
+        groups.push(fresh);
+      }
+    }
+  }
+  const suggestionsIn = (index: number) => suggestions.filter((s) => s.index === index);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const stopAt = useRef(0);
@@ -138,10 +188,35 @@ export function TranscriptReview({
   // removed by hand the unsure checkbox disappears, and a filter left on would
   // hide all lines for good.
   const shown = rows.filter(
-    ({ chunk }) =>
+    ({ chunk, index }) =>
       (!(onlyUnsure && hasSpeakers) || isUnsure(chunk, hasSpeakers)) &&
-      (!(onlyMatches && pattern) || matchesIn(chunk) > 0),
+      (!(onlyMatches && pattern) || matchesIn(chunk) > 0) &&
+      (!(onlySuggestions && glossaryOpen) || suggestionsIn(index).length > 0),
   );
+
+  /** What to mark in a line's (trimmed) text: search matches, or suggestions while the word list is open. */
+  function marksFor(chunk: TranscriptChunk, index: number): Mark[] {
+    const text = chunk.text.trim();
+    if (pattern) return matchRanges(text, pattern).map(([start, end]) => ({ start, end }));
+    if (!glossaryOpen) return [];
+    const lead = chunk.text.length - chunk.text.trimStart().length;
+    return suggestionsIn(index).map((s) => ({ start: s.start - lead, end: s.end - lead, term: s.term }));
+  }
+
+  function accept(list: Suggestion[]) {
+    if (editing !== null || list.length === 0) return;
+    const changes = applySuggestions(chunks, list);
+    if (changes.size === 0) return;
+    const accepted = list.filter((s) => changes.has(s.index)).length;
+    const before = new Map([...changes.keys()].map((i) => [i, chunks[i]]));
+    onReplace(job, changes);
+    setLastReplace({ before, after: changes, matches: accepted });
+    setReplaceNote(() => (t: Strings) => t.review.replaced(accepted, changes.size));
+  }
+
+  function ignore(key: string) {
+    setIgnored((prev) => new Set(prev).add(key));
+  }
 
   function replaceAll() {
     if (!pattern || editing !== null) return;
@@ -266,11 +341,30 @@ export function TranscriptReview({
           )}
           <button
             type="button"
-            onClick={() => setFindOpen((o) => !o)}
+            aria-expanded={findOpen}
+            onClick={() => {
+              setPanel(findOpen ? null : "find");
+              setReplaceNote(null);
+            }}
             className={`flex items-center gap-1.5 rounded px-1.5 py-0.5 hover:bg-white/5 ${findOpen ? "text-brand-300" : ""}`}
           >
             <Search className="size-3.5" /> {r.findReplace}
           </button>
+          {glossary.length > 0 && (
+            <button
+              type="button"
+              aria-expanded={glossaryOpen}
+              onClick={() => {
+                setPanel(glossaryOpen ? null : "glossary");
+                setReplaceNote(null);
+              }}
+              className={`flex items-center gap-1.5 rounded px-1.5 py-0.5 hover:bg-white/5 ${
+                glossaryOpen ? "text-lavender-300" : suggestions.length ? "text-lavender-200" : ""
+              }`}
+            >
+              <BookA className="size-3.5" /> {r.glossary(suggestions.length)}
+            </button>
+          )}
           {result.language && (
             <span title={r.detectedTitle}>
               {r.detected(languageName(result.language, t))}
@@ -350,9 +444,90 @@ export function TranscriptReview({
         </div>
       )}
 
+      {glossaryOpen && (
+        <div className="mb-2 rounded-lg border border-[var(--color-border)] bg-white/[0.02] p-2 text-xs text-neutral-400">
+          <p className="mb-1.5">{groups.length ? r.glossaryHint : ignored.size ? r.glossaryNoneLeft : r.glossaryNone}</p>
+          {groups.length > 0 && (
+            <ul className="max-h-48 divide-y divide-[var(--color-border)] overflow-y-auto pr-1 scroll-thin">
+              {groups.map((group) => {
+                const { found, term } = group[0];
+                return (
+                  <li key={groupKey(group[0])} className="flex flex-wrap items-center gap-x-2 gap-y-1 py-1.5">
+                    <span className="min-w-0 flex-1 text-sm">
+                      <span className="text-neutral-400 line-through decoration-neutral-600">{found}</span>
+                      <span className="mx-1.5 text-neutral-500">→</span>
+                      <span className="font-medium text-neutral-100">{term}</span>
+                      <span className="ml-2 text-xs text-neutral-500">{r.glossaryTimes(group.length)}</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => accept(group)}
+                      disabled={editing !== null}
+                      title={editing !== null ? r.finishEditing : r.acceptTitle(found, term)}
+                      className="rounded border border-lavender-300/40 px-2 py-0.5 text-lavender-200 hover:bg-lavender-300/10 disabled:opacity-40"
+                    >
+                      {r.accept}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => ignore(groupKey(group[0]))}
+                      title={r.ignoreTitle(found, term)}
+                      className="rounded px-2 py-0.5 text-neutral-400 hover:bg-white/5 hover:text-neutral-200"
+                    >
+                      {r.ignore}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+            {groups.length > 0 && (
+              <label className="flex cursor-pointer items-center gap-1.5">
+                <input
+                  type="checkbox"
+                  checked={onlySuggestions}
+                  onChange={(e) => setOnlySuggestions(e.target.checked)}
+                  className="size-3.5 accent-lavender-400"
+                />
+                {r.onlySuggestions}
+              </label>
+            )}
+            <span className="ml-auto" />
+            {groups.length > 1 && (
+              <button
+                type="button"
+                onClick={() => accept(suggestions)}
+                disabled={editing !== null}
+                title={editing !== null ? r.finishEditing : ""}
+                className="rounded bg-lavender-300 px-2.5 py-1 font-semibold text-ink hover:bg-lavender-200 disabled:opacity-40"
+              >
+                {r.replaceAll}
+              </button>
+            )}
+            {lastReplace && (
+              <button
+                type="button"
+                onClick={undoReplace}
+                className="rounded border border-[var(--color-border)] px-2.5 py-1 text-neutral-200 hover:bg-white/5"
+              >
+                {r.undo}
+              </button>
+            )}
+          </div>
+          {replaceNote && <p className="mt-1.5 text-neutral-300">{replaceNote(t)}</p>}
+        </div>
+      )}
+
       {shown.length === 0 ? (
         <p className="py-4 text-center text-sm text-neutral-500">
-          {onlyMatches && pattern ? r.noMatches : onlyUnsure ? r.noUnsure : t.queue.noSpeech}
+          {onlyMatches && pattern
+            ? r.noMatches
+            : onlySuggestions && glossaryOpen
+              ? r.noSuggestionLines
+              : onlyUnsure
+                ? r.noUnsure
+                : t.queue.noSpeech}
         </p>
       ) : (
         <ul className="max-h-96 space-y-1 overflow-y-auto pr-1 scroll-thin">
@@ -438,7 +613,7 @@ export function TranscriptReview({
                       className="w-full rounded px-1.5 py-0.5 text-left text-sm leading-relaxed text-neutral-200 hover:bg-white/5"
                     >
                       {chunk.text.trim() ? (
-                        <Highlighted text={chunk.text.trim()} pattern={pattern} />
+                        <Highlighted text={chunk.text.trim()} marks={marksFor(chunk, index)} />
                       ) : (
                         <span className="italic text-neutral-500">{r.removed}</span>
                       )}

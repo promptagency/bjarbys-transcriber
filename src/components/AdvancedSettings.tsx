@@ -15,7 +15,8 @@ import { EXPORT_FORMATS, type ExportFormat } from "../lib/exporters";
 const isDocument = (f: ExportFormat) => f === "txt" || f === "md";
 // The documents show their name rather than just the extension.
 const showLabel = (f: ExportFormat) => isDocument(f);
-import { type DeviceMode, type Settings, forModel } from "../lib/settings";
+import { type DeviceMode, MAX_GLOSSARY_LENGTH, type Settings, forModel } from "../lib/settings";
+import { glossaryTerms } from "../lib/glossary";
 import { Field, InfoTip, Select } from "./ui";
 import { ModelStorage } from "./ModelStorage";
 import { modelName, useT } from "../lib/i18n";
@@ -181,6 +182,24 @@ export function AdvancedSettings({
           <option value="translate">{t.settings.translate}</option>
         </Select>
       </Field>
+
+      <div className="sm:col-span-2">
+        <Field
+          label={t.settings.glossary}
+          tip={t.settings.tips.glossary}
+          hint={t.settings.glossaryCount(glossaryTerms(settings.glossary).length)}
+        >
+          <textarea
+            value={settings.glossary}
+            onChange={(e) => onChange({ glossary: e.target.value })}
+            placeholder={t.settings.glossaryPlaceholder}
+            maxLength={MAX_GLOSSARY_LENGTH}
+            rows={3}
+            spellCheck={false}
+            className="block w-full resize-y rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 outline-none transition focus:border-brand-400/60 focus:ring-2 focus:ring-brand-400/20"
+          />
+        </Field>
+      </div>
 
       <label className="flex cursor-pointer items-center gap-2.5 text-sm text-neutral-300 sm:col-span-2">
         <input

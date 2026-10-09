@@ -67,7 +67,7 @@ const sv = {
         q: "Vilka begränsningar har tjänsten?",
         a: ["Vem sa vad? ger ett bra första utkast, inte ett färdigt protokoll. Det här är bra att känna till:"],
         list: [
-          "Texten blir inte felfri. Namn, facktermer, dialekter, dåligt ljud och personer som pratar i mun på varandra ger fler fel, och vid långa tysta partier eller musik kan modellen ibland hitta på eller upprepa text. Läs alltid igenom resultatet, och rätta återkommande fel med Sök och ersätt.",
+          "Texten blir inte felfri. Namn, facktermer, dialekter, dåligt ljud och personer som pratar i mun på varandra ger fler fel, och vid långa tysta partier eller musik kan modellen ibland hitta på eller upprepa text. Läs alltid igenom resultatet, och rätta återkommande fel med Sök och ersätt. Namn och fackord du lägger i ordlistan (under Inställningar) får förslag på rättelser.",
           "Ett språk per fil. Språket gäller hela inspelningen (vid automatisk igenkänning avgör de första 30 sekunderna), så inspelningar som växlar språk blir sämre i det andra språket.",
           "Talaruppdelningen skiljer röster åt men vet inte vem som talar: talarna numreras och du namnger dem själv. Den klarar högst tre röster åt gången, liknande röster eller mycket överlappande tal kan blandas ihop, och inspelningar över fyra timmar delas inte upp.",
           "Långa inspelningar kräver mycket minne, ungefär 230 MB per timme ljud och mer med talaruppdelning. På en dator med lite minne kan riktigt långa filer få fliken att krascha.",
@@ -82,7 +82,7 @@ const sv = {
       {
         q: "Vad sparas på min dator?",
         a: [
-          "Dina inställningar, till exempel språk och filformat, sparas i webbläsaren. Modellerna sparas också där (100 MB–2 GB beroende på modell), så att de bara behöver hämtas en gång. Under Inställningar › Lagring ser du hur mycket plats de tar och kan ta bort dem. När en modell har laddats städas andra versioner av den bort automatiskt, men versionerna för grafikkort och processor sparas båda.",
+          "Dina inställningar, till exempel språk och filformat, sparas i webbläsaren. Modellerna sparas också där (100 MB–2 GB beroende på modell), så att de bara behöver hämtas en gång. Under Inställningar › Lagring ser du hur mycket plats de tar och kan ta bort dem. När en modell har laddats städas andra versioner av den bort automatiskt, men versionerna för grafikkort och processor sparas båda. Din ordlista sparas också bara här.",
           "Genomförda transkriptioner sparas bara om du själv har valt det, och ligger då kvar i webbläsaren tills du tar bort dem. Ljudfilerna sparas aldrig. Sidan använder inga cookies, och besöksräkningen sparar ingenting på din dator.",
         ],
       },
@@ -153,6 +153,8 @@ const sv = {
         "Tar reda på vem som pratar när och märker raderna Talare 1, Talare 2 osv. Tar lite extra tid. Du kan namnge talarna efteråt.",
       keep:
         "Genomförda transkriptioner finns kvar om du laddar om sidan eller kommer tillbaka senare, tills du tar bort dem. De sparas bara i den här webbläsaren, aldrig på någon server, men alla som använder webbläsaren kan öppna dem: låt det vara av på en delad dator. Stänger du av det raderas de sparade kopiorna.",
+      glossary:
+        "Namn och fackord som ofta blir fel, ett per rad. När en transkription är klar letar appen efter ord som låter likadant och föreslår rättelser under Ordlista i granskningsvyn. Inget ändras förrän du godkänner. Listan sparas bara i den här webbläsaren.",
     },
     heading: "Finjustera",
     applyReload: "Använd och ladda om modellen",
@@ -196,6 +198,9 @@ const sv = {
     diarize:
       "Dela upp på talare (experimentellt — märker varje rad ”Talare 1”, ”Talare 2” osv.)",
     keep: "Spara genomförda transkriptioner i den här webbläsaren efter en omladdning",
+    glossary: "Ordlista",
+    glossaryCount: (n: number) => (n ? `${n} ${n === 1 ? "namn eller ord" : "namn och ord"}` : ""),
+    glossaryPlaceholder: "Ett namn eller ord per rad, till exempel\nAnna Lindqvist\nHetzner\nKB-Whisper",
   },
   storage: {
     title: "Lagring",
@@ -317,6 +322,17 @@ const sv = {
   review: {
     onlyUnsure: (n: number) => `Bara osäkra rader (${n})`,
     findReplace: "Sök och ersätt",
+    glossary: (n: number) => (n ? `Ordlista · ${n} förslag` : "Ordlista"),
+    glossaryHint: "Ord som låter som något i din ordlista (Inställningar › Ordlista). Spela upp raden om du är osäker.",
+    glossaryNone: "Inga förslag – inget i texten låter som orden i ordlistan.",
+    glossaryNoneLeft: "Inga förslag kvar.",
+    glossaryTimes: (n: number) => (n === 1 ? "1 gång" : `${n} gånger`),
+    accept: "Ersätt",
+    ignore: "Ignorera",
+    acceptTitle: (found: string, term: string) => `Ersätt ”${found}” med ”${term}”`,
+    ignoreTitle: (found: string, term: string) => `Ignorera förslaget ”${found}” → ”${term}”`,
+    onlySuggestions: "Bara rader med förslag",
+    noSuggestionLines: "Inga rader har förslag.",
     detectedTitle: "Känt igen automatiskt från de första 30 sekunderna",
     detected: (name: string) => `Igenkänt språk: ${name}`,
     restored:
@@ -433,7 +449,7 @@ const en: Strings = {
         q: "What are the limitations?",
         a: ["Vem sa vad? gives you a good first draft, not a finished record. Worth knowing:"],
         list: [
-          "The text won’t be flawless. Names, jargon, dialects, poor audio and people talking over each other cause more errors, and during long silences or music the model can occasionally invent or repeat text. Always read the result through, and fix recurring errors with Find & replace.",
+          "The text won’t be flawless. Names, jargon, dialects, poor audio and people talking over each other cause more errors, and during long silences or music the model can occasionally invent or repeat text. Always read the result through, and fix recurring errors with Find & replace. Names and terms you add to the word list (in Settings) get suggested corrections.",
           "One language per file. The language applies to the whole recording (with auto-detect, the first 30 seconds decide), so recordings that switch language come out worse in the second one.",
           "Speaker separation tells voices apart but doesn’t know who is speaking: speakers are numbered and you name them yourself. It handles at most three voices at a time, similar voices or heavily overlapping speech can be mixed up, and recordings over four hours aren’t separated.",
           "Long recordings need a lot of memory, about 230 MB per hour of audio and more with speaker separation. On a computer with little memory, very long files can make the tab crash.",
@@ -448,7 +464,7 @@ const en: Strings = {
       {
         q: "What is stored on my computer?",
         a: [
-          "Your settings, such as language and file formats, are stored in the browser. So are the models (100 MB–2 GB depending on the model), so they only need to be downloaded once. Under Settings › Storage you can see how much space they take and remove them. Once a model has loaded, other versions of it are cleaned up automatically, but the versions for the graphics card and the processor are both kept.",
+          "Your settings, such as language and file formats, are stored in the browser. So are the models (100 MB–2 GB depending on the model), so they only need to be downloaded once. Under Settings › Storage you can see how much space they take and remove them. Once a model has loaded, other versions of it are cleaned up automatically, but the versions for the graphics card and the processor are both kept. Your word list is kept only here too.",
           "Finished transcripts are only kept if you choose to, and then stay in the browser until you delete them. Audio files are never stored. The site uses no cookies, and the visit count stores nothing on your computer.",
         ],
       },
@@ -519,6 +535,8 @@ const en: Strings = {
         "Works out who speaks when and labels the lines Speaker 1, Speaker 2 and so on. Takes a little extra time. You can name the speakers afterwards.",
       keep:
         "Finished transcripts stay if you reload the page or come back later, until you delete them. They’re kept only in this browser, never on a server, but anyone using this browser can open them: leave this off on a shared computer. Turning it off deletes the saved copies.",
+      glossary:
+        "Names and terms that often come out wrong, one per line. When a transcript is done, the app looks for words that sound alike and suggests corrections under Word list in the review view. Nothing changes until you accept. The list is kept only in this browser.",
     },
     heading: "Fine-tune",
     applyReload: "Apply & reload model",
@@ -561,6 +579,9 @@ const en: Strings = {
     diarize:
       "Separate speakers (experimental — labels each line “Speaker 1”, “Speaker 2”, etc.)",
     keep: "Keep finished transcripts in this browser after a reload",
+    glossary: "Word list",
+    glossaryCount: (n) => (n ? `${n} ${n === 1 ? "entry" : "entries"}` : ""),
+    glossaryPlaceholder: "One name or term per line, for example\nAnna Lindqvist\nHetzner\nKB-Whisper",
   },
   storage: {
     title: "Storage",
@@ -682,6 +703,17 @@ const en: Strings = {
   review: {
     onlyUnsure: (n) => `Only unsure lines (${n})`,
     findReplace: "Find & replace",
+    glossary: (n) => (n ? `Word list · ${n} ${plural(n, "suggestion", "suggestions")}` : "Word list"),
+    glossaryHint: "Words that sound like something in your word list (Settings › Word list). Play the line if you’re unsure.",
+    glossaryNone: "No suggestions – nothing in the text sounds like the words in your list.",
+    glossaryNoneLeft: "No suggestions left.",
+    glossaryTimes: (n) => (n === 1 ? "once" : `${n} times`),
+    accept: "Replace",
+    ignore: "Ignore",
+    acceptTitle: (found, term) => `Replace “${found}” with “${term}”`,
+    ignoreTitle: (found, term) => `Ignore the suggestion “${found}” → “${term}”`,
+    onlySuggestions: "Only lines with suggestions",
+    noSuggestionLines: "No lines have suggestions.",
     detectedTitle: "Auto-detected from the first 30 seconds",
     detected: (name) => `Detected language: ${name}`,
     restored:

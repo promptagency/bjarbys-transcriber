@@ -30,6 +30,9 @@ consider [supporting him on Patreon](https://www.patreon.com/AndersBjarby).
   speakers names. Works for up to three voices at a time.
 - ✏️ **Check and correct** — play any line, see the lines the app is unsure of, fix text and speakers,
   and use find & replace for names it keeps getting wrong.
+- 📖 **Word list** — add the names and terms in your recordings, and the app suggests corrections
+  where it heard something that sounds like them ("Hedsner" → Hetzner). Nothing changes until you
+  accept.
 - 📄 **Readable documents** — `.txt` or `.md` with a paragraph per speaker turn and optional
   timestamps, or subtitles (`.srt`, `.vtt`) and `.json`. Pick several and get them in one `.zip`;
   downloads can start by themselves as each transcript finishes.
