@@ -17,7 +17,7 @@ const THRESHOLD = 0.85;
 /** Each word more or fewer than the term has costs this much, so neighbours aren't swallowed. */
 const LENGTH_PENALTY = 0.06;
 /** Keeps a pasted novel from making every line slow to match. */
-const MAX_TERMS = 300;
+export const MAX_TERMS = 300;
 const MAX_TERM_LENGTH = 80;
 
 /** The terms in the user's word list: one per line, trimmed, duplicates dropped. */
@@ -32,6 +32,89 @@ export function glossaryTerms(text: string): string[] {
     if (terms.length === MAX_TERMS) break;
   }
   return terms;
+}
+
+/** Whether the word list already has `term`, ignoring case and spacing. */
+export function hasTerm(terms: string[], term: string): boolean {
+  const wanted = term.replace(/\s+/g, " ").trim().toLowerCase();
+  return terms.some((t) => t.toLowerCase() === wanted);
+}
+
+/**
+ * The word list with `additions` appended — those not already in it, in
+ * order, while there is room. Returns the new text and which terms were added.
+ */
+export function addTerms(text: string, additions: string[]): { text: string; added: string[]; full: boolean } {
+  const terms = glossaryTerms(text);
+  const added: string[] = [];
+  let full = false;
+  for (const addition of glossaryTerms(additions.join("\n"))) {
+    if (hasTerm(terms, addition)) continue;
+    if (terms.length >= MAX_TERMS) {
+      full = true;
+      break;
+    }
+    terms.push(addition);
+    added.push(addition);
+  }
+  return { text: terms.join("\n"), added, full };
+}
+
+/** The word list without `term`. */
+export function removeTerm(text: string, term: string): string {
+  return glossaryTerms(text)
+    .filter((t) => t !== term)
+    .join("\n");
+}
+
+/**
+ * Whether a word reads like a name or term rather than ordinary text: it has
+ * a digit, inner punctuation ("KB-Whisper", "Transformers.js"), a capital
+ * after its first letter ("iPhone"), or a capital first letter where a
+ * sentence doesn't start.
+ */
+function looksLikeTerm(word: string, sentenceStart: boolean): boolean {
+  if (/\p{N}/u.test(word) || /[\p{L}\p{N}][.'’-][\p{L}\p{N}]/u.test(word)) return true;
+  if (/^.+\p{Lu}/u.test(word)) return true;
+  return /^\p{Lu}/u.test(word) && !sentenceStart;
+}
+
+/**
+ * Names and terms a hand edit brought into a line, to offer for the word list:
+ * words in `after` that weren't in `before` and look like a name or term,
+ * joined with name-like neighbours ("Micke Kvick" → "Micke Quick" offers
+ * "Micke Quick", not just "Quick"). Not already listed in `terms`.
+ */
+export function newTermsIn(before: string, after: string, terms: string[]): string[] {
+  const old = new Set([...before.matchAll(WORD)].map((m) => m[0]));
+  const words = [...after.matchAll(WORD)].map((m) => {
+    const start = m.index!;
+    // At the start of the line or after a full stop, a capital says nothing.
+    const sentenceStart = /(^|[.!?…:])["“”'’(\s]*$/u.test(after.slice(0, start));
+    return {
+      text: m[0],
+      start,
+      end: start + m[0].length,
+      termLike: looksLikeTerm(m[0], sentenceStart),
+      isNew: !old.has(m[0]),
+    };
+  });
+  const found: string[] = [];
+  for (let i = 0; i < words.length; ) {
+    if (!words[i].termLike) {
+      i++;
+      continue;
+    }
+    // A run of name-like words, separated only by spaces.
+    let j = i;
+    while (j + 1 < words.length && words[j + 1].termLike && /^ +$/.test(after.slice(words[j].end, words[j + 1].start))) j++;
+    if (words.slice(i, j + 1).some((w) => w.isNew)) {
+      const term = after.slice(words[i].start, words[j].end);
+      if (!hasTerm(terms, term) && !found.includes(term)) found.push(term);
+    }
+    i = j + 1;
+  }
+  return found;
 }
 
 /**

@@ -1,11 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BookA, Play, RotateCcw, Search, Square } from "lucide-react";
+import { BookA, Check, Play, Plus, RotateCcw, Search, Square } from "lucide-react";
 import type { Job } from "../lib/jobs";
 import type { TranscriptChunk } from "../lib/protocol";
 import { LOW_CONFIDENCE } from "../lib/diarize";
 import { speakerLabel, speakersIn } from "../lib/exporters";
 import { changingMatches, findPattern, matchRanges, replaceInChunks } from "../lib/replace";
-import { type Suggestion, applySuggestions, findSuggestions, groupKey } from "../lib/glossary";
+import {
+  type Suggestion,
+  applySuggestions,
+  findSuggestions,
+  groupKey,
+  hasTerm,
+  newTermsIn,
+} from "../lib/glossary";
 import { type Strings, languageName, useT } from "../lib/i18n";
 
 /** A stretch of a line to mark: a search match, or a word-list suggestion (with its term). */
@@ -62,6 +69,16 @@ interface LastReplace {
   matches: number;
 }
 
+/**
+ * Names the user just corrected, offered for the word list: after a hand edit
+ * of a line (`index`), or after Find & replace (`index` null).
+ */
+interface GlossaryOffer {
+  index: number | null;
+  terms: string[];
+  added: string[];
+}
+
 /** A chunk with no end timestamp plays up to the next chunk, or this long. */
 const FALLBACK_PLAY_SECONDS = 5;
 
@@ -93,6 +110,8 @@ export function TranscriptReview({
   onRevert,
   onReplace,
   glossary,
+  onOpenGlossary,
+  onAddGlossaryTerms,
 }: {
   job: Job;
   onEdit: (job: Job, index: number, patch: Partial<TranscriptChunk>) => void;
@@ -100,6 +119,8 @@ export function TranscriptReview({
   onReplace: (job: Job, changes: Map<number, TranscriptChunk>) => void;
   /** The terms in the user's word list (Settings › Ordlista); empty for none. */
   glossary: string[];
+  onOpenGlossary: () => void;
+  onAddGlossaryTerms: (terms: string[]) => void;
 }) {
   const t = useT();
   const r = t.review;
@@ -196,6 +217,43 @@ export function TranscriptReview({
       (!(onlySuggestions && glossaryOpen && groups.length > 0) || suggestionsIn(index).length > 0),
   );
 
+  /** The add-to-word-list offer, shown where the correction was made. */
+  function offerRow(o: GlossaryOffer) {
+    return (
+      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-neutral-400">
+        <BookA className="size-3.5 text-lavender-300" />
+        <span>{r.addOffer}</span>
+        {o.terms.map((term) =>
+          o.added.includes(term) ? (
+            <span key={term} className="inline-flex items-center gap-1 text-lavender-200" role="status">
+              <Check className="size-3.5" /> {r.addedToGlossary(term)}
+            </span>
+          ) : (
+            <button
+              key={term}
+              type="button"
+              onClick={() => addOffered(term)}
+              title={r.addToGlossary(term)}
+              aria-label={r.addToGlossary(term)}
+              className="inline-flex items-center gap-1 rounded-full border border-lavender-300/40 px-2 py-0.5 text-lavender-200 hover:bg-lavender-300/10"
+            >
+              <Plus className="size-3" /> {term}
+            </button>
+          ),
+        )}
+        {o.added.length < o.terms.length && (
+          <button
+            type="button"
+            onClick={() => setOffer(null)}
+            className="rounded px-1.5 py-0.5 text-neutral-500 hover:bg-white/5 hover:text-neutral-300"
+          >
+            {r.notNow}
+          </button>
+        )}
+      </div>
+    );
+  }
+
   /** What to mark in a line's (trimmed) text: search matches, or suggestions while the word list is open. */
   function marksFor(chunk: TranscriptChunk, index: number): Mark[] {
     const text = chunk.text.trim();
@@ -216,6 +274,13 @@ export function TranscriptReview({
     setReplaceNote(() => (t: Strings) => t.review.replaced(accepted, changes.size));
   }
 
+  const [offer, setOffer] = useState<GlossaryOffer | null>(null);
+
+  function addOffered(term: string) {
+    onAddGlossaryTerms([term]);
+    setOffer((o) => (o ? { ...o, added: [...o.added, term] } : o));
+  }
+
   function ignore(key: string) {
     setIgnored((prev) => new Set(prev).add(key));
   }
@@ -228,6 +293,14 @@ export function TranscriptReview({
     onReplace(job, changes);
     setLastReplace({ before, after: changes, matches });
     setReplaceNote(() => (t: Strings) => t.review.replaced(matches, changes.size));
+    // The replacement is exactly what the user wants the word to be: offer it
+    // for the word list, so it's caught next time too.
+    const term = replacement.replace(/\s+/g, " ").trim();
+    setOffer(
+      term.length >= 2 && /\p{L}/u.test(term) && !hasTerm(glossary, term)
+        ? { index: null, terms: [term], added: [] }
+        : null,
+    );
   }
 
   function undoReplace() {
@@ -279,6 +352,7 @@ export function TranscriptReview({
   }
 
   function startEdit(index: number) {
+    setOffer(null);
     setEditing(index);
     setDraft(chunks[index].text.trim());
   }
@@ -295,6 +369,8 @@ export function TranscriptReview({
     const lead = original.match(/^\s*/)?.[0] ?? "";
     if (after !== original.trim()) {
       onEdit(job, editing, { text: after ? lead + after : "" });
+      const terms = newTermsIn(original, after, glossary);
+      setOffer(terms.length ? { index: editing, terms, added: [] } : null);
     }
     setEditing(null);
   }
@@ -347,6 +423,7 @@ export function TranscriptReview({
             onClick={() => {
               setPanel(findOpen ? null : "find");
               setReplaceNote(null);
+              setOffer(null);
             }}
             className={`flex items-center gap-1.5 rounded px-1.5 py-0.5 hover:bg-white/5 ${findOpen ? "text-brand-300" : ""}`}
           >
@@ -359,6 +436,7 @@ export function TranscriptReview({
               onClick={() => {
                 setPanel(glossaryOpen ? null : "glossary");
                 setReplaceNote(null);
+                setOffer(null);
               }}
               className={`flex items-center gap-1.5 rounded px-1.5 py-0.5 hover:bg-white/5 ${
                 glossaryOpen ? "text-lavender-300" : suggestions.length ? "text-lavender-200" : ""
@@ -391,6 +469,7 @@ export function TranscriptReview({
               onChange={(e) => {
                 setQuery(e.target.value);
                 setReplaceNote(null);
+                setOffer((o) => (o?.index === null ? null : o));
               }}
               placeholder={r.find}
               aria-label={r.find}
@@ -443,6 +522,7 @@ export function TranscriptReview({
             )}
           </div>
           {replaceNote && <p className="mt-1.5 text-neutral-300">{replaceNote(t)}</p>}
+          {offer && offer.index === null && offerRow(offer)}
         </div>
       )}
 
@@ -495,6 +575,14 @@ export function TranscriptReview({
                 {r.onlySuggestions}
               </label>
             )}
+            <button
+              type="button"
+              onClick={onOpenGlossary}
+              aria-haspopup="dialog"
+              className="rounded px-1.5 py-0.5 text-lavender-200 hover:bg-white/5"
+            >
+              {r.editGlossary}
+            </button>
             <span className="ml-auto" />
             {groups.length > 1 && (
               <button
@@ -621,6 +709,7 @@ export function TranscriptReview({
                       )}
                     </button>
                   )}
+                  {offer && offer.index === index && editing !== index && offerRow(offer)}
                 </div>
 
                 {chunk.edited && (

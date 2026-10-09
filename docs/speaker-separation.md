@@ -53,6 +53,12 @@ The open transcript is also a view for checking and correcting it line by line:
   turned "ville", "vit" and "visste" into "Vite". Giving Whisper the list as a prompt was also tried and
   helped far less, while making some words worse.
 
+  The list is edited in its own dialog (Settings › Ordlista › *Redigera*, or *Redigera ordlistan* in the
+  panel): search, add (several pasted lines at once), remove, and import/export as a `.txt` file, since
+  the list lives only in the browser. After a hand edit that brings in a name-like word (a capital
+  where no sentence starts, a digit, inner `-`/`.`, or a capital inside the word), or after Find &
+  replace, the app offers that name for the list; nothing is added without a click.
+
 Corrections flow into Copy and every export; corrected chunks carry `"edited": true` in `.json`, and a
 speaker you set has `speaker_conf` 1 (0 for *No speaker*). If you've opted in to keeping transcripts,
 edits and names are kept with them across reloads.

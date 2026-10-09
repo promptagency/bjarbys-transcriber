@@ -39,7 +39,7 @@ export interface Settings {
 }
 
 /** A word list longer than this is cut when restored — it's a list of names, not a document. */
-export const MAX_GLOSSARY_LENGTH = 20_000;
+export const MAX_GLOSSARY_LENGTH = 30_000;
 
 // The labels are for the developer benchmark page; the app names languages in
 // the interface language (see languageName in ./i18n).

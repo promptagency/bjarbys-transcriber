@@ -66,7 +66,9 @@ The word list (`settings.glossary`, one term per line) feeds `src/lib/glossary.t
 the finished lines that *sound* like a term (a coarse sound key + bounded edit distance, threshold 0.85, an edge
 word only counts if it improves the match) and the review view offers them as suggestions — accepted per group or
 all at once through the same `onReplaceChunks` and Undo, never applied automatically. Feeding the list to Whisper
-as a prompt was measured and rejected (small gains, some words worse).
+as a prompt was measured and rejected (small gains, some words worse). The list is edited in `GlossaryDialog`
+(opened from Settings and the review panel; search, paste many, import/export `.txt`), and corrections offer new
+names for it (`newTermsIn` after a hand edit, the replacement after Find & replace) — only on a click.
 
 **Language detection (`detectLanguage` in the worker).** Transformers.js does not detect language — with
 none given it forces English — so when the language is on auto-detect the worker scores Whisper's language
