@@ -1,4 +1,6 @@
-# Vem sa vad?
+<h1 align="center">
+  <img src="src/assets/vem-sa-vad-farg.svg" alt="Vem sa vad?" width="360">
+</h1>
 
 Private, **in-browser** audio &amp; video transcription that also tells you
 **who said what**. The Whisper model runs entirely on the user's machine via
@@ -9,6 +11,10 @@ installed** — just open the page.
 **Use it now: [vemsavad.promptagency.se](https://vemsavad.promptagency.se)** — open
 it in Chrome or Edge and drop in a file. Click *Install* in the address bar to
 get it as an app with its own window, which also opens without a network.
+
+<p align="center">
+  <img src="docs/images/screenshot.png" alt="The start page of Vem sa vad?: the logo, a language picker, tabs for files, recording and podcasts, and a drop area for audio or video" width="720">
+</p>
 
 Vem sa vad? is built on [Bjarbys Transcriber](https://github.com/fltman/bjarbys-transcriber)
 by Anders Bjarby, and adds speaker separation and a few other features on top.
